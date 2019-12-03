@@ -2148,7 +2148,8 @@ Commander::run()
 			/* no else case: do not change lockdown flag in unconfigured case */
 
 		} else {
-			if (!status_flags.rc_input_blocked && !status.rc_signal_lost) {
+			// Edu. Added check to verify wether RC is disabled
+			if (!status_flags.rc_input_blocked && !status.rc_signal_lost && status.rc_input_mode != vehicle_status_s::RC_IN_MODE_OFF) {
 				mavlink_log_critical(&mavlink_log_pub, "Manual control lost");
 				status.rc_signal_lost = true;
 				rc_signal_lost_timestamp = sp_man.timestamp;

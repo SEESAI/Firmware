@@ -44,6 +44,7 @@
 
 #include "RoverPositionControl.hpp"
 #include <lib/ecl/geo/geo.h>
+//#include <iostream>
 
 #define ACTUATOR_PUBLISH_PERIOD_MS 4
 
@@ -294,7 +295,7 @@ RoverPositionControl::control_velocity(const matrix::Vector3f &current_velocity,
 
 		const float x_vel = vel(0);
 		const float x_acc = _vehicle_acceleration_sub.get().xyz[0];
-
+//		printf("%f",x_vel);
 		const float control_throttle = pid_calculate(&_speed_ctrl, desired_speed, x_vel, x_acc, dt);
 
 		//Constrain maximum throttle to mission throttle
@@ -366,7 +367,7 @@ RoverPositionControl::run()
 	parameters_update(true);
 
 	/* wakeup source(s) */
-	px4_pollfd_struct_t fds[3];
+	px4_pollfd_struct_t fds[4];
 
 	/* Setup of loop */
 	fds[0].fd = _global_pos_sub;
@@ -375,6 +376,8 @@ RoverPositionControl::run()
 	fds[1].events = POLLIN;
 	fds[2].fd = _sensor_combined_sub;
 	fds[2].events = POLLIN;
+	fds[3].fd = _local_pos_sub;  // Edu. Added local position as source of position
+	fds[3].events = POLLIN;
 
 	while (!should_exit()) {
 
@@ -400,7 +403,7 @@ RoverPositionControl::run()
 		bool manual_mode = _control_mode.flag_control_manual_enabled;
 
 		/* only run controller if position changed */
-		if (fds[0].revents & POLLIN) {
+		if (fds[0].revents & POLLIN || fds[3].revents & POLLIN) {
 			perf_begin(_loop_perf);
 
 			/* load local copies */

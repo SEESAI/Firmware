@@ -23,3 +23,9 @@ rover_pos_control start
 # Start Land Detector.
 #
 land_detector start rover
+
+
+#
+# Start Constance Distance Sensor.
+#
+rover_const_distance start

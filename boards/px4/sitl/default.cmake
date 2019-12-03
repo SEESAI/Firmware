@@ -45,6 +45,7 @@ px4_add_board(
 		vmount
 		vtol_att_control
 		airspeed_selector
+		rover_const_distance
 
 	SYSTEMCMDS
 		#bl_update
@@ -81,6 +82,7 @@ px4_add_board(
 		px4_mavlink_debug # Tutorial code from http://dev.px4.io/en/debug/debug_values.html
 		px4_simple_app # Tutorial code from http://dev.px4.io/en/apps/hello_sky.html
 		rover_steering_control # Rover example app
+		edu_test
 	)
 
 set(config_sitl_viewer jmavsim CACHE STRING "viewer for sitl")

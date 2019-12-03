@@ -85,6 +85,7 @@ px4_add_board(
 		vmount
 		vtol_att_control
 		airspeed_selector
+		rover_const_distance
 
 	SYSTEMCMDS
 		bl_update
