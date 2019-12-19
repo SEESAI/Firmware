@@ -107,7 +107,7 @@ private:
 	int		_manual_control_sub{-1};		/**< notification of manual control updates */
 	int		_pos_sp_triplet_sub{-1};
 	int 		_att_sp_sub{-1};
-	int     _vehicle_attitude_sub{-1};
+	int     	_vehicle_attitude_sub{-1};
 	int		_sensor_combined_sub{-1};
 
 	uORB::Subscription	_parameter_update_sub{ORB_ID(parameter_update)};
@@ -144,6 +144,15 @@ private:
 		UGV_POSCTRL_MODE_OTHER
 	} _control_mode_current{UGV_POSCTRL_MODE_OTHER};			///< used to check the mode in the last control loop iteration. Use to check if the last iteration was in the same mode.
 
+
+	enum POS_CTRLSTATES {
+		GOTO_WAYPOINT,
+		STOPPING
+	} _pos_ctrl_state {GOTO_WAYPOINT};			/// Position control state machine
+
+	/* previous waypoint */
+	matrix::Vector2f _prev_wp{0.0f,0.0f};
+
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::GND_L1_PERIOD>) _param_l1_period,
 		(ParamFloat<px4::params::GND_L1_DAMPING>) _param_l1_damping,
@@ -164,7 +173,8 @@ private:
 		(ParamFloat<px4::params::GND_THR_CRUISE>) _param_throttle_cruise,
 
 		(ParamFloat<px4::params::GND_WHEEL_BASE>) _param_wheel_base,
-		(ParamFloat<px4::params::GND_MAX_ANG>) _param_max_turn_angle
+		(ParamFloat<px4::params::GND_MAX_ANG>) _param_max_turn_angle,
+		(ParamFloat<px4::params::NAV_LOITER_RAD>) _param_nav_loiter_rad	/**< loiter radius for Rover */
 	)
 
 	/**

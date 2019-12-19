@@ -67,7 +67,7 @@ else
 {
 	return !_actuator_armed.armed;  // If we are armed we are not landed
 					// #Edu: This doens't work very well because if it's armed it will never say it's landed. So
-					// when requesting land it never detecst it has landed. Need to change to Manual.
+					// when requesting land it never detects it has landed.
 }
 }
 

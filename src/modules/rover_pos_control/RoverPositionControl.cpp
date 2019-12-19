@@ -223,51 +223,53 @@ RoverPositionControl::control_position(const matrix::Vector2f &current_position,
 			}
 		}
 
-		float dist = get_distance_to_next_waypoint(_global_pos.lat, _global_pos.lon,
-				pos_sp_triplet.current.lat, pos_sp_triplet.current.lon);
+		float dist_target = get_distance_to_next_waypoint(_global_pos.lat, _global_pos.lon,
+				curr_wp(0), curr_wp(1)); // pos_sp_triplet.current.lat, pos_sp_triplet.current.lon);
 
-		bool should_idle = true;
+		//PX4_INFO("Setpoint type %d", (int) pos_sp_triplet.current.type );
+		PX4_INFO(" State machine state %d", (int) _pos_ctrl_state);
+		PX4_INFO(" Setpoint Lat %f, Lon %f", (double) curr_wp(0), (double)curr_wp(1));
+		PX4_INFO(" Distance to target %f", (double) dist_target);
 
-		if (pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) {
-			// Because of noise in measurements, if the rover was always trying to reach an exact point, it would
-			// move around when it should be parked. So, I try to get the rover within loiter_radius/2, but then
-			// once I reach that point, I don't move until I'm outside of loiter_radius.
-			// TODO: Find out if there's a better measurement to use than loiter_radius.
-			if (dist > pos_sp_triplet.current.loiter_radius) {
-				_waypoint_reached = false;
+		switch (_pos_ctrl_state){
+			case GOTO_WAYPOINT:
+			{
+				_gnd_control.navigate_waypoints(prev_wp, curr_wp, current_position, ground_speed_2d);
 
-			} else if (dist <= pos_sp_triplet.current.loiter_radius / 2) {
-				_waypoint_reached = true;
+				_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = mission_throttle;
+
+				float desired_r = ground_speed_2d.norm_squared() / math::abs_t(_gnd_control.nav_lateral_acceleration_demand());
+				float desired_theta = (0.5f * M_PI_F) - atan2f(desired_r, _param_wheel_base.get());
+				float control_effort = (desired_theta / _param_max_turn_angle.get()) * math::sign(
+							_gnd_control.nav_lateral_acceleration_demand());
+				control_effort = math::constrain(control_effort, -1.0f, 1.0f);
+				_act_controls.control[actuator_controls_s::INDEX_YAW] = control_effort;
+
+				if (dist_target < _param_nav_loiter_rad.get()) {
+					_pos_ctrl_state = STOPPING;
+				}
 			}
-
-			should_idle = _waypoint_reached;
-
-		} else if (pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION ||
-			   pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF ||
-			   pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
-			should_idle = false;
+			break;
+			case STOPPING:
+			{
+				_act_controls.control[actuator_controls_s::INDEX_YAW] = 0.0f;
+				_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
+				// Note _prev_wp is different to the local prev_wp which is related to a mission waypoint.
+				float dist_between_waypoints = get_distance_to_next_waypoint( _prev_wp(0), _prev_wp(1), curr_wp(0), curr_wp(1));
+				if( dist_between_waypoints > 0){
+					_pos_ctrl_state = GOTO_WAYPOINT; // A new waypoint has arrived go to it
+				}
+				PX4_INFO(" Distance between prev and curr waypoints %f", (double)dist_between_waypoints);
+			}
+			break;
+			default:
+				PX4_ERR("Unknown Rover State");
+				_pos_ctrl_state = STOPPING;
+			break;
 		}
 
+		_prev_wp = curr_wp;
 
-		if (should_idle) {
-			_act_controls.control[actuator_controls_s::INDEX_YAW] = 0.0f;
-			_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
-
-		} else {
-
-			/* waypoint is a plain navigation waypoint or the takeoff waypoint, does not matter */
-			_gnd_control.navigate_waypoints(prev_wp, curr_wp, current_position, ground_speed_2d);
-
-			_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = mission_throttle;
-
-			float desired_r = ground_speed_2d.norm_squared() / math::abs_t(_gnd_control.nav_lateral_acceleration_demand());
-			float desired_theta = (0.5f * M_PI_F) - atan2f(desired_r, _param_wheel_base.get());
-			float control_effort = (desired_theta / _param_max_turn_angle.get()) * math::sign(
-						       _gnd_control.nav_lateral_acceleration_demand());
-			control_effort = math::constrain(control_effort, -1.0f, 1.0f);
-			_act_controls.control[actuator_controls_s::INDEX_YAW] = control_effort;
-
-		}
 
 	} else {
 		_control_mode_current = UGV_POSCTRL_MODE_OTHER;
@@ -286,7 +288,8 @@ RoverPositionControl::control_velocity(const matrix::Vector3f &current_velocity,
 
 	const float mission_throttle = _param_throttle_cruise.get();
 	const matrix::Vector3f desired_velocity{pos_sp_triplet.current.vx, pos_sp_triplet.current.vy, pos_sp_triplet.current.vz};
-	const float desired_speed = desired_velocity.norm();
+	const float desired_speed = desired_velocity.norm(); // EDU: Note, this means that Vz is also taken into account, does this make sense on a rover?
+							     // I don't think so, but does make it easier to use controller , as can use both sticks....
 
 	if (desired_speed > 0.01f) {
 
