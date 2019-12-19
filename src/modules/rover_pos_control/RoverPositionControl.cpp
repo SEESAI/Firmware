@@ -227,26 +227,28 @@ RoverPositionControl::control_position(const matrix::Vector2f &current_position,
 				curr_wp(0), curr_wp(1)); // pos_sp_triplet.current.lat, pos_sp_triplet.current.lon);
 
 		//PX4_INFO("Setpoint type %d", (int) pos_sp_triplet.current.type );
-		PX4_INFO(" State machine state %d", (int) _pos_ctrl_state);
-		PX4_INFO(" Setpoint Lat %f, Lon %f", (double) curr_wp(0), (double)curr_wp(1));
-		PX4_INFO(" Distance to target %f", (double) dist_target);
+		//PX4_INFO(" State machine state %d", (int) _pos_ctrl_state);
+		//PX4_INFO(" Setpoint Lat %f, Lon %f", (double) curr_wp(0), (double)curr_wp(1));
+		//PX4_INFO(" Distance to target %f", (double) dist_target);
 
 		switch (_pos_ctrl_state){
 			case GOTO_WAYPOINT:
 			{
-				_gnd_control.navigate_waypoints(prev_wp, curr_wp, current_position, ground_speed_2d);
-
-				_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = mission_throttle;
-
-				float desired_r = ground_speed_2d.norm_squared() / math::abs_t(_gnd_control.nav_lateral_acceleration_demand());
-				float desired_theta = (0.5f * M_PI_F) - atan2f(desired_r, _param_wheel_base.get());
-				float control_effort = (desired_theta / _param_max_turn_angle.get()) * math::sign(
-							_gnd_control.nav_lateral_acceleration_demand());
-				control_effort = math::constrain(control_effort, -1.0f, 1.0f);
-				_act_controls.control[actuator_controls_s::INDEX_YAW] = control_effort;
-
 				if (dist_target < _param_nav_loiter_rad.get()) {
 					_pos_ctrl_state = STOPPING;
+				}
+				else
+				{
+					_gnd_control.navigate_waypoints(prev_wp, curr_wp, current_position, ground_speed_2d);
+
+					_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = mission_throttle;
+
+					float desired_r = ground_speed_2d.norm_squared() / math::abs_t(_gnd_control.nav_lateral_acceleration_demand());
+					float desired_theta = (0.5f * M_PI_F) - atan2f(desired_r, _param_wheel_base.get());
+					float control_effort = (desired_theta / _param_max_turn_angle.get()) * math::sign(
+								_gnd_control.nav_lateral_acceleration_demand());
+					control_effort = math::constrain(control_effort, -1.0f, 1.0f);
+					_act_controls.control[actuator_controls_s::INDEX_YAW] = control_effort;
 				}
 			}
 			break;
@@ -259,7 +261,7 @@ RoverPositionControl::control_position(const matrix::Vector2f &current_position,
 				if( dist_between_waypoints > 0){
 					_pos_ctrl_state = GOTO_WAYPOINT; // A new waypoint has arrived go to it
 				}
-				PX4_INFO(" Distance between prev and curr waypoints %f", (double)dist_between_waypoints);
+				//PX4_INFO(" Distance between prev and curr waypoints %f", (double)dist_between_waypoints);
 			}
 			break;
 			default:
@@ -285,14 +287,15 @@ RoverPositionControl::control_velocity(const matrix::Vector3f &current_velocity,
 {
 
 	float dt = 0.01; // Using non zero value to a avoid division by zero
-
-	const float mission_throttle = _param_throttle_cruise.get();
+	//const float mission_throttle = _param_throttle_cruise.get();
 	const matrix::Vector3f desired_velocity{pos_sp_triplet.current.vx, pos_sp_triplet.current.vy, pos_sp_triplet.current.vz};
-	const float desired_speed = desired_velocity.norm(); // EDU: Note, this means that Vz is also taken into account, does this make sense on a rover?
+	float desired_speed = desired_velocity.norm(); // EDU: Note, this means that Vz is also taken into account, does this make sense on a rover?
 							     // I don't think so, but does make it easier to use controller , as can use both sticks....
+	if (pos_sp_triplet.current.vx < 0)
+		desired_speed = -desired_speed;
 
-	if (desired_speed > 0.01f) {
 
+	if (desired_speed > 0.01f || desired_speed < -0.01f) {
 		const Dcmf R_to_body(Quatf(_vehicle_att.q).inversed());
 		const Vector3f vel = R_to_body * Vector3f(current_velocity(0), current_velocity(1), current_velocity(2));
 
@@ -302,7 +305,7 @@ RoverPositionControl::control_velocity(const matrix::Vector3f &current_velocity,
 		const float control_throttle = pid_calculate(&_speed_ctrl, desired_speed, x_vel, x_acc, dt);
 
 		//Constrain maximum throttle to mission throttle
-		_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = math::constrain(control_throttle, 0.0f, mission_throttle);
+		_act_controls.control[actuator_controls_s::INDEX_THROTTLE] = math::constrain(control_throttle, -1.0f, 1.0f);
 
 		Vector3f desired_body_velocity;
 
@@ -315,7 +318,9 @@ RoverPositionControl::control_velocity(const matrix::Vector3f &current_velocity,
 
 		}
 
-		const float desired_theta = atan2f(desired_body_velocity(1), desired_body_velocity(0));
+		// Calculate the angles using only positive X if not the requested Yaw effort is too large
+		// and rover turns too quickly, so impossible to go backwards
+		const float desired_theta = atan2f(desired_body_velocity(1), std::abs(desired_body_velocity(0)));
 		float control_effort = desired_theta / _param_max_turn_angle.get();
 		control_effort = math::constrain(control_effort, -1.0f, 1.0f);
 
