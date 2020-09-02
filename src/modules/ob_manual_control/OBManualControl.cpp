@@ -178,10 +178,10 @@ void OBManualControl::run()
 					}
 
 					_manual_control_setpoint = _manual_control_setpoint_rc; // First fill with rc as default
-					PipeInclusive(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav,
-						      &_manual_control_setpoint); // Modify those values that are a combination
-					_manual_control_sub.publish(_manual_control_setpoint);
+					 // The transition_switch is not used in PX4 MC, but set it to zero as an extra precaution
+					_manual_control_setpoint.transition_switch = 0; // Used to toggle from RC to Joystick
 
+					_manual_control_sub.publish(_manual_control_setpoint);
 					break;
 				}
 
@@ -193,10 +193,11 @@ void OBManualControl::run()
 					}
 					_manual_control_setpoint = _manual_control_setpoint_mav; // First fill with mav as default
 
-					PipeInclusive(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav,
-						      &_manual_control_setpoint); // Modify those values that are a combination
-					_manual_control_sub.publish(_manual_control_setpoint);
+					UseRCSetpoints(&_manual_control_setpoint_rc, &_manual_control_setpoint); // Modify those values that are a combination
+					// The transition_switch is not used in PX4 MC, but set it to zero as an extra precaution
+					_manual_control_setpoint.transition_switch = 0; // Used to toggle from RC to Joystick
 
+					_manual_control_sub.publish(_manual_control_setpoint);
 					break;
 				}
 			}
@@ -209,14 +210,13 @@ void OBManualControl::run()
 }
 
 
-// This functions combines signals from both Joystick and RC
-void OBManualControl::PipeInclusive(manual_control_setpoint_s *manual_control_setpoint_rc,
-				    manual_control_setpoint_s *manual_control_setpoint_mav, manual_control_setpoint_s *manual_control_setpoint)
+// This functions incorporates the switches from RC into the Joystick message.
+// When usign the Joystick the functions that these RC switches provides are not done through manual_control_setpoint messages but
+// directly through appropiate mavlink commnads from QGC
+void OBManualControl::UseRCSetpoints(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint)
 {
-
 	// Signal coming from both
-	manual_control_setpoint->kill_switch = manual_control_setpoint_rc->kill_switch |
-					       manual_control_setpoint_mav->kill_switch;
+	manual_control_setpoint->kill_switch = manual_control_setpoint_rc->kill_switch;
 
 	// Joystick (mav) doesn't set any of the mode switches in manual_control, it's QGC that sends the necessery modes directly
 	// through the relevant mavlink message. So use those of the RC instead so that RC can control modes even when joystick in control.
@@ -233,12 +233,11 @@ void OBManualControl::PipeInclusive(manual_control_setpoint_s *manual_control_se
 		manual_control_setpoint->loiter_switch = manual_control_setpoint_rc->loiter_switch;
 		// There is no switch dedicated to Land for some reason !
 	}
-
-	// The transition switch is not used in PX4 MC, but set it to zero as an extra precaution
-	_manual_control_setpoint.transition_switch = 0;
-
 }
 
+// The joystick buttons in PX4 are not used, so had to hardcode the transition switch to first button (A) in the controller in
+// mavlink_receiver.cpp.
+// This function detects if the switch has toggled in either joystick or RC Tx
 bool OBManualControl::SwitchToggled(manual_control_setpoint_s *manual_control_setpoint_rc,
 				    manual_control_setpoint_s *manual_control_setpoint_mav)
 {
