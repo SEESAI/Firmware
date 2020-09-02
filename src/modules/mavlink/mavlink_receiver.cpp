@@ -1888,7 +1888,6 @@ MavlinkReceiver::handle_message_manual_control(mavlink_message_t *msg)
 		}
 
 		_mom_switch_state = man.buttons;
-
 		_rc_pub.publish(rc);
 
 	} else {
@@ -1899,6 +1898,10 @@ MavlinkReceiver::handle_message_manual_control(mavlink_message_t *msg)
 		manual.y = man.y / 1000.0f;
 		manual.r = man.r / 1000.0f;
 		manual.z = man.z / 1000.0f;
+
+		manual.gear_switch = man.buttons & 0x1;  // Not sure why the buttons are not captured, obviously dont know what to map them to, but still useful.
+			 			  	// Only interested in first button (A), can remap here to others if necessary
+
 		manual.data_source = manual_control_setpoint_s::SOURCE_MAVLINK_0 + _mavlink->get_instance_id();
 
 		_manual_pub.publish(manual);

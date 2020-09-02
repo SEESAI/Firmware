@@ -69,6 +69,10 @@ public:
 	/** @see ModuleBase::print_status() */
 	int print_status() override;
 
+	bool SwitchToggled(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint_mav);
+	void PipeExclusive(manual_control_setpoint_s *manual_control_setpoint_in, manual_control_setpoint_s *manual_control_setpoint_out);
+	void PipeInclusive(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint_mav, manual_control_setpoint_s *manual_control_setpoint);
+
 private:
 
 	// Subscriptions
@@ -78,9 +82,13 @@ private:
 	int _manual_control_sub_rc{-1};			/**< notification of manual control updates from RC transmitter */
 
 	//uORB::Subscription	_manual_control_sub_rc{ORB_ID(manual_control_setpoint_rc)};
+	manual_control_setpoint_s	_manual_control_setpoint_rc{};
+	manual_control_setpoint_s	_manual_control_setpoint_mav{};
 	manual_control_setpoint_s	_manual_control_setpoint{};
 
 	uORB::PublicationMulti<manual_control_setpoint_s> 	_manual_control_sub{ORB_ID(manual_control_setpoint), ORB_PRIO_DEFAULT}; /**< notification of manual control updates coming from mavlink */
+
+	enum State {RC_CONTROL, MAV_CONTROL} _state{MAV_CONTROL};
 
 
 
