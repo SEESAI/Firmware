@@ -69,9 +69,12 @@ public:
 	/** @see ModuleBase::print_status() */
 	int print_status() override;
 
-	bool SwitchToggled(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint_mav);
-	void PipeExclusive(manual_control_setpoint_s *manual_control_setpoint_in, manual_control_setpoint_s *manual_control_setpoint_out);
-	void PipeInclusive(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint_mav, manual_control_setpoint_s *manual_control_setpoint);
+	bool SwitchToggled(manual_control_setpoint_s *manual_control_setpoint_rc,
+			   manual_control_setpoint_s *manual_control_setpoint_mav);
+	void PipeExclusive(manual_control_setpoint_s *manual_control_setpoint_in,
+			   manual_control_setpoint_s *manual_control_setpoint_out);
+	void PipeInclusive(manual_control_setpoint_s *manual_control_setpoint_rc,
+			   manual_control_setpoint_s *manual_control_setpoint_mav, manual_control_setpoint_s *manual_control_setpoint);
 
 private:
 

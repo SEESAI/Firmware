@@ -34,10 +34,10 @@
 px4_add_module(
 	MODULE modules__ob_manual_control
 	MAIN ob_manual_control
-	COMPILE_FLAGS	-O0
+	COMPILE_FLAGS	- O0
 	SRCS
-		OBManualControl.cpp
+	OBManualControl.cpp
 	DEPENDS
-		modules__uORB
-	)
+	modules__uORB
+)
 

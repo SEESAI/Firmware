@@ -163,35 +163,38 @@ void OBManualControl::run()
 			px4_usleep(50000);
 			continue;
 
-		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN ) {
+		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN) {
 			orb_copy(ORB_ID(manual_control_setpoint_rc), _manual_control_sub_rc, &_manual_control_setpoint_rc);
 			orb_copy(ORB_ID(manual_control_setpoint_mav), _manual_control_sub_mav, &_manual_control_setpoint_mav);
 
 			bool switch_toggled = SwitchToggled(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav);
 
-			switch(_state){
-				case RC_CONTROL:{
-					if(switch_toggled)
-					{
+			switch (_state) {
+			case RC_CONTROL: {
+					if (switch_toggled) {
 						PX4_INFO("Switching to Mav control");
 						_state = MAV_CONTROL;
 						break; // Exit immediately
 					}
+
 					_manual_control_setpoint = _manual_control_setpoint_rc; // First fill with rc as default
-					PipeInclusive(&_manual_control_setpoint_rc,&_manual_control_setpoint_mav, &_manual_control_setpoint); // Modify those values that are a combination
+					PipeInclusive(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav,
+						      &_manual_control_setpoint); // Modify those values that are a combination
 					_manual_control_sub.publish(_manual_control_setpoint);
 
 					break;
 				}
-				case MAV_CONTROL:{
-					if(switch_toggled)
-					{
+
+			case MAV_CONTROL: {
+					if (switch_toggled) {
 						PX4_INFO("Switching to RC control");
 						_state = RC_CONTROL;
 						break; // Exit immediately
 					}
+
 					_manual_control_setpoint = _manual_control_setpoint_mav; // First fill with mav as default
-					PipeInclusive(&_manual_control_setpoint_rc,&_manual_control_setpoint_mav, &_manual_control_setpoint); // Modify those values that are a combination
+					PipeInclusive(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav,
+						      &_manual_control_setpoint); // Modify those values that are a combination
 					_manual_control_sub.publish(_manual_control_setpoint);
 
 					break;
@@ -207,42 +210,47 @@ void OBManualControl::run()
 
 
 
-void OBManualControl::PipeExclusive(manual_control_setpoint_s *manual_control_setpoint_in, manual_control_setpoint_s *manual_control_setpoint_out)
+void OBManualControl::PipeExclusive(manual_control_setpoint_s *manual_control_setpoint_in,
+				    manual_control_setpoint_s *manual_control_setpoint_out)
 {
 	//manual_control_setpoint_out = manual_control_setpoint_in; // Copy
 
 }
 
-void OBManualControl::PipeInclusive(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint_mav, manual_control_setpoint_s *manual_control_setpoint)
+void OBManualControl::PipeInclusive(manual_control_setpoint_s *manual_control_setpoint_rc,
+				    manual_control_setpoint_s *manual_control_setpoint_mav, manual_control_setpoint_s *manual_control_setpoint)
 {
 
-	manual_control_setpoint->kill_switch = manual_control_setpoint_rc->kill_switch | manual_control_setpoint_mav->kill_switch;
+	manual_control_setpoint->kill_switch = manual_control_setpoint_rc->kill_switch |
+					       manual_control_setpoint_mav->kill_switch;
 	// Land etc, are submodes of the of the auto mode...
 
 }
 
-bool OBManualControl::SwitchToggled(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint_mav)
+bool OBManualControl::SwitchToggled(manual_control_setpoint_s *manual_control_setpoint_rc,
+				    manual_control_setpoint_s *manual_control_setpoint_mav)
 {
 	static bool first_run = true;
-	static uint8_t gear_switch_rc_prev;   // NOTE Could transition switch be a better one (it's a transition, and transition is only for VTOL? not sure if available as switch in multicopoter..)
+	static uint8_t
+	gear_switch_rc_prev;   // NOTE Could transition switch be a better one (it's a transition, and transition is only for VTOL? not sure if available as switch in multicopoter..)
 	static uint8_t gear_switch_mav_prev;
 	bool toggled_rc = false;
 	bool toggled_mav = false;
 	bool toggled = false;
 
-	if(first_run)
-	{
-	     gear_switch_rc_prev = manual_control_setpoint_rc->gear_switch;
-	     gear_switch_mav_prev = manual_control_setpoint_mav->gear_switch;
-	     first_run = false;
+	if (first_run) {
+		gear_switch_rc_prev = manual_control_setpoint_rc->gear_switch;
+		gear_switch_mav_prev = manual_control_setpoint_mav->gear_switch;
+		first_run = false;
 	}
 
 	toggled_rc = gear_switch_rc_prev ^ manual_control_setpoint_rc->gear_switch; // Xor => Output != 0 if they are different
-	if( gear_switch_mav_prev == 0 && manual_control_setpoint_mav->gear_switch ==1) { // Joystick is momentary button default value 0, so only looking for transition from 0 to 1
+
+	if (gear_switch_mav_prev == 0
+	    && manual_control_setpoint_mav->gear_switch == 1) { // Joystick is momentary button default value 0, so only looking for transition from 0 to 1
 		toggled_mav = true;
-	}
-	else
-	{
+
+	} else {
 		toggled_mav = false;
 	}
 
@@ -250,11 +258,11 @@ bool OBManualControl::SwitchToggled(manual_control_setpoint_s *manual_control_se
 
 	//PX4_INFO("toggled value %d", toggled);
 
-        gear_switch_rc_prev = manual_control_setpoint_rc->gear_switch;
-        gear_switch_mav_prev = manual_control_setpoint_mav->gear_switch;
+	gear_switch_rc_prev = manual_control_setpoint_rc->gear_switch;
+	gear_switch_mav_prev = manual_control_setpoint_mav->gear_switch;
 
 
-	return(toggled);
+	return (toggled);
 }
 
 int OBManualControl::print_usage(const char *reason)
