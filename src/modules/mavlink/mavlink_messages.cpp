@@ -547,11 +547,13 @@ private:
 	MavlinkOrbSubscription *_cpuload_sub;
 	MavlinkOrbSubscription *_battery_status_sub[ORB_MULTI_MAX_INSTANCES];
 	MavlinkOrbSubscription *_rc_sub;
+	MavlinkOrbSubscription *_manual_sub;
 
 	uint64_t _status_timestamp{0};
 	uint64_t _cpuload_timestamp{0};
 	uint64_t _battery_status_timestamp[ORB_MULTI_MAX_INSTANCES] {};
 	uint64_t _rc_timestamp{0};
+	uint64_t _manual_timestamp{0};
 
 	/* do not allow top copying this class */
 	MavlinkStreamSysStatus(MavlinkStreamSysStatus &) = delete;
@@ -561,7 +563,9 @@ protected:
 	explicit MavlinkStreamSysStatus(Mavlink *mavlink) : MavlinkStream(mavlink),
 		_status_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_status))),
 		_cpuload_sub(_mavlink->add_orb_subscription(ORB_ID(cpuload))),
-		_rc_sub(_mavlink->add_orb_subscription(ORB_ID(rc_channels)))
+		_rc_sub(_mavlink->add_orb_subscription(ORB_ID(rc_channels))), // Added to get rc.signal lost
+		_manual_sub(_mavlink->add_orb_subscription(ORB_ID(manual_control_setpoint))) // Added to get manual.data_source
+
 	{
 		for (int i = 0; i < ORB_MULTI_MAX_INSTANCES; i++) {
 			_battery_status_sub[i] = _mavlink->add_orb_subscription(ORB_ID(battery_status), i);
@@ -575,11 +579,12 @@ protected:
 		cpuload_s cpuload{};
 		battery_status_s battery_status[ORB_MULTI_MAX_INSTANCES] {};
 		rc_channels_s rc{};
+		manual_control_setpoint_s manual{};
 
 		const bool updated_status = _status_sub->update(&_status_timestamp, &status);
 		const bool updated_cpuload = _cpuload_sub->update(&_cpuload_timestamp, &cpuload);
-		const bool updated_rc = _rc_sub->update(&_rc_timestamp, &rc);
-
+		_rc_sub->update(&_rc_timestamp, &rc);
+		_manual_sub->update(&_manual_timestamp, &manual);
 		bool updated_battery = false;
 
 		for (int i = 0; i < ORB_MULTI_MAX_INSTANCES; i++) {
@@ -588,7 +593,7 @@ protected:
 			}
 		}
 
-		if (updated_status || updated_cpuload || updated_battery || updated_rc ) {
+		if (updated_status || updated_cpuload || updated_battery ) {
 			int lowest_battery_index = 0;
 
 			for (int i = 0; i < ORB_MULTI_MAX_INSTANCES; i++) {
@@ -623,9 +628,10 @@ protected:
 				msg.battery_remaining = -1;
 			}
 
-			msg.errors_count1 = status.rc_signal_lost;  // No manual_control_setpoint messages arriving ( can come from RC or MAV )
-			msg.errors_count2 = status.data_link_lost;  // No messages from GCS received
-			msg.errors_count3 = rc.signal_lost;  // No messages from RC Tx received
+			msg.errors_count1 = status.rc_signal_lost;  	// No manual_control_setpoint messages arriving ( can come from RC or MAV )
+			msg.errors_count2 = status.data_link_lost;  	// No messages from GCS received
+			msg.errors_count3 = rc.signal_lost;  		// No messages from RC Tx received
+			msg.errors_count4 = manual.data_source; 	// Indicates wether the drone is controlled by RC (1) or Mavlink( 2-5)
 
 			mavlink_msg_sys_status_send_struct(_mavlink->get_channel(), &msg);
 
@@ -3612,7 +3618,6 @@ protected:
 			msg.buttons |= (manual.loiter_switch << (shift * 3));
 			msg.buttons |= (manual.acro_switch << (shift * 4));
 			msg.buttons |= (manual.offboard_switch << (shift * 5));
-			msg.buttons |= (manual.data_source << (shift * 6));   // Indicates wether the drone is controlled by RC or (Mavlink)
 
 			mavlink_msg_manual_control_send_struct(_mavlink->get_channel(), &msg);
 

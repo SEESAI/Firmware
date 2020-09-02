@@ -67,3 +67,5 @@ posix-configs/SITL/init/test/*_generated
 # KDevelop ignores
 .kdev4/*
 *.kdev4
+
+.vscode/browse.vc.db
