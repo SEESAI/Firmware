@@ -237,10 +237,18 @@ bool OBManualControl::SwitchToggled(manual_control_setpoint_s *manual_control_se
 	     first_run = false;
 	}
 
-	toggled_rc = gear_switch_rc_prev ^ manual_control_setpoint_rc->gear_switch; // Xor => Output =1 if they are different
-	toggled_mav = gear_switch_mav_prev ^ manual_control_setpoint_mav->gear_switch; // Xor => Output =1 if they are different
+	toggled_rc = gear_switch_rc_prev ^ manual_control_setpoint_rc->gear_switch; // Xor => Output != 0 if they are different
+	if( gear_switch_mav_prev == 0 && manual_control_setpoint_mav->gear_switch ==1) { // Joystick is momentary button default value 0, so only looking for transition from 0 to 1
+		toggled_mav = true;
+	}
+	else
+	{
+		toggled_mav = false;
+	}
 
 	toggled = toggled_rc | toggled_mav ; // true if any of them toggle
+
+	//PX4_INFO("toggled value %d", toggled);
 
         gear_switch_rc_prev = manual_control_setpoint_rc->gear_switch;
         gear_switch_mav_prev = manual_control_setpoint_mav->gear_switch;
