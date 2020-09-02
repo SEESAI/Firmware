@@ -191,8 +191,8 @@ void OBManualControl::run()
 						_state = RC_CONTROL;
 						break; // Exit immediately
 					}
-
 					_manual_control_setpoint = _manual_control_setpoint_mav; // First fill with mav as default
+
 					PipeInclusive(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav,
 						      &_manual_control_setpoint); // Modify those values that are a combination
 					_manual_control_sub.publish(_manual_control_setpoint);
@@ -209,21 +209,33 @@ void OBManualControl::run()
 }
 
 
-
-void OBManualControl::PipeExclusive(manual_control_setpoint_s *manual_control_setpoint_in,
-				    manual_control_setpoint_s *manual_control_setpoint_out)
-{
-	//manual_control_setpoint_out = manual_control_setpoint_in; // Copy
-
-}
-
+// This functions combines signals from both Joystick and RC
 void OBManualControl::PipeInclusive(manual_control_setpoint_s *manual_control_setpoint_rc,
 				    manual_control_setpoint_s *manual_control_setpoint_mav, manual_control_setpoint_s *manual_control_setpoint)
 {
 
+	// Signal coming from both
 	manual_control_setpoint->kill_switch = manual_control_setpoint_rc->kill_switch |
 					       manual_control_setpoint_mav->kill_switch;
-	// Land etc, are submodes of the of the auto mode...
+
+	// Joystick (mav) doesn't set any of the mode switches in manual_control, it's QGC that sends the necessery modes directly
+	// through the relevant mavlink message. So use those of the RC instead so that RC can control modes even when joystick in control.
+	manual_control_setpoint->mode_switch = manual_control_setpoint_rc->mode_switch;
+	if(manual_control_setpoint->mode_switch == 0){
+		// Mode selection done  by a single channel
+		PX4_INFO("Signle Channel mode");
+		manual_control_setpoint->mode_slot = manual_control_setpoint_rc->mode_slot;    // This switch is used when setting the mode with a single channel
+	}
+	else{
+		PX4_INFO("Multi Channel mode");
+		// Mode selection set by multiple Channels, only interested in these:
+		manual_control_setpoint->return_switch = manual_control_setpoint_rc->return_switch;
+		manual_control_setpoint->loiter_switch = manual_control_setpoint_rc->loiter_switch;
+		// There is no switch dedicated to Land for some reason !
+	}
+
+	// The transition switch is not used in PX4 MC, but set it to zero as an extra precaution
+	_manual_control_setpoint.transition_switch = 0;
 
 }
 
@@ -232,22 +244,22 @@ bool OBManualControl::SwitchToggled(manual_control_setpoint_s *manual_control_se
 {
 	static bool first_run = true;
 	static uint8_t
-	gear_switch_rc_prev;   // NOTE Could transition switch be a better one (it's a transition, and transition is only for VTOL? not sure if available as switch in multicopoter..)
-	static uint8_t gear_switch_mav_prev;
+	transition_switch_rc_prev;   // We use transition_switch as it's only used for VTOL.
+	static uint8_t transition_switch_mav_prev;
 	bool toggled_rc = false;
 	bool toggled_mav = false;
 	bool toggled = false;
 
 	if (first_run) {
-		gear_switch_rc_prev = manual_control_setpoint_rc->gear_switch;
-		gear_switch_mav_prev = manual_control_setpoint_mav->gear_switch;
+		transition_switch_rc_prev = manual_control_setpoint_rc->transition_switch;
+		transition_switch_mav_prev = manual_control_setpoint_mav->transition_switch;
 		first_run = false;
 	}
 
-	toggled_rc = gear_switch_rc_prev ^ manual_control_setpoint_rc->gear_switch; // Xor => Output != 0 if they are different
+	toggled_rc = transition_switch_rc_prev ^ manual_control_setpoint_rc->transition_switch; // Xor => Output != 0 if they are different
 
-	if (gear_switch_mav_prev == 0
-	    && manual_control_setpoint_mav->gear_switch == 1) { // Joystick is momentary button default value 0, so only looking for transition from 0 to 1
+	if (transition_switch_mav_prev == 0
+	    && manual_control_setpoint_mav->transition_switch == 1) { // Joystick is momentary button default value 0, so only looking for transition from 0 to 1
 		toggled_mav = true;
 
 	} else {
@@ -258,8 +270,8 @@ bool OBManualControl::SwitchToggled(manual_control_setpoint_s *manual_control_se
 
 	//PX4_INFO("toggled value %d", toggled);
 
-	gear_switch_rc_prev = manual_control_setpoint_rc->gear_switch;
-	gear_switch_mav_prev = manual_control_setpoint_mav->gear_switch;
+	transition_switch_rc_prev = manual_control_setpoint_rc->transition_switch;
+	transition_switch_mav_prev = manual_control_setpoint_mav->transition_switch;
 
 
 	return (toggled);

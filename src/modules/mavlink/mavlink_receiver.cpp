@@ -1899,8 +1899,8 @@ MavlinkReceiver::handle_message_manual_control(mavlink_message_t *msg)
 		manual.r = man.r / 1000.0f;
 		manual.z = man.z / 1000.0f;
 
-		manual.gear_switch = man.buttons & 0x1;  // Not sure why the buttons are not captured, obviously dont know what to map them to, but still useful.
-			 			  	// Only interested in first button (A), can remap here to others if necessary
+		manual.transition_switch = man.buttons & 0x1;  // Buttons are not captured by PX4 as they are not used. We (sees.ai) use them
+							 // to select who controls the drone (RC or Joystick thru mavlink)
 
 		manual.data_source = manual_control_setpoint_s::SOURCE_MAVLINK_0 + _mavlink->get_instance_id();
 
