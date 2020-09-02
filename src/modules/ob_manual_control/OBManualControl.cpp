@@ -255,7 +255,6 @@ void OBManualControl::UseRCSetpoints(manual_control_setpoint_s *manual_control_s
 	manual_control_setpoint->mode_switch = manual_control_setpoint_rc->mode_switch;
 	if(manual_control_setpoint->mode_switch == 0){
 		// Mode selection done  by a single channel
-		PX4_INFO("Signle Channel mode");
 		manual_control_setpoint->mode_slot = manual_control_setpoint_rc->mode_slot;    // This switch is used when setting the mode with a single channel
 	}
 	else{
