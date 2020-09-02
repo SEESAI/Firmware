@@ -30,6 +30,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+/*
+
+sees.ai - Eduardo Aldaz-Carroll - 1 Sep 2020
+
+We want to be able to have the Observer (OB) be able to control the drone while it is also controlled remotely by a joystick
+connected to QGC.
+
+QGC reads the joystick and uses the info to send MANUAL_CONTROL messages, it fills axis and buttons from joytick.
+PX4 takes the MANUAL_CONTROL messages and converts them into an instance of manual_control_setpoint uorb messages.
+It also stores the information it receives from the RC Tx into another instance manual_control_setpoint uorb messages.
+manual_control_setpoint is a multinstance message.
+All the modules that subscribe to this message connect to the first instance that is registered.
+
+
+We have enabled a switch on the RC Tx (unusued VTOL transition_switch) that the OB can toggle to gain/release control of the drone.
+Also all the mode switches and the kill switch from the RC remain operational even if Joystick is controlling.
+The RP can gain/release control by using button A from the Joystick.
+
+To implement this we have developped a module called ob_manual_control that selects the RC Tx or Mavlink manual control messages and forwards them on.
+This is done by creating two new types of topic, manual_control_setpoint_rc and manual_control_setpoint_mav created by the RC and mavlink respectively ,
+previously they both used multi topic standard_manual_control.
+
+Now the ob_manual_control module select one originator (RC/Mav) depending on the switch and forwards it on as the standard manual_control_Setpoint messages.
+
+BThe variable buttons of MANUAL_CONTROL, bits 12,13 contain who is actually in control (RC =1 or 2-5 Mavlink instance).
+
+Have also added the Status of comms sent through VEHICLE_STATUS error_count1, error_count2, etc
+
+Note: The switches on the RC Tx are mapped to manual_control_setpoint individually, then some of them are bundled as bit mask inside MANUAL_CONTROL buttons.
+	QGC maps the buttons of the joystick as expected onto the MANUAL_CONTROL message. However PX4 ignores them.
+*/
+
+
 
 #include "OBManualControl.hpp"
 
@@ -39,7 +72,6 @@
 
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/manual_control_setpoint.h>
-
 
 int OBManualControl::print_status()
 {
@@ -169,7 +201,7 @@ void OBManualControl::run()
 
 			bool switch_toggled = SwitchToggled(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav);
 
-			switch (_state) {
+			switch (_state) { // State is indirectly shown on manual_control_setpoint.data_source . 1 For RC , 2-5 for Mavlink
 			case RC_CONTROL: {
 					if (switch_toggled) {
 						PX4_INFO("Switching to Mav control");
