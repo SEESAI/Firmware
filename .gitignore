@@ -113,3 +113,5 @@ src/systemcmds/topic_listener/listener_generated.cpp
 # SITL
 dataman
 eeprom/
+
+src/drivers/uavcan/libuavcan
