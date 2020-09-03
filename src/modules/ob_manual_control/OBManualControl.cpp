@@ -178,7 +178,7 @@ void OBManualControl::run()
 	px4_pollfd_struct_t fds[1];
 	fds[0].fd = _manual_control_sub_mav;
 	fds[0].events = POLLIN;
-	fds[1].fd = _manual_control_sub_mav;
+	fds[1].fd = _manual_control_sub_rc;
 	fds[1].events = POLLIN;
 
 	while (!should_exit()) {
