@@ -118,6 +118,7 @@
 #include <uORB/topics/vehicle_trajectory_waypoint.h>
 #include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/topics/wind_estimate.h>
+#include <uORB/topics/rc_channels.h>
 
 using matrix::Vector3f;
 using matrix::wrap_2pi;
@@ -563,6 +564,8 @@ private:
 	uORB::Subscription _battery_status_sub[ORB_MULTI_MAX_INSTANCES] {
 		{ORB_ID(battery_status), 0}, {ORB_ID(battery_status), 1}, {ORB_ID(battery_status), 2}, {ORB_ID(battery_status), 3}
 	};
+	uORB::Subscription _rc_sub {ORB_ID(rc_channels)};
+	uORB::Subscription _manual_sub {ORB_ID(manual_control_setpoint)};
 
 	/* do not allow top copying this class */
 	MavlinkStreamSysStatus(MavlinkStreamSysStatus &) = delete;
@@ -589,6 +592,12 @@ protected:
 
 			cpuload_s cpuload{};
 			_cpuload_sub.copy(&cpuload);
+
+			rc_channels_s rc{};
+			_rc_sub.copy(&rc);
+
+			manual_control_setpoint_s manual{};
+			_manual_sub.copy(&manual);
 
 			battery_status_s battery_status[ORB_MULTI_MAX_INSTANCES] {};
 
@@ -629,6 +638,11 @@ protected:
 				msg.current_battery = -1;
 				msg.battery_remaining = -1;
 			}
+
+			msg.errors_count1 = status.rc_signal_lost;  	// No manual_control_setpoint messages arriving ( can come from RC or MAV )
+			msg.errors_count2 = status.data_link_lost;  	// No messages from GCS received
+			msg.errors_count3 = rc.signal_lost;  		// No messages from RC Tx received
+			msg.errors_count4 = manual.data_source; 	// Indicates wether the drone is controlled by RC (1) or Mavlink( 2-5)
 
 			mavlink_msg_sys_status_send_struct(_mavlink->get_channel(), &msg);
 
