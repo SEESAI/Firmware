@@ -69,3 +69,7 @@ posix-configs/SITL/init/test/*_generated
 *.kdev4
 
 .vscode/browse.vc.db
+
+Tools/flightgear_bridge
+
+platforms/qurt/dspal
