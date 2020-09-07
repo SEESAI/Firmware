@@ -44,7 +44,7 @@ manual_control_setpoint is a multinstance message.
 All the modules that subscribe to this message connect to the first instance that is registered.
 
 
-We have enabled a switch on the RC Tx (unusued VTOL transition_switch) that the OB can toggle to gain/release control of the drone.
+We have enabled a switch on the RC Tx (unusued VTOL transition_switch, needs to be mapped in Radio!) that the OB can toggle to gain/release control of the drone.
 Also all the mode switches and the kill switch from the RC remain operational even if Joystick is controlling.
 The RP can gain/release control by using button A from the Joystick.
 
@@ -53,8 +53,6 @@ This is done by creating two new types of topic, manual_control_setpoint_rc and 
 previously they both used multi topic standard_manual_control.
 
 Now the ob_manual_control module select one originator (RC/Mav) depending on the switch and forwards it on as the standard manual_control_Setpoint messages.
-
-BThe variable buttons of MANUAL_CONTROL, bits 12,13 contain who is actually in control (RC =1 or 2-5 Mavlink instance).
 
 Have also added the Status of comms sent through VEHICLE_STATUS error_count1, error_count2, etc
 
