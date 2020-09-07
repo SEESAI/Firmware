@@ -84,6 +84,7 @@ px4_add_board(
 		vmount
 		vtol_att_control
 		airspeed_selector
+		ob_manual_control
 
 	SYSTEMCMDS
 		bl_update

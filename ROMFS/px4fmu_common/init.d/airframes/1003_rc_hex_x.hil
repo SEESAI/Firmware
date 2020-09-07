@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# @name HIL Hexacopter X
+#
+# @type Simulation
+# @class Copter
+#
+# @maintainer Eduardo Aldaz <ealdaz@sees.ai>
+#
+
+sh /etc/init.d/rc.mc_defaults
+
+set MIXER hexa_x
+set PWM_OUT 12345678
+
+param set SYS_HITL 1

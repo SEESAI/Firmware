@@ -62,3 +62,8 @@ mc_pos_control start
 # Start Multicopter Land Detector.
 #
 land_detector start multicopter
+
+#
+# Start Observer Manual Control module
+#
+ob_manual_control start

@@ -1901,6 +1901,11 @@ MavlinkReceiver::handle_message_manual_control(mavlink_message_t *msg)
 		manual.z = man.z / 1000.0f;
 		manual.data_source = manual_control_setpoint_s::SOURCE_MAVLINK_0 + _mavlink->get_instance_id();
 
+		manual.transition_switch = man.buttons & 0x1;  // Buttons are not captured by PX4 as they are not used. We (sees.ai) use them
+							 // to select who controls the drone (RC or Joystick thru mavlink)
+							 // This is mapped to button 1 in the Joystick
+
+
 		_manual_pub.publish(manual);
 	}
 }
