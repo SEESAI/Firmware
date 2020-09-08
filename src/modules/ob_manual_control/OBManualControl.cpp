@@ -173,7 +173,7 @@ void OBManualControl::run()
 	_manual_control_sub_mav = orb_subscribe(ORB_ID(manual_control_setpoint_mav));
 	_manual_control_sub_rc = orb_subscribe(ORB_ID(manual_control_setpoint_rc));
 
-	px4_pollfd_struct_t fds[1];
+	px4_pollfd_struct_t fds[2];
 	fds[0].fd = _manual_control_sub_mav;
 	fds[0].events = POLLIN;
 	fds[1].fd = _manual_control_sub_rc;
