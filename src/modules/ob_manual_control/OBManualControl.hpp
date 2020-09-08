@@ -39,7 +39,7 @@
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/PublicationMulti.hpp>
-
+#include <systemlib/mavlink_log.h>
 
 extern "C" __EXPORT int ob_manual_control_main(int argc, char *argv[]);
 
@@ -89,6 +89,8 @@ private:
 	uORB::PublicationMulti<manual_control_setpoint_s> 	_manual_control_sub{ORB_ID(manual_control_setpoint), ORB_PRIO_DEFAULT}; /**< notification of manual control updates coming from mavlink */
 
 	enum State {RC_CONTROL, MAV_CONTROL} _state{MAV_CONTROL};
+
+	orb_advert_t           _mavlink_log_pub{nullptr};
 
 
 

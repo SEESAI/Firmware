@@ -203,6 +203,7 @@ void OBManualControl::run()
 			case RC_CONTROL: {
 					if (switch_toggled) {
 						PX4_INFO("Switching to Mav control");
+						mavlink_log_warning(&_mavlink_log_pub, "Switching to Mav control");
 						_state = MAV_CONTROL;
 						break; // Exit immediately
 					}
@@ -218,6 +219,7 @@ void OBManualControl::run()
 			case MAV_CONTROL: {
 					if (switch_toggled) {
 						PX4_INFO("Switching to RC control");
+						mavlink_log_warning(&_mavlink_log_pub, "Switching to RC control");
 						_state = RC_CONTROL;
 						break; // Exit immediately
 					}
