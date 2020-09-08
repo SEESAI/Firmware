@@ -179,6 +179,8 @@ void OBManualControl::run()
 	fds[1].fd = _manual_control_sub_rc;
 	fds[1].events = POLLIN;
 
+	mavlink_log_warning(&_mavlink_log_pub, "Starting in Mav Joystick control");
+
 	while (!should_exit()) {
 
 		// wait for up to 1000ms for data
@@ -202,8 +204,8 @@ void OBManualControl::run()
 			switch (_state) { // State is indirectly shown on manual_control_setpoint.data_source . 1 For RC , 2-5 for Mavlink
 			case RC_CONTROL: {
 					if (switch_toggled) {
-						PX4_INFO("Switching to Mav control");
-						mavlink_log_warning(&_mavlink_log_pub, "Switching to Mav control");
+						//PX4_INFO("Switching to Mav control");
+						mavlink_log_warning(&_mavlink_log_pub, "Switching to Mav Joystick control");
 						_state = MAV_CONTROL;
 						break; // Exit immediately
 					}
@@ -218,7 +220,7 @@ void OBManualControl::run()
 
 			case MAV_CONTROL: {
 					if (switch_toggled) {
-						PX4_INFO("Switching to RC control");
+						//PX4_INFO("Switching to RC control");
 						mavlink_log_warning(&_mavlink_log_pub, "Switching to RC control");
 						_state = RC_CONTROL;
 						break; // Exit immediately
