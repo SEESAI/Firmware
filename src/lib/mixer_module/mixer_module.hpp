@@ -51,6 +51,8 @@
 #include <uORB/topics/multirotor_motor_limits.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/test_motor.h>
+#include <uORB/topics/manual_control_setpoint.h>
+#include <systemlib/mavlink_log.h>
 
 
 /**
@@ -278,4 +280,11 @@ private:
 		(ParamInt<px4::params::MOT_ORDERING>) _param_mot_ordering
 
 	)
+
+	// Subscribe to RC Tx to detect if the stop motor switch has been pressed
+	uORB::Subscription _manual_control_sub_rc{ORB_ID(manual_control_setpoint_rc)};
+	manual_control_setpoint_s	_manual_control_setpoint_rc{};
+
+	orb_advert_t           _mavlink_log_pub{nullptr};
+
 };

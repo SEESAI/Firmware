@@ -73,6 +73,9 @@ _control_latency_perf(perf_alloc(PC_ELAPSED, "control latency"))
 	uORB::PublicationQueued<test_motor_s> test_motor_pub{ORB_ID(test_motor)};
 	test_motor_pub.publish(test);
 	_motor_test.test_motor_sub.subscribe();
+
+	// Add RC topic so we can read switch to disable motor
+	_manual_control_sub_rc.subscribe();
 }
 
 MixingOutput::~MixingOutput()
@@ -365,6 +368,18 @@ bool MixingOutput::update()
 	reorderOutputs(_current_output_value);
 
 	/* now return the outputs to the driver */
+
+	//Edu: Disable first motor if RC switch is on
+	// In order for PX4 to use this module we have to disable the IO processor
+	// by setting Parameter SYS_USE_IO to False
+
+	_manual_control_sub_rc.update(&_manual_control_setpoint_rc); // Update reading
+	if(_manual_control_setpoint_rc.gear_switch == _manual_control_setpoint_rc.SWITCH_POS_ON)
+	{
+		mavlink_log_warning(&_mavlink_log_pub, "Motor 0 Disabled");
+		_current_output_value[0]= 900;
+	}
+
 	if (_interface.updateOutputs(stop_motors, _current_output_value, mixed_num_outputs, n_updates)) {
 		actuator_outputs_s actuator_outputs{};
 		setAndPublishActuatorOutputs(mixed_num_outputs, actuator_outputs);
