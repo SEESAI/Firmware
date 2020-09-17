@@ -194,32 +194,77 @@ float MultirotorMixer::compute_desaturation_gain(const float *desaturation_vecto
 	float k_min = 0.f;
 	float k_max = 0.f;
 
-	for (unsigned i = 0; i < _rotor_count; i++) {
-		// Avoid division by zero. If desaturation_vector[i] is zero, there's nothing we can do to unsaturate anyway
-		if (fabsf(desaturation_vector[i]) < FLT_EPSILON) {
-			continue;
+	if (_rotor_count < 6) {
+		// If we're a quad then we saturate on the most extreme motor
+
+		for (unsigned i = 0; i < _rotor_count; i++) {
+			// Avoid division by zero. If desaturation_vector[i] is zero, there's nothing we can do to unsaturate anyway
+			if (fabsf(desaturation_vector[i]) < FLT_EPSILON) {
+				continue;
+			}
+
+			if (outputs[i] < min_output) {
+				float k = (min_output - outputs[i]) / desaturation_vector[i];
+
+				if (k < k_min) { k_min = k; }
+
+				if (k > k_max) { k_max = k; }
+
+				sat_status.flags.motor_neg = true;
+			}
+
+			if (outputs[i] > max_output) {
+				float k = (max_output - outputs[i]) / desaturation_vector[i];
+
+				if (k < k_min) { k_min = k; }
+
+				if (k > k_max) { k_max = k; }
+
+				sat_status.flags.motor_pos = true;
+			}
 		}
+	} else {
+		// If we have more than 5 rotors then we can saturate on the 2nd most extreme (allows for motor failure to be caught)
+		float k_min2 = 0.f;
+		float k_max2 = 0.f;
 
-		if (outputs[i] < min_output) {
-			float k = (min_output - outputs[i]) / desaturation_vector[i];
+		for (unsigned i = 0; i < _rotor_count; i++) {
+			// Avoid division by zero. If desaturation_vector[i] is zero, there's nothing we can do to unsaturate anyway
+			if (fabsf(desaturation_vector[i]) < FLT_EPSILON) {
+				continue;
+			}
 
-			if (k < k_min) { k_min = k; }
+			if (outputs[i] < min_output) {
+				float k = (min_output - outputs[i]) / desaturation_vector[i];
 
-			if (k > k_max) { k_max = k; }
+				if (k < k_min) {
+					k_min2 = k_min;
+					k_min = k;
+				} else if (k < k_min2) {
+					kmin2 = k;
+				}
 
-			sat_status.flags.motor_neg = true;
+				sat_status.flags.motor_neg = true;
+			}
+
+			if (outputs[i] > max_output) {
+				float k = (max_output - outputs[i]) / desaturation_vector[i];
+
+				if (k > k_max) {
+					k_max2 = k_max;
+					k_max = k;
+				} else if (k > k_max2) {
+					kmax2 = k;
+				}
+
+				sat_status.flags.motor_pos = true;
+			}
 		}
-
-		if (outputs[i] > max_output) {
-			float k = (max_output - outputs[i]) / desaturation_vector[i];
-
-			if (k < k_min) { k_min = k; }
-
-			if (k > k_max) { k_max = k; }
-
-			sat_status.flags.motor_pos = true;
-		}
+		// Take the 2nd most saturated values
+		k_min = kmin2;
+		k_max = kmax2;
 	}
+
 
 	// Reduce the saturation as much as possible
 	return k_min + k_max;
