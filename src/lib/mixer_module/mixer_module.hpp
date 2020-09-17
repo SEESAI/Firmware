@@ -285,6 +285,6 @@ private:
 	uORB::Subscription _manual_control_sub_rc{ORB_ID(manual_control_setpoint_rc)};
 	manual_control_setpoint_s	_manual_control_setpoint_rc{};
 
-	orb_advert_t           _mavlink_log_pub{nullptr};
+	orb_advert_t           _mavlink_log_pub{nullptr}; // To send warning through mavlink
 
 };

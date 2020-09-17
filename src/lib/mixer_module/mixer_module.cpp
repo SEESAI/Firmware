@@ -372,6 +372,7 @@ bool MixingOutput::update()
 	//Edu: Disable first motor if RC switch is on
 	// In order for PX4 to use this module we have to disable the IO processor
 	// by setting Parameter SYS_USE_IO to False
+	// Also need to map a RC switch to control gear_switch
 
 	_manual_control_sub_rc.update(&_manual_control_setpoint_rc); // Update reading
 	if(_manual_control_setpoint_rc.gear_switch == _manual_control_setpoint_rc.SWITCH_POS_ON)
