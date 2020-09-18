@@ -244,12 +244,25 @@ float MultirotorMixer::compute_desaturation_gain(const float *desaturation_vecto
 					k_max2 = k;
 				}
 
+				if (k < k_min) {
+					k_min2 = k_min;
+					k_min = k;
+				} else if (k < k_min2) {
+					k_min2 = k;
+				}
 
 				sat_status.flags.motor_neg = true;
 			}
 
 			if (outputs[i] > max_output) {
 				float k = (max_output - outputs[i]) / desaturation_vector[i];
+
+				if (k > k_max) {
+					k_max2 = k_max;
+					k_max = k;
+				} else if (k > k_max2) {
+					k_max2 = k;
+				}
 
 				if (k < k_min) {
 					k_min2 = k_min;
