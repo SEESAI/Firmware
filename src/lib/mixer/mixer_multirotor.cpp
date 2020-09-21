@@ -347,11 +347,14 @@ void MultirotorMixer::mix_airmode_rpy(float roll, float pitch, float yaw, float 
 
 	// Unsaturate yaw (in case upper and lower bounds are exceeded)
 	// to prioritize roll/pitch over yaw.
+	/* Temp removed 21 Sep 2020 - RH
 	for (unsigned i = 0; i < _rotor_count; i++) {
 		_tmp_array[i] = _rotors[i].yaw_scale;
 	}
 
 	minimize_saturation(_tmp_array, outputs, _saturation_status);
+	*/
+
 }
 
 void MultirotorMixer::mix_airmode_disabled(float roll, float pitch, float yaw, float thrust, float *outputs)
