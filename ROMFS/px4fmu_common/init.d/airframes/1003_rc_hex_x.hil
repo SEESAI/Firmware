@@ -1,11 +1,11 @@
 #!/bin/sh
 #
-# @name HIL Quadcopter X
+# @name HIL Hexacopter X
 #
 # @type Simulation
 # @class Copter
 #
-# @maintainer Lorenz Meier <lorenz@px4.io>
+# @maintainer Eduardo Aldaz <ealdaz@sees.ai>
 #
 
 sh /etc/init.d/rc.mc_defaults
