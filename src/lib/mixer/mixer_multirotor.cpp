@@ -293,7 +293,7 @@ void MultirotorMixer::mix_airmode_sees(float roll, float pitch, float yaw, float
 	// Unsaturate on thrust, also ignoring the fastest motor
 	// to prioritize roll/pitch over thrust
 	for (unsigned i = 0; i < _rotor_count; i++) {
-		_tmp_array[i] = _rotors[i].yaw_scale;
+		_tmp_array[i] = _rotors[i].thrust_scale;
 	}
 
 	minimize_saturation(_tmp_array, outputs, _saturation_status, 0.0, 1.0, false, true);
