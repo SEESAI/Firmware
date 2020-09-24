@@ -747,7 +747,7 @@ private:
 	 * @return desaturation gain
 	 */
 	float compute_desaturation_gain(const float *desaturation_vector, const float *outputs, saturation_status &sat_status,
-					float min_output, float max_output) const;
+					float min_output, float max_output, bool ignore_fastest = false) const;
 
 	/**
 	 * Minimize the saturation of the actuators by adding or substracting a fraction of desaturation_vector.
@@ -766,9 +766,20 @@ private:
 	 * @param min_output minimum desired value in outputs
 	 * @param max_output maximum desired value in outputs
 	 * @param reduce_only if true, only allow to reduce (substract) a fraction of desaturation_vector
+	 * @param ignore_fastest if true, and more than 4 rotors, then fastest is ignored (maintains stability in motor failure)
 	 */
 	void minimize_saturation(const float *desaturation_vector, float *outputs, saturation_status &sat_status,
-				 float min_output = 0.f, float max_output = 1.f, bool reduce_only = false) const;
+				 float min_output = 0.f, float max_output = 1.f, bool reduce_only = false, bool ignore_fastest = false) const;
+
+	/**
+	 * Mix roll, pitch, yaw, thrust and set the outputs vector.
+	 *
+	 * Desaturation behavior: full airmode for roll/pitch/yaw:
+	 * Fastest output is ignored in order to allow for motor failre.
+	 * Priority is given to roll & pitch first, then thrust, then yaw
+	 * If a motor fails drone may become unstable in yaw, but will maintain altitude and stability alloiwing safe landing
+	 */
+	inline void mix_airmode_sees(float roll, float pitch, float yaw, float thrust, float *outputs);
 
 	/**
 	 * Mix roll, pitch, yaw, thrust and set the outputs vector.

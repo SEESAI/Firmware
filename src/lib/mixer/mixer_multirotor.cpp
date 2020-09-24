@@ -189,90 +189,54 @@ MultirotorMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handl
 }
 
 float MultirotorMixer::compute_desaturation_gain(const float *desaturation_vector, const float *outputs,
-		saturation_status &sat_status, float min_output, float max_output) const
+		saturation_status &sat_status, float min_output, float max_output, bool ignore_fastest) const
 {
 	float k_min = 0.f;
 	float k_max = 0.f;
 
-	if (_rotor_count < 6) {
-		// If we're a quad then we saturate on the most extreme motor
+	// only ignore fastest if enough rotors to do so
+	ignore_fastest &= _rotor_count > 4;
 
+	unsigned rotor_fastest = 0;
+	if (ignore_fastest) {
+		// Find the fastest rotor (we ignore later)
+		float output_fastest = outputs[0];
 		for (unsigned i = 0; i < _rotor_count; i++) {
-			// Avoid division by zero. If desaturation_vector[i] is zero, there's nothing we can do to unsaturate anyway
-			if (fabsf(desaturation_vector[i]) < FLT_EPSILON) {
-				continue;
-			}
-
-			if (outputs[i] < min_output) {
-				float k = (min_output - outputs[i]) / desaturation_vector[i];
-
-				if (k < k_min) { k_min = k; }
-
-				if (k > k_max) { k_max = k; }
-
-				sat_status.flags.motor_neg = true;
-			}
-
-			if (outputs[i] > max_output) {
-				float k = (max_output - outputs[i]) / desaturation_vector[i];
-
-				if (k < k_min) { k_min = k; }
-
-				if (k > k_max) { k_max = k; }
-
-				sat_status.flags.motor_pos = true;
+			if (outputs[i] > output_fastest) {
+				output_fastest = outputs[i];
+				rotor_fastest = i;
 			}
 		}
-	} else {
-		// If we have more than 5 rotors then we can saturate on the 2nd most extreme (allows for motor failure to be caught)
+	}
 
-		// Find the fastest and slowest rotors (we'll ignore these later)
-		unsigned rotor_slowest = 0;
-		unsigned rotor_fastest = 0;
-		{
-			float output_slowest = outputs[0];
-			float output_fastest = outputs[0];
-			for (unsigned i = 1; i < _rotor_count; i++) {
-				if (outputs[i] < output_slowest) {
-					output_slowest = outputs[i];
-					rotor_slowest = i;
-				}
-				if (outputs[i] > output_fastest) {
-					output_fastest = outputs[i];
-					rotor_fastest = i;
-				}
-			}
+	for (unsigned i = 0; i < _rotor_count; i++) {
+		// Avoid division by zero. If desaturation_vector[i] is zero, there's nothing we can do to unsaturate anyway
+		if (fabsf(desaturation_vector[i]) < FLT_EPSILON) {
+			continue;
+		}
+		// Optionally ignore the fastest (to allow for motor failure)
+		if (ignore_fastest && i == rotor_fastest) {
+			continue;
 		}
 
-		for (unsigned i = 0; i < _rotor_count; i++) {
-			// Avoid division by zero. If desaturation_vector[i] is zero, there's nothing we can do to unsaturate anyway
-			if (fabsf(desaturation_vector[i]) < FLT_EPSILON) {
-				continue;
-			}
-			// Ignore the fastest and slowest (to allow for motor failure)
-			if (i == rotor_slowest || i == rotor_fastest) {
-				continue;
-			}
+		if (outputs[i] < min_output) {
+			float k = (min_output - outputs[i]) / desaturation_vector[i];
 
-			if (outputs[i] < min_output) {
-				float k = (min_output - outputs[i]) / desaturation_vector[i];
+			if (k < k_min) { k_min = k; }
 
-				if (k < k_min) { k_min = k; }
+			if (k > k_max) { k_max = k; }
 
-				if (k > k_max) { k_max = k; }
+			sat_status.flags.motor_neg = true;
+		}
 
-				sat_status.flags.motor_neg = true;
-			}
+		if (outputs[i] > max_output) {
+			float k = (max_output - outputs[i]) / desaturation_vector[i];
 
-			if (outputs[i] > max_output) {
-				float k = (max_output - outputs[i]) / desaturation_vector[i];
+			if (k < k_min) { k_min = k; }
 
-				if (k < k_min) { k_min = k; }
+			if (k > k_max) { k_max = k; }
 
-				if (k > k_max) { k_max = k; }
-
-				sat_status.flags.motor_pos = true;
-			}
+			sat_status.flags.motor_pos = true;
 		}
 	}
 
@@ -283,9 +247,9 @@ float MultirotorMixer::compute_desaturation_gain(const float *desaturation_vecto
 
 void MultirotorMixer::minimize_saturation(const float *desaturation_vector, float *outputs,
 		saturation_status &sat_status,
-		float min_output, float max_output, bool reduce_only) const
+		float min_output, float max_output, bool reduce_only, bool ignore_fastest) const
 {
-	float k1 = compute_desaturation_gain(desaturation_vector, outputs, sat_status, min_output, max_output);
+	float k1 = compute_desaturation_gain(desaturation_vector, outputs, sat_status, min_output, max_output, ignore_fastest);
 
 	if (reduce_only && k1 > 0.f) {
 		return;
@@ -298,11 +262,42 @@ void MultirotorMixer::minimize_saturation(const float *desaturation_vector, floa
 	// Compute the desaturation gain again based on the updated outputs.
 	// In most cases it will be zero. It won't be if max(outputs) - min(outputs) > max_output - min_output.
 	// In that case adding 0.5 of the gain will equilibrate saturations.
-	float k2 = 0.5f * compute_desaturation_gain(desaturation_vector, outputs, sat_status, min_output, max_output);
+	float k2 = 0.5f * compute_desaturation_gain(desaturation_vector, outputs, sat_status, min_output, max_output, ignore_fastest);
 
 	for (unsigned i = 0; i < _rotor_count; i++) {
 		outputs[i] += k2 * desaturation_vector[i];
 	}
+}
+
+void MultirotorMixer::mix_airmode_sees(float roll, float pitch, float yaw, float thrust, float *outputs)
+{
+	// Airmode for roll, pitch and yaw
+	// Fastest output is ignored in order to allow for motor failre.
+	// Priority is then given to roll & pitch first, then thrust, then yaw last
+	// If a motor fails, drone may end up spinning in yaw, but will maintain roll/pitch and altitude
+
+	// Do full mixing
+	for (unsigned i = 0; i < _rotor_count; i++) {
+		outputs[i] = roll * _rotors[i].roll_scale +
+			     pitch * _rotors[i].pitch_scale +
+			     yaw * _rotors[i].yaw_scale +
+			     thrust * _rotors[i].thrust_scale;
+
+		_tmp_array[i] = _rotors[i].yaw_scale;
+	}
+
+	// Unsaturate on yaw, ignoring the fastest motor
+	// to prioritise roll/pitch & thrust over yaw
+	minimize_saturation(_tmp_array, outputs, _saturation_status, 0.0, 1.0, false, true);
+
+	// Unsaturate on thrust, also ignoring the fastest motor
+	// to prioritize roll/pitch over thrust
+	for (unsigned i = 0; i < _rotor_count; i++) {
+		_tmp_array[i] = _rotors[i].yaw_scale;
+	}
+
+	minimize_saturation(_tmp_array, outputs, _saturation_status, 0.0, 1.0, false, true);
+
 }
 
 void MultirotorMixer::mix_airmode_rp(float roll, float pitch, float yaw, float thrust, float *outputs)
@@ -417,7 +412,7 @@ MultirotorMixer::mix(float *outputs, unsigned space)
 
 	float roll    = math::constrain(get_control(0, 0) * _roll_scale, -1.0f, 1.0f);
 	float pitch   = math::constrain(get_control(0, 1) * _pitch_scale, -1.0f, 1.0f);
-	float yaw     = math::constrain(get_control(0, 2) * _yaw_scale, -0.33f, 0.33f);
+	float yaw     = math::constrain(get_control(0, 2) * _yaw_scale, -1.0f, 1.0f);
 	float thrust  = math::constrain(get_control(0, 3), 0.0f, 1.0f);
 
 	// clean out class variable used to capture saturation
@@ -430,7 +425,9 @@ MultirotorMixer::mix(float *outputs, unsigned space)
 		break;
 
 	case Airmode::roll_pitch_yaw:
-		mix_airmode_rpy(roll, pitch, yaw, thrust, outputs);
+		// Note - hijacking this for now, if it works we'll give it its own function RH 24/9/20
+		mix_airmode_sees(roll, pitch, yaw, thrust, outputs);
+		// mix_airmode_rpy(roll, pitch, yaw, thrust, outputs);
 		break;
 
 	case Airmode::disabled:
