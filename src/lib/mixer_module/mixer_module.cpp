@@ -369,16 +369,17 @@ bool MixingOutput::update()
 
 	/* now return the outputs to the driver */
 
-	//Edu: Disable first motor if RC switch is on
+	// Edu: Disable first motor if RC switch is on
 	// In order for PX4 to use this module we have to disable the IO processor
 	// by setting Parameter SYS_USE_IO to False
 	// Also need to map a RC switch to control gear_switch
+	const uint8_t DISABLE_MOTOR_NBER = 3;
 
 	_manual_control_sub_rc.update(&_manual_control_setpoint_rc); // Update reading
 	if(_manual_control_setpoint_rc.gear_switch == _manual_control_setpoint_rc.SWITCH_POS_ON)
 	{
-		mavlink_log_warning(&_mavlink_log_pub, "Motor 0 Disabled");
-		_current_output_value[0]= 900;
+		mavlink_log_warning(&_mavlink_log_pub, "Motor %d Disabled", DISABLE_MOTOR_NBER+1);
+		_current_output_value[DISABLE_MOTOR_NBER]= 900;  // 0
 	}
 
 	if (_interface.updateOutputs(stop_motors, _current_output_value, mixed_num_outputs, n_updates)) {
