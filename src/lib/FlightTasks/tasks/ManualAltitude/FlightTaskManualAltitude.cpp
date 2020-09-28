@@ -302,6 +302,9 @@ void FlightTaskManualAltitude::_updateHeadingSetpoints()
 			_yaw_setpoint = _yaw;
 		}
 	}
+	// no fixed heading at any time (Sees Test 28/9/20)
+	_yaw_setpoint = NAN;
+
 }
 
 void FlightTaskManualAltitude::_ekfResetHandlerHeading(float delta_psi)
