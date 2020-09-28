@@ -421,7 +421,10 @@ MultirotorMixer::mix(float *outputs, unsigned space)
 	// Do the mixing using the strategy given by the current Airmode configuration
 	switch (_airmode) {
 	case Airmode::roll_pitch:
-		mix_airmode_rp(roll, pitch, yaw, thrust, outputs);
+		// Note - hijacking this for now, if it works we'll give it its own function RH 24/9/20
+		yaw     = math::constrain(yaw, -0.3f, 0.3f);
+		mix_airmode_sees(roll, pitch, yaw, thrust, outputs);
+		// mix_airmode_rp(roll, pitch, yaw, thrust, outputs);
 		break;
 
 	case Airmode::roll_pitch_yaw:
