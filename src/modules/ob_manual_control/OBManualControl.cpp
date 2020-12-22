@@ -249,11 +249,25 @@ void OBManualControl::run()
 // directly through appropiate mavlink commnads from QGC
 void OBManualControl::UseRCSetpoints(manual_control_setpoint_s *manual_control_setpoint_rc, manual_control_setpoint_s *manual_control_setpoint)
 {
-	// Signal coming from both
-	manual_control_setpoint->kill_switch = manual_control_setpoint_rc->kill_switch;
-
 	// Joystick (mav) doesn't set any of the mode switches in manual_control, it's QGC that sends the necessery modes directly
 	// through the relevant mavlink message. So use those of the RC instead so that RC can control modes even when joystick in control.
+
+	// We enable Kill at any time from the RC
+	manual_control_setpoint->kill_switch = manual_control_setpoint_rc->kill_switch;
+
+	// The following are not currently used, but could be. If we do not explicitly assign them a value when in Mav Joystick mode they
+	// are set to zero (default value in Mav mode as they are not used). If they had a different value in RC this will be detected
+	// as a switch transition (This happened with the Offboard switch which is set to 3 by Herelink, and was been set to zero by Mav
+	// causing an Offboard swith transition to be detected)
+
+	manual_control_setpoint->return_switch =  manual_control_setpoint_rc->return_switch;
+	manual_control_setpoint->offboard_switch =  manual_control_setpoint_rc->offboard_switch;
+	manual_control_setpoint->gear_switch =  manual_control_setpoint_rc->gear_switch;
+	manual_control_setpoint->loiter_switch =  manual_control_setpoint_rc->loiter_switch;
+
+	// The following switches will never be enabled so ignore them
+	// rattitude_switch, posctl_switch, acro_switch , arm_switch , mode_slot, data_source, stab_switch, man_switch;
+
 	manual_control_setpoint->mode_switch = manual_control_setpoint_rc->mode_switch;
 	if(manual_control_setpoint->mode_switch == 0){
 		// Mode selection done  by a single channel
