@@ -86,6 +86,7 @@ fi
 # shellcheck disable=SC2154
 param set MAV_SYS_ID $((px4_instance+1))
 simulator_tcp_port=$((4560+px4_instance))
+simulator_udp_port=$((14560+px4_instance))
 udp_offboard_port_local=$((14580+px4_instance))
 udp_offboard_port_remote=$((14540+px4_instance))
 udp_gcs_port_local=$((14570+px4_instance))
@@ -205,7 +206,8 @@ sh "$autostart_file"
 
 dataman start
 replay tryapplyparams
-simulator start -c $simulator_tcp_port
+# simulator start -c $simulator_tcp_port
+simulator start -s -u $simulator_udp_port
 tone_alarm start
 gpssim start
 sensors start
