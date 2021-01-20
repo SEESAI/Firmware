@@ -85,6 +85,7 @@ fi
 # multi-instance setup
 # shellcheck disable=SC2154
 param set MAV_SYS_ID $((px4_instance+1))
+param set MAV_BROADCAST 1
 simulator_tcp_port=$((4560+px4_instance))
 simulator_udp_port=$((14560+px4_instance))
 udp_offboard_port_local=$((14580+px4_instance))
@@ -245,7 +246,7 @@ mavlink stream -r 20 -s RC_CHANNELS -u $udp_gcs_port_local
 mavlink stream -r 10 -s OPTICAL_FLOW_RAD -u $udp_gcs_port_local
 
 # API/Offboard link
-mavlink start -x -u $udp_offboard_port_local -r 4000000 -m onboard -o $udp_offboard_port_remote
+mavlink start -x -u $udp_offboard_port_local -r 4000000 -m onboard -t 192.168.0.22 -o $udp_offboard_port_remote
 
 # execute autostart post script if any
 [ -e "$autostart_file".post ] && sh "$autostart_file".post
