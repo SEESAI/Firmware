@@ -180,13 +180,17 @@ fi
 if [ "$PX4_USE_EXTERNAL_POSE" = 1 ]; then
 	echo "Using external position source, set EKF2_AID_MASK 8"
 	param set EKF2_AID_MASK 8
+	# param set LPE_FUSION 2
 else
+	param set EKF2_AID_MASK 1
 	echo "Not using External Position"
 fi
 
-if [ "$PX4_DISABLE_GQC" = 1 ]; then
+if [ "$PX4_DISABLE_FAILSAFE" = 1 ]; then
 	echo "Disable Failsafe check"
-	param set NAV_DLL_ACT 8
+	param set NAV_DLL_ACT 0
+	param set NAV_RCL_ACT 0
+	param set NAV_TRAFF_AVOID 0
 else
 	echo "Not using External Position"
 fi
