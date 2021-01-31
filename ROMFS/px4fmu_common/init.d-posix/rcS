@@ -7,8 +7,14 @@
 
 SCRIPT_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 
+PX4_ESTIMATOR="ekf2"
+PX4_DISABLE_FAILSAFE=1            # When present, will disable failsafe datalink check
+PX4_USE_EXTERNAL_POSE=1    		  # when present, will require position from SLAM
+# export PX4_USE_TCP=1                # udp / tcp
 MAVSDK_SERVER_IP="$(host mavsdk-server | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b')"
-echo "MAVSDK_SERVER_IP: ${MAVSDK_SERVER_IP}"
+echo "MAVSDK_SERVER_IP XXX: ${MAVSDK_SERVER_IP}"
+echo "PX4_SIM_MODEL: $PX4_SIM_MODEL"
+echo "PX4_ESTIMATOR: $PX4_ESTIMATOR"
 
 #
 # Main SITL startup script
@@ -18,6 +24,7 @@ echo "MAVSDK_SERVER_IP: ${MAVSDK_SERVER_IP}"
 # shellcheck disable=SC2154
 if [ "$replay_mode" = "ekf2" ]
 then
+	echo "replay"
 	sh etc/init.d-posix/rc.replay
 	exit 0
 fi
@@ -66,7 +73,6 @@ fi
 # exit early when the minimal shell is requested
 [ $RUN_MINIMAL_SHELL = yes ] && exit 0
 
-echo "PX4_ESTIMATOR: $PX4_ESTIMATOR"
 # Use environment variable PX4_ESTIMATOR to choose estimator.
 if [ "$PX4_ESTIMATOR" = "q" ]; then
 	param set SYS_MC_EST_GROUP 3
@@ -283,7 +289,7 @@ mavlink stream -r 10 -s OPTICAL_FLOW_RAD -u $udp_gcs_port_local
 
 # API/Offboard link
 # find port of container
-echo "MAVSKD_SERVER_IP: ${MAVSDK_SERVER_IP}"
+echo "MAVSKD_SERVER_IP XXX: ${MAVSDK_SERVER_IP}"
 mavlink start -x -u $udp_offboard_port_local -r 4000000 -m onboard -t ${MAVSDK_SERVER_IP} -o $udp_offboard_port_remote
 
 # execute autostart post script if any
