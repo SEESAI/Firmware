@@ -52,7 +52,7 @@ void RateControl::setDTermCutoff(const float loop_rate, const float cutoff, cons
 	// only do expensive filter update if the cutoff changed
 	if (force || fabsf(_lp_filters_d.get_cutoff_freq() - cutoff) > 0.01f) {
 		_lp_filters_d.set_cutoff_frequency(loop_rate, cutoff);
-		_lp_filters_d.reset(_rate_prev);
+		_lp_filters_d.reset(_rate_d_filtered);
 	}
 }
 
@@ -71,19 +71,21 @@ Vector3f RateControl::update(const Vector3f rate, const Vector3f rate_sp, const 
 	// angular rates error
 	Vector3f rate_error = rate_sp - rate;
 
-	// prepare D-term based on low-pass filtered rates
-	Vector3f rate_filtered(_lp_filters_d.apply(rate));
+	// prepare D-term
 	Vector3f rate_d;
 
 	if (dt > FLT_EPSILON) {
-		rate_d = (rate_filtered - _rate_prev_filtered) / dt;
+		rate_d = (rate - _rate_prev) / dt;
 	}
 
+	// (RH 24 Feb 2021) Apply D term filter after rate calculation to smooth out peaks from dt-inconsistency
+	Vector3f rate_d_filtered(_lp_filters_d.apply(rate_d));
+
 	// PID control with feed forward
-	Vector3f torque = _gain_p.emult(rate_error) + _rate_int - _gain_d.emult(rate_d) + _gain_ff.emult(rate_sp);
+	Vector3f torque = _gain_p.emult(rate_error) + _rate_int - _gain_d.emult(rate_d_filtered) + _gain_ff.emult(rate_sp);
 
 	_rate_prev = rate;
-	_rate_prev_filtered = rate_filtered;
+	_rate_d_prev_filtered = rate_d_filtered;
 
 	// update integral only if we are not landed
 	if (!landed) {
