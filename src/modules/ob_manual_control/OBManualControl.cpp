@@ -55,9 +55,9 @@ Note: The switches on the RC Tx are mapped to manual_control_setpoint individual
 
 #include "OBManualControl.hpp"
 
-#include <px4_getopt.h>
-#include <px4_log.h>
-#include <px4_posix.h>
+#include <px4_platform_common/getopt.h>
+#include <px4_platform_common/log.h>
+#include <px4_platform_common/posix.h>
 
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/manual_control_setpoint.h>
