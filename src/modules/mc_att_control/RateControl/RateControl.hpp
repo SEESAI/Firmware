@@ -119,6 +119,7 @@ private:
 
 	// States
 	matrix::Vector3f _rate_prev; ///< angular rates of previous update
+	matrix::Vector3f _rate_d_filtered; ///< low-pass filtered angular rates derivative of current update
 	matrix::Vector3f _rate_d_prev_filtered; ///< low-pass filtered angular rates derivative of previous update
 	matrix::Vector3f _rate_int; ///< integral term of the rate controller
 	math::LowPassFilter2pVector3f _lp_filters_d{0.f, 0.f}; ///< low-pass filters for D-term (roll, pitch & yaw)
