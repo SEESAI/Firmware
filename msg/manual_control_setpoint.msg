@@ -47,3 +47,4 @@ float32 aux4			 # default function: camera roll
 float32 aux5			 # default function: payload drop
 float32 aux6
 
+# TOPICS manual_control_setpoint manual_control_setpoint_rc manual_control_setpoint_mav

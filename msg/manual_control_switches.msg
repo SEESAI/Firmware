@@ -34,3 +34,4 @@ uint8 stab_switch                # stabilize switch (only relevant for fixed win
 uint8 posctl_switch              # position control 2 position switch (optional): _ALTCTL_, POSCTL
 
 uint32 switch_changes            # number of switch changes
+# TOPICS manual_control_switches manual_control_switches_rc manual_control_switches_mav
