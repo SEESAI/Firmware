@@ -160,8 +160,8 @@ OBManualControl::OBManualControl(int example_param, bool example_flag)
 void OBManualControl::run()
 {
 	// Run the loop synchronized to the manual_control_setpoint topic publication
-	_manual_control_sub_mav = orb_subscribe(ORB_ID(manual_control_setpoint_mav));
-	_manual_control_sub_rc = orb_subscribe(ORB_ID(manual_control_setpoint_rc));
+	_manual_control_sub_mav = orb_subscribe(ORB_ID(manual_control_switches_mav));
+	_manual_control_sub_rc = orb_subscribe(ORB_ID(manual_control_switches_rc));
 
 	px4_pollfd_struct_t fds[2];
 	fds[0].fd = _manual_control_sub_mav;
@@ -186,10 +186,10 @@ void OBManualControl::run()
 			continue;
 
 		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN) {
-			orb_copy(ORB_ID(manual_control_setpoint_rc), _manual_control_sub_rc, &_manual_control_setpoint_rc);
-			orb_copy(ORB_ID(manual_control_setpoint_mav), _manual_control_sub_mav, &_manual_control_setpoint_mav);
+			orb_copy(ORB_ID(_manual_control_switches_rc), _manual_control_sub_rc, &_manual_control_switches_rc);
+			orb_copy(ORB_ID(manual_control_setpoint_mav), _manual_control_sub_mav, &_manual_control_switches_mav);
 
-			bool switch_toggled = SwitchToggled(&_manual_control_setpoint_rc, &_manual_control_setpoint_mav);
+			bool switch_toggled = SwitchToggled(&_manual_control_switches_rc, &_manual_control_switches_mav);
 
 			switch (_state) { // State is indirectly shown on manual_control_setpoint.data_source . 1 For RC , 2-5 for Mavlink
 			case RC_CONTROL: {
@@ -200,11 +200,11 @@ void OBManualControl::run()
 						break; // Exit immediately
 					}
 
-					_manual_control_setpoint = _manual_control_setpoint_rc; // First fill with rc as default
+					_manual_control_switches = _manual_control_switches_rc; // First fill with rc as default
 					 // The transition_switch is not used in PX4 MC, but set it to zero as an extra precaution
 					_manual_control_switches.transition_switch = 0; // Used to toggle from RC to Joystick
 
-					_manual_control_sub.publish(_manual_control_setpoint);
+					_manual_control_sub.publish(_manual_control_switches);
 					break;
 				}
 
@@ -215,13 +215,13 @@ void OBManualControl::run()
 						_state = RC_CONTROL;
 						break; // Exit immediately
 					}
-					_manual_control_setpoint = _manual_control_setpoint_mav; // First fill with mav as default
+					_manual_control_switches = _manual_control_switches_mav; // First fill with mav as default
 
-					UseRCSetpoints(&_manual_control_setpoint_rc, &_manual_control_setpoint); // Modify those values that are a combination
+					UseRCSetpoints(&_manual_control_switches_rc, &_manual_control_switches); // Modify those values that are a combination
 					// The transition_switch is not used in PX4 MC, but set it to zero as an extra precaution
 					_manual_control_switches.transition_switch = 0; // Used to toggle from RC to Joystick
 
-					_manual_control_sub.publish(_manual_control_setpoint);
+					_manual_control_sub.publish(_manual_control_switches);
 					break;
 				}
 			}
