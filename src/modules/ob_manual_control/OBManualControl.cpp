@@ -160,14 +160,20 @@ OBManualControl::OBManualControl(int example_param, bool example_flag)
 void OBManualControl::run()
 {
 	// Run the loop synchronized to the manual_control_setpoint topic publication
-	_manual_control_sub_mav = orb_subscribe(ORB_ID(manual_control_switches_mav));
-	_manual_control_sub_rc = orb_subscribe(ORB_ID(manual_control_switches_rc));
+	_manual_control_switches_sub_mav = orb_subscribe(ORB_ID(manual_control_switches_mav));
+	_manual_control_switches_sub_rc = orb_subscribe(ORB_ID(manual_control_switches_rc));
+	_manual_control_setpoint_sub_mav = orb_subscribe(ORB_ID(manual_control_setpoint_mav));
+	_manual_control_setpoint_sub_rc = orb_subscribe(ORB_ID(manual_control_setpoint_rc));
 
-	px4_pollfd_struct_t fds[2];
-	fds[0].fd = _manual_control_sub_mav;
+	px4_pollfd_struct_t fds[4];
+	fds[0].fd = _manual_control_switches_sub_mav;
 	fds[0].events = POLLIN;
-	fds[1].fd = _manual_control_sub_rc;
+	fds[1].fd = _manual_control_switches_sub_rc;
 	fds[1].events = POLLIN;
+	fds[2].fd = _manual_control_setpoint_sub_mav;
+	fds[2].events = POLLIN;
+	fds[3].fd = _manual_control_setpoint_sub_rc;
+	fds[3].events = POLLIN;
 
 	mavlink_log_warning(&_mavlink_log_pub, "Starting in Mav Joystick control");
 
@@ -185,11 +191,14 @@ void OBManualControl::run()
 			px4_usleep(50000);
 			continue;
 
-		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN) {
-			orb_copy(ORB_ID(_manual_control_switches_rc), _manual_control_sub_rc, &_manual_control_switches_rc);
-			orb_copy(ORB_ID(manual_control_setpoint_mav), _manual_control_sub_mav, &_manual_control_switches_mav);
+		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN || fds[2].revents & POLLIN || fds[3].revents & POLLIN) {
+			orb_copy(ORB_ID(_manual_control_switches_rc), _manual_control_switches_sub_rc, &_manual_control_switches_rc);
+			orb_copy(ORB_ID(manual_control_switches_mav), _manual_control_switches_sub_mav, &_manual_control_switches_mav);
+			orb_copy(ORB_ID(manual_control_setpoint_rc), _manual_control_setpoint_sub_rc, &_manual_control_setpoint_rc);
+			orb_copy(ORB_ID(manual_control_setpoint_mav), _manual_control_setpoint_sub_mav, &_manual_control_setpoint_mav);
 
-			bool switch_toggled = SwitchToggled(&_manual_control_switches_rc, &_manual_control_switches_mav);
+			bool switch_toggled = SwitchToggled(&_manual_control_switches_rc, &_manual_control_setpoint_rc,
+							    &_manual_control_switches_mav, &_manual_control_setpoint_mav);
 
 			switch (_state) { // State is indirectly shown on manual_control_setpoint.data_source . 1 For RC , 2-5 for Mavlink
 			case RC_CONTROL: {
@@ -237,7 +246,8 @@ void OBManualControl::run()
 // This functions incorporates the switches from RC into the Joystick message.
 // When usign the Joystick the functions that these RC switches provides are not done through manual_control_setpoint messages but
 // directly through appropiate mavlink commnads from QGC
-void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manual_control_switches_s *manual_control_switches)
+void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
+		    manual_control_switches_s *manual_control_switches, manual_control_setpoint_s *manual_control_setpoint)
 {
 	// Joystick (mav) doesn't set any of the mode switches in manual_control, it's QGC that sends the necessery modes directly
 	// through the relevant mavlink message. So use those of the RC instead so that RC can control modes even when joystick in control.
@@ -254,6 +264,8 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 	manual_control_switches->offboard_switch =  manual_control_switches_rc->offboard_switch;
 	manual_control_switches->gear_switch =  manual_control_switches_rc->gear_switch;
 	manual_control_switches->loiter_switch =  manual_control_switches_rc->loiter_switch;
+
+	manual_control_setpoint = manual_control_setpoint_rc;
 
 	// The following switches will never be enabled so ignore them
 	// rattitude_switch, posctl_switch, acro_switch , arm_switch , mode_slot, data_source, stab_switch, man_switch;
@@ -275,8 +287,8 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 // The joystick buttons in PX4 are not used, so had to hardcode the transition switch to first button (A) in the controller in
 // mavlink_receiver.cpp.
 // This function detects if the switch has toggled in either joystick or RC Tx
-bool OBManualControl::SwitchToggled(manual_control_switches_s *manual_control_switches_rc,
-				    manual_control_switches_s *manual_control_switches_mav)
+bool SwitchToggled(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
+                   manual_control_switches_s *manual_control_switches_mav, manual_control_setpoint_s *manual_control_setpoint_mav)
 {
 	static bool first_run = true;
 	static uint8_t

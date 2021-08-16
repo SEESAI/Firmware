@@ -70,17 +70,20 @@ public:
 	/** @see ModuleBase::print_status() */
 	int print_status() override;
 
-	bool SwitchToggled(manual_control_switches_s *_manual_control_switches_rc,
-			   manual_control_switches_s *_manual_control_switches_mav);
-	void UseRCSetpoints(manual_control_switches_s *manual_control_setpoint_rc, manual_control_switches_s *manual_control_setpoint);
+	bool SwitchToggled(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
+			   manual_control_switches_s *manual_control_switches_mav, manual_control_setpoint_s *manual_control_setpoint_mav);
+	void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
+			   manual_control_switches_s *manual_control_switches, manual_control_setpoint_s *manual_control_setpoint);
 
 private:
 
 	// Subscriptions
 	//uORB::Subscription	_manual_control_sub_mav{ORB_ID(manual_control_setpoint_mav)};
 	//uORB::Subscription	_manual_control_sub_rc{ORB_ID(manual_control_setpoint_rc)};
-	int _manual_control_sub_mav{-1};		/**< notification of manual control updates from mavlink */
-	int _manual_control_sub_rc{-1};			/**< notification of manual control updates from RC transmitter */
+	int _manual_control_switches_sub_mav{-1};		/**< notification of manual control switches updates from MAVLink */
+	int _manual_control_switches_sub_rc{-1};		/**< notification of manual control switches updates from RC transmitter */
+	int _manual_control_setpoint_sub_mav{-1};               /**< notification of manual control setpoint updates from MAVLink */
+	int _manual_control_setpoint_sub_rc{-1};                /**< notification of manual control setpoint updates from RC transmitter */
 
 	//uORB::Subscription	_manual_control_sub_rc{ORB_ID(manual_control_setpoint_rc)};
 	manual_control_setpoint_s       _manual_control_setpoint{};
@@ -90,8 +93,8 @@ private:
 	manual_control_switches_s       _manual_control_switches_rc{};
 	manual_control_switches_s       _manual_control_switches_mav{};
 
-	uORB::PublicationMulti<manual_control_switches_s> 	_manual_control_switches_sub{ORB_ID(manual_control_switches)}; /**< notification of manual control switch updates coming from mavlink */
-	uORB::PublicationMulti<manual_control_setpoint_s>       _manual_control_sub
+	uORB::PublicationMulti<manual_control_switches_s> 	_manual_control_switches_sub{ORB_ID(manual_control_switches)}; /**< notification of manual control switch updates coming from MAVLink */
+	uORB::PublicationMulti<manual_control_setpoint_s>       _manual_control_setpoint_sub{ORB_ID(manual_control_setpoint)}; /**< notification of manual control setpoint updates coming from MAVLink */
 
 
 	enum State {RC_CONTROL, MAV_CONTROL} _state{MAV_CONTROL};
