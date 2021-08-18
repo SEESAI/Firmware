@@ -1715,12 +1715,12 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS_RAW_INT", 1.0f);
                 configure_stream_local("HIGHRES_IMU", 2.5f);
 		configure_stream_local("HOME_POSITION", 0.5f);
-		configure_stream_local("LOCAL_POSITION_NED", 0.5f);
+		configure_stream_local("LOCAL_POSITION_NED", 1.5f);
 		configure_stream_local("NAMED_VALUE_FLOAT", 1.0f);
 		configure_stream_local("ODOMETRY", 2.5f);
 		configure_stream_local("OPTICAL_FLOW_RAD", 0.5f);
 		configure_stream_local("RC_CHANNELS", 0.5f);
-		configure_stream_local("SERVO_OUTPUT_RAW_0", 2.5f);
+		configure_stream_local("SERVO_OUTPUT_RAW_0", 1.0f);
 		configure_stream_local("SYS_STATUS", 1.0f);
 		configure_stream_local("VFR_HUD", 1.0f);
 		break;
