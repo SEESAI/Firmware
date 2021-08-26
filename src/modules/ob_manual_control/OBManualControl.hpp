@@ -73,7 +73,7 @@ public:
 	bool SwitchToggled(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
 			   manual_control_switches_s *manual_control_switches_mav, manual_control_setpoint_s *manual_control_setpoint_mav);
 	void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
-			   manual_control_switches_s *manual_control_switches, manual_control_setpoint_s *manual_control_setpoint);
+			   manual_control_switches_s *manual_control_switches);
 
 private:
 

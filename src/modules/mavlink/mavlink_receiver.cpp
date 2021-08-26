@@ -1974,6 +1974,11 @@ MavlinkReceiver::handle_message_manual_control(mavlink_message_t *msg)
 		manual.data_source = manual_control_setpoint_s::SOURCE_MAVLINK_0 + _mavlink->get_instance_id();
 
 		_manual_control_setpoint_pub.publish(manual);
+
+		manual_control_switches_s manual_switches{};
+		manual_switches.transition_switch = man.buttons & 0x1;
+
+		_manual_control_switches_pub.publish(manual_switches);
 	}
 }
 

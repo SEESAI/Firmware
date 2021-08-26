@@ -192,7 +192,7 @@ void OBManualControl::run()
 			continue;
 
 		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN || fds[2].revents & POLLIN || fds[3].revents & POLLIN) {
-			orb_copy(ORB_ID(_manual_control_switches_rc), _manual_control_switches_sub_rc, &_manual_control_switches_rc);
+			orb_copy(ORB_ID(manual_control_switches_rc), _manual_control_switches_sub_rc, &_manual_control_switches_rc);
 			orb_copy(ORB_ID(manual_control_switches_mav), _manual_control_switches_sub_mav, &_manual_control_switches_mav);
 			orb_copy(ORB_ID(manual_control_setpoint_rc), _manual_control_setpoint_sub_rc, &_manual_control_setpoint_rc);
 			orb_copy(ORB_ID(manual_control_setpoint_mav), _manual_control_setpoint_sub_mav, &_manual_control_setpoint_mav);
@@ -210,10 +210,12 @@ void OBManualControl::run()
 					}
 
 					_manual_control_switches = _manual_control_switches_rc; // First fill with rc as default
+					_manual_control_setpoint = _manual_control_setpoint_rc;
 					 // The transition_switch is not used in PX4 MC, but set it to zero as an extra precaution
 					_manual_control_switches.transition_switch = 0; // Used to toggle from RC to Joystick
 
-					_manual_control_sub.publish(_manual_control_switches);
+					_manual_control_switches_sub.publish(_manual_control_switches);
+					_manual_control_setpoint_sub.publish(_manual_control_setpoint);
 					break;
 				}
 
@@ -225,12 +227,13 @@ void OBManualControl::run()
 						break; // Exit immediately
 					}
 					_manual_control_switches = _manual_control_switches_mav; // First fill with mav as default
-
-					UseRCSetpoints(&_manual_control_switches_rc, &_manual_control_switches); // Modify those values that are a combination
+					_manual_control_setpoint = _manual_control_setpoint_mav;
+					UseRCSetpoints(&_manual_control_switches_rc, &_manual_control_setpoint_rc, &_manual_control_switches); // Modify those values that are a combination
 					// The transition_switch is not used in PX4 MC, but set it to zero as an extra precaution
 					_manual_control_switches.transition_switch = 0; // Used to toggle from RC to Joystick
 
-					_manual_control_sub.publish(_manual_control_switches);
+					_manual_control_switches_sub.publish(_manual_control_switches);
+					_manual_control_setpoint_sub.publish(_manual_control_setpoint);
 					break;
 				}
 			}
@@ -238,16 +241,18 @@ void OBManualControl::run()
 	}
 
 	//_manual_control_sub_mav.unsubscribe();
-	orb_unsubscribe(_manual_control_sub_mav);
-	orb_unsubscribe(_manual_control_sub_rc);
+	orb_unsubscribe(_manual_control_switches_sub_mav);
+	orb_unsubscribe(_manual_control_switches_sub_rc);
+	orb_unsubscribe(_manual_control_setpoint_sub_rc);
+	orb_unsubscribe(_manual_control_setpoint_sub_mav);
 }
 
 
 // This functions incorporates the switches from RC into the Joystick message.
 // When usign the Joystick the functions that these RC switches provides are not done through manual_control_setpoint messages but
 // directly through appropiate mavlink commnads from QGC
-void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
-		    manual_control_switches_s *manual_control_switches, manual_control_setpoint_s *manual_control_setpoint)
+void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
+			   manual_control_switches_s *manual_control_switches)
 {
 	// Joystick (mav) doesn't set any of the mode switches in manual_control, it's QGC that sends the necessery modes directly
 	// through the relevant mavlink message. So use those of the RC instead so that RC can control modes even when joystick in control.
@@ -264,8 +269,6 @@ void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manua
 	manual_control_switches->offboard_switch =  manual_control_switches_rc->offboard_switch;
 	manual_control_switches->gear_switch =  manual_control_switches_rc->gear_switch;
 	manual_control_switches->loiter_switch =  manual_control_switches_rc->loiter_switch;
-
-	manual_control_setpoint = manual_control_setpoint_rc;
 
 	// The following switches will never be enabled so ignore them
 	// rattitude_switch, posctl_switch, acro_switch , arm_switch , mode_slot, data_source, stab_switch, man_switch;
@@ -287,7 +290,7 @@ void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manua
 // The joystick buttons in PX4 are not used, so had to hardcode the transition switch to first button (A) in the controller in
 // mavlink_receiver.cpp.
 // This function detects if the switch has toggled in either joystick or RC Tx
-bool SwitchToggled(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
+bool OBManualControl::SwitchToggled(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
                    manual_control_switches_s *manual_control_switches_mav, manual_control_setpoint_s *manual_control_setpoint_mav)
 {
 	static bool first_run = true;
