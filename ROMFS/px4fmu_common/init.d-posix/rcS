@@ -13,8 +13,6 @@ PX4_DISABLE_FAILSAFE=1
 PX4_USE_EXTERNAL_POSE=0
 export PX4_USE_TCP=0
 
-MAVSDK_SERVER_IP="$(host mavsdk-server | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b')"
-echo "MAVSDK_SERVER_IP: $MAVSDK_SERVER_IP"
 echo "PX4_SIM_MODEL: $PX4_SIM_MODEL"
 echo "PX4_ESTIMATOR: $PX4_ESTIMATOR"
 
@@ -116,7 +114,6 @@ fi
 # multi-instance setup
 # shellcheck disable=SC2154
 param set MAV_SYS_ID $((px4_instance+1))
-param set MAV_BROADCAST 1
 
 # Use environment variable PX4_USE_EXTERNAL_POSE to set external odometry
 if [ "$PX4_USE_EXTERNAL_POSE" = 1 ]; then
