@@ -60,8 +60,9 @@ private:
 	bool send() override
 	{
 		gps_inject_data_s gps_inject_data;
+		bool sent = false;
 
-		if (_gps_inject_data_sub.update(&gps_inject_data)) {
+		while ((_mavlink->get_free_tx_buf() >= get_size()) && _gps_inject_data_sub.update(&gps_inject_data)) {
 			mavlink_gps_rtcm_data_t msg{};
 
 			msg.len = gps_inject_data.len;
@@ -70,13 +71,11 @@ private:
 
 			mavlink_msg_gps_rtcm_data_send_struct(_mavlink->get_channel(), &msg);
 
-			return true;
+			sent = true;
 		}
 
-		return false;
+		return sent;
 	}
 };
 
 #endif // GPS_RTCM_DATA_HPP
-
- 
