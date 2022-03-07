@@ -99,6 +99,21 @@ GeofenceBreachAvoidance::getFenceViolationTestPoint()
 	return waypointFromBearingAndDistance(_current_pos_lat_lon, _test_point_bearing, _test_point_distance);
 }
 
+// EDIT -- David Patrick 04/03/2022
+// In total, there are now 2 points:
+// a test-point, which triggers a breach when the drone's current position exceeds the geofence (above);
+// a loiter-point, which uses the braking-distance prediction to calculate and set the loiter point (below).
+// The former uses the original code with _test_point_distance set to 0.2m (not 0 else bearing calculations could mathematical errors) instead of the braking-distance.
+// The latter is a duplication of the the original test-point mechanism and maintains the loiter being set at the predicted braking-distance.
+Vector2d
+GeofenceBreachAvoidance::getFenceHorizontalLoiterPoint()
+{
+	float gf_loiter_distance_horizontal;
+	gf_loiter_distance_horizontal = computeBrakingDistanceMultirotor();
+	return waypointFromBearingAndDistance(_current_pos_lat_lon, _test_point_bearing, gf_loiter_distance_horizontal);
+}
+// EDIT END
+
 Vector2d
 GeofenceBreachAvoidance::generateLoiterPointForFixedWing(geofence_violation_type_u violation_type, Geofence *geofence)
 {
@@ -182,7 +197,7 @@ GeofenceBreachAvoidance::generateLoiterPointForMultirotor(geofence_violation_typ
 
 	} else if (violation_type.flags.dist_to_home_exceeded) {
 
-		return waypointFromHomeToTestPointAtDist(math::max(_max_hor_dist_home - _min_hor_dist_to_fence_mc, 0.0f));
+		return waypointFromHomeToTestPointAtDist((computeBrakingDistanceMultirotor()/2) + _max_hor_dist_home);
 
 	} else {
 		if (_velocity_hor_abs > 0.5f) {
@@ -281,7 +296,7 @@ void GeofenceBreachAvoidance::updateMinVertDistToFenceMultirotor()
 
 Vector2d GeofenceBreachAvoidance::waypointFromHomeToTestPointAtDist(float distance)
 {
-	Vector2d test_point = getFenceViolationTestPoint();
+	Vector2d test_point = getFenceHorizontalLoiterPoint();
 	float bearing_home_current_pos = get_bearing_to_next_waypoint(_home_lat_lon(0), _home_lat_lon(1), test_point(0),
 					 test_point(1));
 	double loiter_center_lat, loiter_center_lon;

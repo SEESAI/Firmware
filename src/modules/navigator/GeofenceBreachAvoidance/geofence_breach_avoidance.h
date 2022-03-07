@@ -59,6 +59,8 @@ public:
 
 	matrix::Vector2<double> getFenceViolationTestPoint();
 
+	matrix::Vector2<double> getFenceHorizontalLoiterPoint();
+
 	matrix::Vector2<double> waypointFromBearingAndDistance(matrix::Vector2<double> current_pos_lat_lon,
 			float test_point_bearing, float test_point_distance);
 
