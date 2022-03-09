@@ -743,8 +743,9 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 			_gf_breach_avoidance.setHorizontalVelocity(velocity_hor_abs);
 			_gf_breach_avoidance.setClimbRate(-_local_pos.vz);
 			// EDIT -- David Patrick 04/03/2022
-			// Altered test_point distances to 0.2 to cause geofence breaches to be based on drone current position.
-			// Ensure that braking distance computations are still run for loiter points.
+			// Hardcoded test_point distances to 0.2 to cause geofence breaches to be based on drone current position.
+			// These are effectively 0, however != 0 to prevent mathematical errors in bearing calculations elsewhere.
+			// Ensure that braking distance computations are still run for updating values.
 			test_point_distance = 0.2;
 			vertical_test_point_distance = 0.2;
 			_gf_breach_avoidance.computeBrakingDistanceMultirotor();

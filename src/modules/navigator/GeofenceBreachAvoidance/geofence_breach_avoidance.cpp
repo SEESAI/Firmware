@@ -103,7 +103,7 @@ GeofenceBreachAvoidance::getFenceViolationTestPoint()
 // In total, there are now 2 points:
 // a test-point, which triggers a breach when the drone's current position exceeds the geofence (above);
 // a loiter-point, which uses the braking-distance prediction to calculate and set the loiter point (below).
-// The former uses the original code with _test_point_distance set to 0.2m (not 0 else bearing calculations could mathematical errors) instead of the braking-distance.
+// The former uses the original code with _test_point_distance set to 0.2m (not 0 else bearing calculations could result in mathematical errors) instead of the braking-distance.
 // The latter is a duplication of the the original test-point mechanism and maintains the loiter being set at the predicted braking-distance.
 Vector2d
 GeofenceBreachAvoidance::getFenceHorizontalLoiterPoint()
@@ -197,6 +197,15 @@ GeofenceBreachAvoidance::generateLoiterPointForMultirotor(geofence_violation_typ
 
 	} else if (violation_type.flags.dist_to_home_exceeded) {
 
+		// This is where the Horizontal Hold position is computed.
+		// Originally, the argument was set to the Geofence radius (_max_hor_dist_home) - a minimum distance that the drone could begin braking from based on acceleration/jerk limit parameters (_min_hor_dist_to_fence_mc).
+		// The intention was to ensure HOLD was just inside the Geofence.
+
+		// Instead, we want to trigger a breach at Geofence but set Hold to the braking distance which is outside the Geofence to preserve the controlled deceleration and prevent overshoot corrections.
+		// Hence, the argument instead uses the Geofence Radius + braking distance from that radius.
+
+		// The braking distance was arbitrarily divided by 2 as it was still overkill.
+		// (was overshooting by ~30m on a 30m geofence, i.e holding 60m from home)
 		return waypointFromHomeToTestPointAtDist((computeBrakingDistanceMultirotor()/2) + _max_hor_dist_home);
 
 	} else {
@@ -296,6 +305,8 @@ void GeofenceBreachAvoidance::updateMinVertDistToFenceMultirotor()
 
 Vector2d GeofenceBreachAvoidance::waypointFromHomeToTestPointAtDist(float distance)
 {
+	// This change simply results in Hold being derived from the braking distance instead of the drone's current position
+	// (as TestPoint is now based on drone position) by using the new function.
 	Vector2d test_point = getFenceHorizontalLoiterPoint();
 	float bearing_home_current_pos = get_bearing_to_next_waypoint(_home_lat_lon(0), _home_lat_lon(1), test_point(0),
 					 test_point(1));
