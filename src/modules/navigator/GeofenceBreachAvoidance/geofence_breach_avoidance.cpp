@@ -206,7 +206,7 @@ GeofenceBreachAvoidance::generateLoiterPointForMultirotor(geofence_violation_typ
 
 		// The braking distance was arbitrarily divided by 2 as it was still overkill.
 		// (was overshooting by ~30m on a 30m geofence, i.e holding 60m from home)
-		return waypointFromHomeToTestPointAtDist((computeBrakingDistanceMultirotor()/2) + _max_hor_dist_home);
+		return waypointFromHomeToTestPointAtDist((computeBrakingDistanceMultirotor() / 2) + _max_hor_dist_home);
 
 	} else {
 		if (_velocity_hor_abs > 0.5f) {
