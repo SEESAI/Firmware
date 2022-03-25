@@ -101,6 +101,7 @@ private:
 
 	orb_advert_t           _mavlink_log_pub{nullptr};
 
+	bool kill_prev{false};
 
 
 };
