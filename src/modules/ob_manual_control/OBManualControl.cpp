@@ -322,7 +322,10 @@ bool OBManualControl::SwitchToggled(manual_control_switches_s *manual_control_sw
 	bool toggled_mav = false;
 	bool toggled = false;
 
-	if (first_run) {
+	// Added a condition that checks that the transition_switch is not unmapped.
+	// If it is unmapped (0), then there has been no RC connection yet (mapping occurs in RCUpdate()).
+	// Once RC connection is received, it would then map and be set to Off (3). This change in value would trigger an unwanted switch toggle reaction.
+	if (first_run && (manual_control_switches_rc->transition_switch != manual_control_switches_s::SWITCH_POS_NONE)) {
 		transition_switch_rc_prev = manual_control_switches_rc->transition_switch;
 		transition_switch_mav_prev = manual_control_switches_mav->transition_switch;
 		first_run = false;
