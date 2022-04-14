@@ -81,8 +81,6 @@ public:
 
 	void setTestPointBearing(float test_point_bearing) { _test_point_bearing = test_point_bearing; }
 
-	//float getTestPointBearing() {return _test_point_bearing;}
-
 	void setHorizontalTestPointDistance(float test_point_distance) { _test_point_distance = test_point_distance; }
 
 	void setVerticalTestPointDistance(float distance) { _vertical_test_point_distance = distance; }

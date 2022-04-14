@@ -835,9 +835,6 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 						// Sees.ai preferred behaviour - The geofence breach triggers with current position on boundary, however we try to stop at the test-point (current position + braking distance).
 							if(gf_violation_type.flags.dist_to_home_exceeded){
 								lointer_center_lat_lon = fence_violation_test_point;
-								//Below is to hard set a distance outside geofence for LOITER point.
-								//float bearing = _gf_breach_avoidance.getTestPointBearing();
-								//lointer_center_lat_lon = _gf_breach_avoidance.waypointFromBearingAndDistance(current_pos_lat_lon, bearing, 15);
 							}
 							else {
 								lointer_center_lat_lon = current_pos_lat_lon;
@@ -847,9 +844,6 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 									vertical_test_point_distance = 0;
 								}
 								loiter_altitude_amsl = _global_pos.alt + vertical_test_point_distance;
-								/*double acc = _local_pos.az;
-								mavlink_log_critical(&_mavlink_log_pub, "Acceleration is %f", acc);
-								*/
 							}
 							else{
 								loiter_altitude_amsl = _global_pos.alt;
