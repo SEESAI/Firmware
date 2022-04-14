@@ -59,8 +59,6 @@ public:
 
 	matrix::Vector2<double> getFenceViolationTestPoint();
 
-	matrix::Vector2<double> getFenceHorizontalLoiterPoint();
-
 	matrix::Vector2<double> waypointFromBearingAndDistance(matrix::Vector2<double> current_pos_lat_lon,
 			float test_point_bearing, float test_point_distance);
 
@@ -82,6 +80,8 @@ public:
 	float getMinVertDistToFenceMultirotor() {return _min_vert_dist_to_fence_mc;}
 
 	void setTestPointBearing(float test_point_bearing) { _test_point_bearing = test_point_bearing; }
+
+	//float getTestPointBearing() {return _test_point_bearing;}
 
 	void setHorizontalTestPointDistance(float test_point_distance) { _test_point_distance = test_point_distance; }
 
