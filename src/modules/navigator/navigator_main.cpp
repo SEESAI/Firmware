@@ -770,36 +770,36 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 
 		fence_violation_test_point = _gf_breach_avoidance.getFenceViolationTestPoint();
 
-				// Toggle bool for desired behaviour
+		// Toggle bool for desired behaviour
 		bool sees_geofence_behaviour = true;
 
-		if (sees_geofence_behaviour){
+		if (sees_geofence_behaviour) {
 			// Sees.ai preferred behaviour - geofence triggers based on drone current position.
 			// This is more predictable than default PX4 behaviour, however it does result in geofence overshoot.
 			// This is deemed acceptable as the SI2 geofence is the primary safety measure for ensuring operation within a specified zone,
 			// PX4 geofence is only used as a last-resort backup.
 			gf_violation_type.flags.dist_to_home_exceeded = !_geofence.isCloserThanMaxDistToHome(_global_pos.lat,
-				_global_pos.lon,
-				_global_pos.alt);
+					_global_pos.lon,
+					_global_pos.alt);
 
-		gf_violation_type.flags.max_altitude_exceeded = !_geofence.isBelowMaxAltitude(_global_pos.alt);
+			gf_violation_type.flags.max_altitude_exceeded = !_geofence.isBelowMaxAltitude(_global_pos.alt);
 
-		gf_violation_type.flags.fence_violation = !_geofence.isInsidePolygonOrCircle(_global_pos.lat,
-				_global_pos.lon,
-				_global_pos.alt);
-		}
-		else{
+			gf_violation_type.flags.fence_violation = !_geofence.isInsidePolygonOrCircle(_global_pos.lat,
+					_global_pos.lon,
+					_global_pos.alt);
+
+		} else {
 			// Default PX4 behaviour -
-		gf_violation_type.flags.dist_to_home_exceeded = !_geofence.isCloserThanMaxDistToHome(fence_violation_test_point(0),
-				fence_violation_test_point(1),
-				_global_pos.alt);
+			gf_violation_type.flags.dist_to_home_exceeded = !_geofence.isCloserThanMaxDistToHome(fence_violation_test_point(0),
+					fence_violation_test_point(1),
+					_global_pos.alt);
 
-		gf_violation_type.flags.max_altitude_exceeded = !_geofence.isBelowMaxAltitude(_global_pos.alt +
-				vertical_test_point_distance);
+			gf_violation_type.flags.max_altitude_exceeded = !_geofence.isBelowMaxAltitude(_global_pos.alt +
+					vertical_test_point_distance);
 
-		gf_violation_type.flags.fence_violation = !_geofence.isInsidePolygonOrCircle(fence_violation_test_point(0),
-				fence_violation_test_point(1),
-				_global_pos.alt);
+			gf_violation_type.flags.fence_violation = !_geofence.isInsidePolygonOrCircle(fence_violation_test_point(0),
+					fence_violation_test_point(1),
+					_global_pos.alt);
 		}
 
 		_last_geofence_check = hrt_absolute_time();
@@ -831,30 +831,32 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 						// the computation of the braking distance does not match the actual braking distance. Until we have a better model
 						// we set the loiter point to the current position, that will make sure that the vehicle will loiter inside the fence
 
-						if(sees_geofence_behaviour){
-						// Sees.ai preferred behaviour - The geofence breach triggers with current position on boundary, however we try to stop at the test-point (current position + braking distance).
-							if(gf_violation_type.flags.dist_to_home_exceeded){
+						if (sees_geofence_behaviour) {
+							// Sees.ai preferred behaviour - The geofence breach triggers with current position on boundary, however we try to stop at the test-point (current position + braking distance).
+							if (gf_violation_type.flags.dist_to_home_exceeded) {
 								lointer_center_lat_lon = fence_violation_test_point;
-							}
-							else {
+
+							} else {
 								lointer_center_lat_lon = current_pos_lat_lon;
 							}
-							if(gf_violation_type.flags.max_altitude_exceeded) {
+
+							if (gf_violation_type.flags.max_altitude_exceeded) {
 								if (vertical_test_point_distance < 0) {
 									vertical_test_point_distance = 0;
 								}
+
 								loiter_altitude_amsl = _global_pos.alt + vertical_test_point_distance;
-							}
-							else{
+
+							} else {
 								loiter_altitude_amsl = _global_pos.alt;
 							}
-						}
-						else{
-						// PX4 Default Behaviour - Attempts to stop the drone on the boundary by creating a loiter-point at the braking distance test-point.
-						lointer_center_lat_lon =  _gf_breach_avoidance.generateLoiterPointForMultirotor(gf_violation_type,
-									  &_geofence);
 
-						loiter_altitude_amsl = _gf_breach_avoidance.generateLoiterAltitudeForMulticopter(gf_violation_type);
+						} else {
+							// PX4 Default Behaviour - Attempts to stop the drone on the boundary by creating a loiter-point at the braking distance test-point.
+							lointer_center_lat_lon =  _gf_breach_avoidance.generateLoiterPointForMultirotor(gf_violation_type,
+										  &_geofence);
+
+							loiter_altitude_amsl = _gf_breach_avoidance.generateLoiterAltitudeForMulticopter(gf_violation_type);
 						}
 
 					} else {

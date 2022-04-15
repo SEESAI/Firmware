@@ -70,10 +70,12 @@ public:
 	/** @see ModuleBase::print_status() */
 	int print_status() override;
 
-	bool SwitchToggled(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
+	bool SwitchToggled(manual_control_switches_s *manual_control_switches_rc,
+			   manual_control_setpoint_s *manual_control_setpoint_rc,
 			   manual_control_switches_s *manual_control_switches_mav, manual_control_setpoint_s *manual_control_setpoint_mav);
-	void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc, manual_control_setpoint_s *manual_control_setpoint_rc,
-			   manual_control_switches_s *manual_control_switches);
+	void UseRCSetpoints(manual_control_switches_s *manual_control_switches_rc,
+			    manual_control_setpoint_s *manual_control_setpoint_rc,
+			    manual_control_switches_s *manual_control_switches);
 
 private:
 
@@ -101,7 +103,7 @@ private:
 
 	orb_advert_t           _mavlink_log_pub{nullptr};
 
-		bool kill_prev{false};
+	bool kill_prev{false};
 
 
 
