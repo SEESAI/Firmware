@@ -125,7 +125,8 @@ private:
 				msg.battery_remaining = -1;
 			}
 
-			msg.errors_count1 = status.rc_signal_lost;    // No manual_control_setpoint messages arriving ( can come from RC or MAV )
+			msg.errors_count1 =
+				status.rc_signal_lost;    // No manual_control_setpoint messages arriving ( can come from RC or MAV )
 			msg.errors_count2 = status.data_link_lost;    // No messages from GCS received
 			msg.errors_count3 = rc.signal_lost;           // No messages from RC Tx received
 			msg.errors_count4 = manual.data_source;       // Indicates wether the drone is controlled by RC (1) or Mavlink( 2-5)
