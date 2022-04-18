@@ -253,12 +253,12 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 					_state_of_charge = 1.0;
 					below_max = false;
 				}
-				if (cell_voltage <= SOCLookup[9].OCVoltage) {
+				if (cell_voltage <= SOCLookup[10].OCVoltage) {
 					_state_of_charge = 0.0;
 					above_min = false;
 				}
 				if (above_min && below_max) {
-					for (int i = 0; i < 10; i++) {
+					for (int i = 0; i < 11; i++) {
 						float voltage_key = SOCLookup[i].OCVoltage;
 						if (cell_voltage > voltage_key) {
 							const float volt1 = SOCLookup[i].OCVoltage;
