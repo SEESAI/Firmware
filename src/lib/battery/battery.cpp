@@ -213,9 +213,74 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 		_state_of_charge = math::max(_state_of_charge, 0.f);
 
 		const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _params.capacity, 0.f);
-		_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
 
-	} else {
+		// Sees.ai modification coulomb_counting_only
+
+		// Set to 'true' for Sees behaviour:
+		// SoC relies solely on mAh discharged.
+		//
+		// Set to 'false' for default PX4 behaviour:
+		// SoC is based on whichever of the two options below that provides the lower value:
+		// - A combination of discharge and Voltage based estimation (relies more on voltage at lower voltages).
+		// - Just on discharge.
+		bool sees_coulomb_counting_only = true;
+
+		if (sees_coulomb_counting_only) {
+
+			if(first_run){
+				struct Lookup {
+					float OCVoltage;
+					float SOC;
+				};
+
+				Lookup SOCLookup[] {
+					{4.17, 100.0},
+					{4.09, 89.5},
+					{3.99, 79.1},
+					{3.93, 68.6},
+					{3.87, 58.2},
+					{3.82, 47.7},
+					{3.79, 37.3},
+					{3.77, 26.8},
+					{3.73, 16.4},
+					{3.69, 5.9},
+					{3.50, 0.0}
+				};
+				bool above_min = true;
+				bool below_max = true;
+
+				if (cell_voltage >= SOCLookup[0].OCVoltage) {
+					_state_of_charge = 1.0;
+					below_max = false;
+				}
+				if (cell_voltage <= SOCLookup[9].OCVoltage) {
+					_state_of_charge = 0.0;
+					above_min = false;
+				}
+				if (above_min && below_max) {
+					for (int i = 0; i < 10; i++) {
+						float voltage_key = SOCLookup[i].OCVoltage;
+						if (cell_voltage > voltage_key) {
+							const float volt1 = SOCLookup[i].OCVoltage;
+							const float soc1 = SOCLookup[i].SOC;
+							const float volt2 = SOCLookup[i+1].OCVoltage;
+							const float soc2 = SOCLookup[i+1].SOC;
+							soc_initial = (soc1 + (soc2 - soc1) * (cell_voltage - volt1) / (volt2 - volt1))/100;
+							break;
+						}
+					}
+				}
+				first_run = false;
+			}
+
+			// CURRENT SOC CALC
+			_state_of_charge = soc_initial - (_discharged_mah/_params.capacity);
+		}
+		else {
+			_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
+		}
+	}
+	else {
 		_state_of_charge = _state_of_charge_volt_based;
 	}
 }
