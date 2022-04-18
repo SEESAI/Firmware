@@ -274,15 +274,17 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 	// temporarily overwrites the manual_control_setpoint_mav timestamp with the RC timestamp from manual_control_setpoint_rc.
 	// Switch == 1 is off, Switch == 3 is off. (0 is unassigned, 2 is middle)
 
-	if((manual_control_switches->kill_switch == manual_control_switches_s::SWITCH_POS_ON) || (kill_prev == true)){
+	if ((manual_control_switches->kill_switch == manual_control_switches_s::SWITCH_POS_ON) || (kill_prev == true)) {
 		_manual_control_setpoint.timestamp = _manual_control_setpoint_rc.timestamp;
-		switch(manual_control_switches->kill_switch){
-			case(manual_control_switches_s::SWITCH_POS_ON):
-				kill_prev = true;
-				break;
-			case(manual_control_switches_s::SWITCH_POS_OFF):
-				kill_prev = false;
-				break;
+
+		switch (manual_control_switches->kill_switch) {
+		case (manual_control_switches_s::SWITCH_POS_ON):
+			kill_prev = true;
+			break;
+
+		case (manual_control_switches_s::SWITCH_POS_OFF):
+			kill_prev = false;
+			break;
 		}
 	}
 
