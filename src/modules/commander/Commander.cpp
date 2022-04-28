@@ -2349,7 +2349,7 @@ Commander::run()
 					const char kill_switch_string[] = "Kill-switch engaged";
 
 					if (_land_detector.landed) {
-						mavlink_log_info(&_mavlink_log_pub, kill_switch_string);
+						mavlink_log_critical(&_mavlink_log_pub, kill_switch_string);
 
 					} else {
 						mavlink_log_critical(&_mavlink_log_pub, kill_switch_string);
@@ -2361,7 +2361,7 @@ Commander::run()
 
 			} else if (_manual_control_switches.kill_switch == manual_control_switches_s::SWITCH_POS_OFF) {
 				if (_armed.manual_lockdown) {
-					mavlink_log_info(&_mavlink_log_pub, "Kill-switch disengaged");
+					mavlink_log_critical(&_mavlink_log_pub, "Kill-switch disengaged");
 					_status_changed = true;
 					_armed.manual_lockdown = false;
 				}
