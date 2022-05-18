@@ -56,6 +56,8 @@
 #include <uORB/PublicationMulti.hpp>
 #include <uORB/topics/battery_status.h>
 
+#include <systemlib/mavlink_log.h>
+
 /**
  * BatteryBase is a base class for any type of battery.
  *
@@ -202,6 +204,9 @@ private:
 	uint8_t _warning{battery_status_s::BATTERY_WARNING_NONE};
 	hrt_abstime _last_timestamp{0};
 
-	bool first_run = true;
+	float first_run_time;
+	bool first_run{true};
 	float soc_initial{0};
+	float sees_warning_last;
+	orb_advert_t _mavlink_log_pub{nullptr};
 };

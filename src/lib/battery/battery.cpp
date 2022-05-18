@@ -214,6 +214,7 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 
 		const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _params.capacity, 0.f);
 
+		bool sees_coulomb_counting_only = true;
 		// Sees.ai modification coulomb_counting_only
 
 		// Set to 'true' for Sees behaviour:
@@ -223,11 +224,10 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 		// SoC is based on whichever of the two options below that provides the lower value:
 		// - A combination of discharge and Voltage based estimation (relies more on voltage at lower voltages).
 		// - Just on discharge.
-		bool sees_coulomb_counting_only = true;
 
 		if (sees_coulomb_counting_only) {
 
-			if(first_run){
+			if(first_run || ((hrt_absolute_time() - first_run_time) < 1'000'000)){
 				struct Lookup {
 					float OCVoltage;
 					float SOC;
@@ -258,7 +258,7 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 					above_min = false;
 				}
 				if (above_min && below_max) {
-					for (int i = 0; i < 11; i++) {
+					for (int i = 0; i < 10; i++) {
 						float voltage_key = SOCLookup[i].OCVoltage;
 						if (cell_voltage > voltage_key) {
 							const float volt1 = SOCLookup[i].OCVoltage;
@@ -275,6 +275,11 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 
 			// CURRENT SOC CALC
 			_state_of_charge = soc_initial - (_discharged_mah/_params.capacity);
+			// Cell Voltage Monitor Warnings
+			if (cell_voltage < float(3.4) && (hrt_absolute_time() - sees_warning_last > 10'000'000)) {
+				mavlink_log_critical(&_mavlink_log_pub, "Cell Voltage Critical - %fV. Land Immediately!", double(cell_voltage));
+				sees_warning_last = hrt_absolute_time();
+			}
 		}
 		else {
 			_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
