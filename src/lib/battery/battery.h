@@ -206,6 +206,8 @@ private:
 
 	float first_run_time;
 	bool first_run{true};
+	float cell_voltage_filtered;
+	float cell_voltage_filtered_load;
 	float soc_initial{0};
 	float sees_warning_last;
 	orb_advert_t _mavlink_log_pub{nullptr};
