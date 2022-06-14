@@ -188,35 +188,128 @@ void Battery::sumDischarged(const hrt_abstime &timestamp, float current_a)
 
 void Battery::estimateStateOfCharge(const float voltage_v, const float current_a, const float throttle)
 {
-	// remaining battery capacity based on voltage
-	float cell_voltage = voltage_v / _params.n_cells;
 
-	// correct battery voltage locally for load drop to avoid estimation fluctuations
-	if (_params.r_internal >= 0.f) {
-		cell_voltage += _params.r_internal * current_a;
+	bool sees_coulomb_counting_only = true;
+	// Sees.ai modification coulomb_counting_only
+	// Set to 'true' for Sees behaviour:
+	// SoC relies solely on mAh discharged.
+	//
+	// Set to 'false' for default PX4 behaviour:
+	// SoC is based on whichever of the two options below that provides the lower value:
+	// - A combination of discharge and Voltage based estimation (relies more on voltage at lower voltages).
+	// - Just on discharge.
 
-	} else {
-		// assume linear relation between throttle and voltage drop
-		cell_voltage += throttle * _params.v_load_drop;
+
+	// -------------------------------------------
+	// If bool is true, do sees desired behaviour
+	// -------------------------------------------
+
+	if (sees_coulomb_counting_only) {
+
+		// This ensures the cell voltage is derived from the filtered voltage and corrects for any voltage load drop as PX4 uses the raw voltage values.
+
+		cell_voltage_filtered = _voltage_filter_v.getState();
+		cell_voltage_filtered /= _params.n_cells;
+		cell_voltage_filtered_load += _params.r_internal * current_a;
+
+		// Derives initial SoC Estimation from the voltage. A 15 second timer is included to allow voltage to settle whilst components initialise.
+		if(first_run || ((hrt_absolute_time() - first_run_time) < 15'000'000)){
+			struct Lookup {
+				float OCVoltage;
+				float SOC;
+			};
+				Lookup SOCLookup[] {
+				{4.17, 100.0},
+				{4.09, 89.5},
+				{3.99, 79.1},
+				{3.93, 68.6},
+				{3.87, 58.2},
+				{3.82, 47.7},
+				{3.79, 37.3},
+				{3.77, 26.8},
+				{3.73, 16.4},
+				{3.69, 5.9},
+				{3.50, 0.0}
+			};
+			bool above_min = true;
+			bool below_max = true;
+
+
+
+			if (cell_voltage_filtered >= SOCLookup[0].OCVoltage) {
+				_state_of_charge = 1.0;
+				below_max = false;
+			}
+			if (cell_voltage_filtered <= SOCLookup[10].OCVoltage) {
+				_state_of_charge = 0.0;
+				above_min = false;
+			}
+			if (above_min && below_max) {
+				for (int i = 0; i < 10; i++) {
+					float voltage_key = SOCLookup[i].OCVoltage;
+					if (cell_voltage_filtered > voltage_key) {
+						const float volt1 = SOCLookup[i].OCVoltage;
+						const float soc1 = SOCLookup[i].SOC;
+						const float volt2 = SOCLookup[i+1].OCVoltage;
+						const float soc2 = SOCLookup[i+1].SOC;
+						soc_initial = (soc1 + (soc2 - soc1) * (cell_voltage_filtered - volt1) / (volt2 - volt1))/100;
+						break;
+					}
+				}
+			}
+			if (first_run) {
+				first_run_time = hrt_absolute_time();
+				first_run = false;
+			}
+		}
+
+		// CURRENT SOC CALC
+		_state_of_charge = soc_initial - (_discharged_mah/_params.capacity);
+
+		// Voltage Monitor warning - Coulomb counting won't catch cell failures so we add a warning if cell voltage drops to a critical level (3.4V).
+		// This is derived from.........
+		if (cell_voltage_filtered < float(3.4) && (hrt_absolute_time() - sees_warning_last > 10'000'000)) {
+			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %fV. Land Immediately!", double(cell_voltage_filtered_load));
+		}
 	}
 
-	_state_of_charge_volt_based = math::gradual(cell_voltage, _params.v_empty, _params.v_charged, 0.f, 1.f);
 
-	// choose which quantity we're using for final reporting
-	if (_params.capacity > 0.f && _battery_initialized) {
-		// if battery capacity is known, fuse voltage measurement with used capacity
-		// The lower the voltage the more adjust the estimate with it to avoid deep discharge
-		const float weight_v = 3e-4f * (1 - _state_of_charge_volt_based);
-		_state_of_charge = (1 - weight_v) * _state_of_charge + weight_v * _state_of_charge_volt_based;
-		// directly apply current capacity slope calculated using current
-		_state_of_charge -= _discharged_mah_loop / _params.capacity;
-		_state_of_charge = math::max(_state_of_charge, 0.f);
+	// -----------------------------
+	// Else do PX4 Default Behaviour
+	// -----------------------------
 
-		const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _params.capacity, 0.f);
-		_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
+	else {
+		// remaining battery capacity based on voltage
+		float cell_voltage = voltage_v / _params.n_cells;
 
-	} else {
-		_state_of_charge = _state_of_charge_volt_based;
+		// correct battery voltage locally for load drop to avoid estimation fluctuations
+		if (_params.r_internal >= 0.f) {
+			cell_voltage += _params.r_internal * current_a;
+
+		} else {
+			// assume linear relation between throttle and voltage drop
+			cell_voltage += throttle * _params.v_load_drop;
+		}
+
+		_state_of_charge_volt_based = math::gradual(cell_voltage, _params.v_empty, _params.v_charged, 0.f, 1.f);
+
+		// choose which quantity we're using for final reporting
+		if (_params.capacity > 0.f && _battery_initialized) {
+			// if battery capacity is known, fuse voltage measurement with used capacity
+			// The lower the voltage the more adjust the estimate with it to avoid deep discharge
+			const float weight_v = 3e-4f * (1 - _state_of_charge_volt_based);
+			_state_of_charge = (1 - weight_v) * _state_of_charge + weight_v * _state_of_charge_volt_based;
+			// directly apply current capacity slope calculated using current
+			_state_of_charge -= _discharged_mah_loop / _params.capacity;
+			_state_of_charge = math::max(_state_of_charge, 0.f);
+
+			const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _params.capacity, 0.f);
+
+			_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
+		}
+		else {
+			_state_of_charge = _state_of_charge_volt_based;
+		}
 	}
 }
 
