@@ -227,6 +227,7 @@ void IST8310::RunImpl()
 
 			// initiate next measurement
 			RegisterWrite(Register::CNTL1, CNTL1_BIT::MODE_SINGLE_MEASUREMENT);
+			// Change poll rate here
 			ScheduleDelayed(6_ms); // Wait at least 6ms. (minimum waiting time for 16 times internal average setup)
 		}
 
