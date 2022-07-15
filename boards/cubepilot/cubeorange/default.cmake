@@ -89,6 +89,7 @@ px4_add_board(
 		#uuv_pos_control
 		vmount
 		vtol_att_control
+		ob_manual_control
 	SYSTEMCMDS
 		bl_update
 		dmesg
