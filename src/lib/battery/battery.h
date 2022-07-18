@@ -204,30 +204,11 @@ private:
 	uint8_t _warning{battery_status_s::BATTERY_WARNING_NONE};
 	hrt_abstime _last_timestamp{0};
 
-	float cell_voltage_filtered;
-	float cell_voltage_filtered_load;
+	float cell_voltage_filtered{0};
+	float cell_voltage_filtered_load{0};
 	float soc_initial{0};
 	float _discharged_mah_initial{0};
 	const int lookup_size = 11;
 	hrt_abstime sees_warning_last{0};
 	orb_advert_t _mavlink_log_pub{nullptr};
-
-			/*struct Lookup {
-				float OCVoltage;
-				float SOC;
-			};
-				constexpr Lookup SOCLookup[] {
-				{4.17, 100.0},
-				{4.09, 89.5},
-				{3.99, 79.1},
-				{3.93, 68.6},
-				{3.87, 58.2},
-				{3.82, 47.7},
-				{3.79, 37.3},
-				{3.77, 26.8},
-				{3.73, 16.4},
-				{3.69, 5.9},
-				{3.50, 0.0}
-			};
-			*/
 };
