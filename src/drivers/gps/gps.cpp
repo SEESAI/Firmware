@@ -370,6 +370,10 @@ int GPS::callback(GPSCallbackType type, void *data1, int data2, void *user)
 		/* not used */
 		break;
 
+	case GPSCallbackType::gotRelativePositionMessage:
+		/* not used */
+		break;
+
 	case GPSCallbackType::surveyInStatus:
 		/* not used */
 		break;
