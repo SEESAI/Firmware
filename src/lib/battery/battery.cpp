@@ -205,18 +205,22 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 	if (sees_coulomb_counting_only) {
 
 		// This ensures the cell voltage is derived from the filtered voltage and corrects for any voltage load drop as PX4 uses the raw voltage values.
-
 		cell_voltage_filtered = _voltage_filter_v.getState();
 		cell_voltage_filtered /= _params.n_cells;
 		cell_voltage_filtered_load += _params.r_internal * current_a;
 
-		// Derives initial SoC Estimation from the voltage. A 15 second timer is included to allow voltage to settle whilst components initialise.
-		if(current_a < 5.0f){
-			struct Lookup {
-				float OCVoltage{0.f};
-				float SOC{0.f};
-			};
+		// Initially dervied an initial SoC Estimation from the voltage at low current draw. Tiree in idle state draws ~3A and Birdham ~0.5A, so idle threshold is set to 4A.
+		// However, it's difficult to characterise idle current in a way that is appropriate for both Birdham and Tiree.
+		// Must be disarmed to prevent any sporadic drops in current from triggering voltage-based estimation midflight (battery voltage under load is unrepresentative of SoC).
+		// Also eliminates risk of takeoff affecting initial SoC.
+		if (_vehicle_control_mode_sub.updated()) {
+			vehicle_control_mode_s vehicle_control_mode;
+			if (_vehicle_control_mode_sub.copy(&vehicle_control_mode)) {
+				_armed = vehicle_control_mode.flag_armed;
+			}
+		}
 
+		if(!_armed){
 			constexpr Lookup SOCLookup[lookup_size] {
 				{4.17, 100.0},
 				{4.09, 89.5},
@@ -245,11 +249,13 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 						const float soc1 = SOCLookup[i].SOC;
 						const float volt2 = SOCLookup[i-1].OCVoltage;
 						const float soc2 = SOCLookup[i-1].SOC;
-						soc_initial = (soc1 + (soc2 - soc1) * (cell_voltage_filtered - volt1) / (volt2 - volt1))/100;
+						soc_initial = math::gradual(cell_voltage_filtered, volt1, volt2, soc1, soc2)/100;
 						break;
 					}
 				}
 			}
+			// If the 'initial' SoC is refreshed (e.g between flights), the discharged_initial is updated
+			// to ensure appropriate continuity in coulomb counting.
 			_discharged_mah_initial = _discharged_mah;
 
 		}
@@ -261,8 +267,7 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 		}
 
 		// Voltage Monitor warning - Coulomb counting won't catch cell failures so we add a warning if cell voltage drops to a critical level (3.4V).
-		// This is derived from.........
-		if (current_a > 10.0f && cell_voltage_filtered < float(3.4) && (hrt_absolute_time() - sees_warning_last > 10'000'000)) {
+		if (_armed && cell_voltage_filtered < float(3.4) && (hrt_absolute_time() - sees_warning_last > 10'000'000)) {
 			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %fV. Land Immediately!", double(cell_voltage_filtered_load));
 			sees_warning_last = hrt_absolute_time();
 		}

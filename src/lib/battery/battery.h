@@ -55,6 +55,8 @@
 #include <lib/ecl/AlphaFilter/AlphaFilter.hpp>
 #include <uORB/PublicationMulti.hpp>
 #include <uORB/topics/battery_status.h>
+#include <uORB/Subscription.hpp>
+#include <uORB/topics/vehicle_control_mode.h>
 
 #include <systemlib/mavlink_log.h>
 
@@ -211,4 +213,11 @@ private:
 	const int lookup_size = 11;
 	hrt_abstime sees_warning_last{0};
 	orb_advert_t _mavlink_log_pub{nullptr};
+	bool _armed{false};
+	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
+
+	struct Lookup {
+				float OCVoltage{0.f};
+				float SOC{0.f};
+			};
 };
