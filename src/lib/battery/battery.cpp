@@ -205,71 +205,38 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 	if (sees_coulomb_counting_only) {
 
 		// This ensures the cell voltage is derived from the filtered voltage and corrects for any voltage load drop as PX4 uses the raw voltage values.
-		cell_voltage_filtered = _voltage_filter_v.getState();
-		cell_voltage_filtered /= _params.n_cells;
-		cell_voltage_filtered_load += _params.r_internal * current_a;
+		float cell_voltage = voltage_v / _params.n_cells;
+		// Adjust for current and resistance to get open circuit voltage
+		float oc_cell_voltage = cell_voltage + _params.r_internal * current_a;
 
-		// Initially dervied an initial SoC Estimation from the voltage at low current draw. Tiree in idle state draws ~3A and Birdham ~0.5A, so idle threshold is set to 4A.
-		// However, it's difficult to characterise idle current in a way that is appropriate for both Birdham and Tiree.
-		// Must be disarmed to prevent any sporadic drops in current from triggering voltage-based estimation midflight (battery voltage under load is unrepresentative of SoC).
-		// Also eliminates risk of takeoff affecting initial SoC.
-		if (_vehicle_control_mode_sub.updated()) {
-			vehicle_control_mode_s vehicle_control_mode;
-			if (_vehicle_control_mode_sub.copy(&vehicle_control_mode)) {
-				_armed = vehicle_control_mode.flag_armed;
-			}
+		// We're using armed as a proxy for high current to avoid having to have a parameter that works on all drones
+		vehicle_control_mode_s vehicle_control_mode;
+		if (_vehicle_control_mode_sub.update(&vehicle_control_mode)) {
+			_armed = vehicle_control_mode.flag_armed;
 		}
 
 		if(!_armed){
-			constexpr Lookup SOCLookup[lookup_size] {
-				{4.17, 100.0},
-				{4.09, 89.5},
-				{3.99, 79.1},
-				{3.93, 68.6},
-				{3.87, 58.2},
-				{3.82, 47.7},
-				{3.79, 37.3},
-				{3.77, 26.8},
-				{3.73, 16.4},
-				{3.69, 5.9},
-				{3.50, 0.0}
-			};
 
-			if (cell_voltage_filtered >= SOCLookup[0].OCVoltage) {
-				soc_initial = 1.0;
-			}
-			else if (cell_voltage_filtered <= SOCLookup[lookup_size].OCVoltage) {
-				soc_initial = 0.0;
-			}
-			else {
-				for (int i = 1; i < lookup_size; i++) {
-					float voltage_key = SOCLookup[i].OCVoltage;
-					if (cell_voltage_filtered > voltage_key) {
-						const float volt1 = SOCLookup[i].OCVoltage;
-						const float soc1 = SOCLookup[i].SOC;
-						const float volt2 = SOCLookup[i-1].OCVoltage;
-						const float soc2 = SOCLookup[i-1].SOC;
-						soc_initial = math::gradual(cell_voltage_filtered, volt1, volt2, soc1, soc2)/100;
-						break;
-					}
-				}
-			}
+			// Get the initial SOC from cell voltage
+			_soc_initial = _soc_lookup.GetSOC(oc_cell_voltage);
+
 			// If the 'initial' SoC is refreshed (e.g between flights), the discharged_initial is updated
 			// to ensure appropriate continuity in coulomb counting.
 			_discharged_mah_initial = _discharged_mah;
 
 		}
 
-		// CURRENT SOC CALC
-		_state_of_charge = soc_initial - ((_discharged_mah - _discharged_mah_initial)/_params.capacity);
-		if (_state_of_charge < 0) {
-			_state_of_charge = 0;
+		// Coulomb count to estimate current SOC
+		_state_of_charge = _soc_initial - ((_discharged_mah - _discharged_mah_initial)/_params.capacity);
+		if (_state_of_charge < 0.f) {
+			_state_of_charge = 0.f;
 		}
 
 		// Voltage Monitor warning - Coulomb counting won't catch cell failures so we add a warning if cell voltage drops to a critical level (3.4V).
-		if (_armed && cell_voltage_filtered < float(3.4) && (hrt_absolute_time() - sees_warning_last > 10'000'000)) {
-			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %fV. Land Immediately!", double(cell_voltage_filtered_load));
-			sees_warning_last = hrt_absolute_time();
+		// Note - doing this on actual cell voltage (not current-corrected OC voltage) as that's the critical parameter for pack safety
+		if (_armed && cell_voltage < float(3.4) && (hrt_absolute_time() - _sees_warning_last > 10'000'000)) {
+			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %fV. Land Immediately!", double(cell_voltage));
+			_sees_warning_last = hrt_absolute_time();
 		}
 	}
 
@@ -310,6 +277,28 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 			_state_of_charge = _state_of_charge_volt_based;
 		}
 	}
+}
+
+float Battery::SOCLookup::GetSOC(float voltage) {
+	if (voltage >= _lookup[0]._oc_voltage) {
+		return 1.f;
+	}
+	else if (voltage <= _lookup[_lookup_size]._oc_voltage) {
+		return 0.f;
+	}
+	else {
+		for (int i = 1; i < _lookup_size; i++) {
+			float voltage_key = _lookup[i]._oc_voltage;
+			if (voltage > voltage_key) {
+				const float volt1 = _lookup[i]._oc_voltage;
+				const float soc1 = _lookup[i]._soc;
+				const float volt2 = _lookup[i-1]._oc_voltage;
+				const float soc2 = _lookup[i-1]._soc;
+				return math::gradual(voltage, volt1, volt2, soc1, soc2)/100.f;
+			}
+		}
+	}
+	return 0.0;
 }
 
 uint8_t Battery::determineWarning(float state_of_charge)
