@@ -227,26 +227,26 @@ private:
 		// return soc [0, 1] given open circuit cell voltage
 		float GetSOC(float voltage);
 
-		private:
-			struct Lookup {
-				float _oc_voltage{0.f};
-				float _soc{0.f};
-			};
-			/// size of lookup table - NB MUST be correct or risk of seg_fault / bad lookup
-			const int _lookup_size = 11;
-			/// lookup table - NB MUST be monontonic descending
-			const Lookup _lookup[11] {
-				{4.17, 100.0},
-				{4.09, 89.5},
-				{3.99, 79.1},
-				{3.93, 68.6},
-				{3.87, 58.2},
-				{3.82, 47.7},
-				{3.79, 37.3},
-				{3.77, 26.8},
-				{3.73, 16.4},
-				{3.69, 5.9},
-				{3.50, 0.0}
-			};
+	private:
+		struct Lookup {
+			float _oc_voltage{0.f};
+			float _soc{0.f};
+		};
+		/// size of lookup table - NB MUST be correct or risk of seg_fault / bad lookup
+		const int _lookup_size = 11;
+		/// lookup table - NB MUST be monontonic descending
+		const Lookup _lookup[11] {
+			{4.17, 100.0},
+			{4.09, 89.5},
+			{3.99, 79.1},
+			{3.93, 68.6},
+			{3.87, 58.2},
+			{3.82, 47.7},
+			{3.79, 37.3},
+			{3.77, 26.8},
+			{3.73, 16.4},
+			{3.69, 5.9},
+			{3.50, 0.0}
+		};
 	} _soc_lookup;
 };

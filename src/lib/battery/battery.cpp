@@ -211,11 +211,12 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 
 		// We're using armed as a proxy for high current to avoid having to have a parameter that works on all drones
 		vehicle_control_mode_s vehicle_control_mode;
+
 		if (_vehicle_control_mode_sub.update(&vehicle_control_mode)) {
 			_armed = vehicle_control_mode.flag_armed;
 		}
 
-		if(!_armed){
+		if (!_armed) {
 
 			// Get the initial SOC from cell voltage
 			_soc_initial = _soc_lookup.GetSOC(oc_cell_voltage);
@@ -227,7 +228,8 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 		}
 
 		// Coulomb count to estimate current SOC
-		_state_of_charge = _soc_initial - ((_discharged_mah - _discharged_mah_initial)/_params.capacity);
+		_state_of_charge = _soc_initial - ((_discharged_mah - _discharged_mah_initial) / _params.capacity);
+
 		if (_state_of_charge < 0.f) {
 			_state_of_charge = 0.f;
 		}
@@ -279,25 +281,28 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 	}
 }
 
-float Battery::SOCLookup::GetSOC(float voltage) {
+float Battery::SOCLookup::GetSOC(float voltage)
+{
 	if (voltage >= _lookup[0]._oc_voltage) {
 		return 1.f;
-	}
-	else if (voltage <= _lookup[_lookup_size]._oc_voltage) {
+
+	} else if (voltage <= _lookup[_lookup_size]._oc_voltage) {
 		return 0.f;
-	}
-	else {
+
+	} else {
 		for (int i = 1; i < _lookup_size; i++) {
 			float voltage_key = _lookup[i]._oc_voltage;
+
 			if (voltage > voltage_key) {
 				const float volt1 = _lookup[i]._oc_voltage;
 				const float soc1 = _lookup[i]._soc;
-				const float volt2 = _lookup[i-1]._oc_voltage;
-				const float soc2 = _lookup[i-1]._soc;
-				return math::gradual(voltage, volt1, volt2, soc1, soc2)/100.f;
+				const float volt2 = _lookup[i - 1]._oc_voltage;
+				const float soc2 = _lookup[i - 1]._soc;
+				return math::gradual(voltage, volt1, volt2, soc1, soc2) / 100.f;
 			}
 		}
 	}
+
 	return 0.0;
 }
 
