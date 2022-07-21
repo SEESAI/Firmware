@@ -40,6 +40,7 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/hover_thrust_estimate.h>
+#include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/drag_estimator.h>
 #include <uORB/Publication.hpp>
 #include <systemlib/mavlink_log.h>
@@ -94,10 +95,12 @@ private:
 
 	//Subscriptions
 
+	int _sensor_combined_sub {-1};
 	int _vehicle_attitude_sub {-1};
 	int _vehicle_attitude_setpoint_sub {-1};
 	int _hover_thrust_estimate_sub {-1};
 
+	sensor_combined_s		_sensor_combined{};
 	vehicle_attitude_s		_vehicle_attitude{};
 	vehicle_attitude_setpoint_s	_vehicle_attitude_setpoint{};
 	hover_thrust_estimate_s		_hover_thrust_estimate;

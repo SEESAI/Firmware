@@ -139,16 +139,19 @@ void DragEstimator::run()
 	_vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
 	_vehicle_attitude_setpoint_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 	_hover_thrust_estimate_sub = orb_subscribe(ORB_ID(hover_thrust_estimate));
+	_sensor_combined_sub = orb_subscribe(ORB_ID(sensor_combined));
 
 
 
-	px4_pollfd_struct_t fds[3];
+	px4_pollfd_struct_t fds[4];
 	fds[0].fd = _vehicle_attitude_sub;
 	fds[0].events = POLLIN;
 	fds[1].fd = _vehicle_attitude_setpoint_sub;
 	fds[1].events = POLLIN;
 	fds[2].fd = _hover_thrust_estimate_sub;
 	fds[2].events = POLLIN;
+	fds[3].fd = _sensor_combined_sub;
+	fds[3].events = POLLIN;
 
 	while (!should_exit()) {
 
@@ -169,10 +172,27 @@ void DragEstimator::run()
 			orb_copy(ORB_ID(vehicle_attitude), _vehicle_attitude_sub, &_vehicle_attitude);
 			orb_copy(ORB_ID(vehicle_attitude_setpoint), _vehicle_attitude_setpoint_sub, &_vehicle_attitude_setpoint);
 			orb_copy(ORB_ID(hover_thrust_estimate), _hover_thrust_estimate_sub, &_hover_thrust_estimate);
-			// TODO: add acceleration from combined_sensor
+			orb_copy(ORB_ID(sensor_combined), _sensor_combined_sub, &_sensor_combined);
+
+			// Acceleration from accelerometer
+			float ax = _sensor_combined.accelerometer_m_s2[0];
+			float ay = _sensor_combined.accelerometer_m_s2[1];
+			float az = _sensor_combined.accelerometer_m_s2[2];
+
+			// TODO: maths
+
+
+			drag_estimator_s drag;
+			// TODO: populate drag for publishing
+
+
+			_drag_estimator_pub.publish(drag);
+
+
+
 
 			// TODO: do something with the data...
-
+/*
 			// Take attitude in quaternions
 			qw = _vehicle_attitude.q[0];
 			qx = _vehicle_attitude.q[1];
@@ -196,8 +216,11 @@ void DragEstimator::run()
 
 
 			float roll = AttQuatToRoll(qw, qx, qy, qz);
+*/
 
-			_drag_estimator_pub.publish
+
+
+
 
 
 
