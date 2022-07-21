@@ -341,6 +341,16 @@ rtps:
     id: 158
   - msg: estimator_event_flags
     id: 159
+  - msg: sensor_gnss_relative
+    id: 164
+  - msg: manual_control_switches_rc
+    id: 165
+  - msg: manual_control_switches_mav
+    id: 166
+  - msg: manual_control_setpoint_rc
+    id: 167
+  - msg: manual_control_setpoint_mav
+    id: 168
   ########## multi topics: begin ##########
   - msg: actuator_controls_0
     id: 180
@@ -448,4 +458,5 @@ rtps:
   - msg: estimator_wind
     id: 213
     alias: wind
+
   ########## multi topics: end ##########
