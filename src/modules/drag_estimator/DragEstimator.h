@@ -102,7 +102,7 @@ private:
 	vehicle_attitude_setpoint_s	_vehicle_attitude_setpoint{};
 	hover_thrust_estimate_s		_hover_thrust_estimate;
 
-	uORB::Publication<drag_estimator_s>	_drag_estimator_sub{ORB_ID(drag_estimator)};
+	uORB::Publication<drag_estimator_s>	_drag_estimator_pub{ORB_ID(drag_estimator)};
 
 	orb_advert_t           _mavlink_log_pub{nullptr};
 

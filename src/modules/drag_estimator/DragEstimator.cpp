@@ -169,6 +169,8 @@ void DragEstimator::run()
 			orb_copy(ORB_ID(vehicle_attitude), _vehicle_attitude_sub, &_vehicle_attitude);
 			orb_copy(ORB_ID(vehicle_attitude_setpoint), _vehicle_attitude_setpoint_sub, &_vehicle_attitude_setpoint);
 			orb_copy(ORB_ID(hover_thrust_estimate), _hover_thrust_estimate_sub, &_hover_thrust_estimate);
+			// TODO: add acceleration from combined_sensor
+
 			// TODO: do something with the data...
 
 			// Take attitude in quaternions
@@ -194,6 +196,8 @@ void DragEstimator::run()
 
 
 			float roll = AttQuatToRoll(qw, qx, qy, qz);
+
+			_drag_estimator_pub.publish
 
 
 
