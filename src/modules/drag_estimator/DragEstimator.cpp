@@ -178,20 +178,20 @@ void DragEstimator::run()
 			Quatf att_quat(qw, qx, qy, qz);
 
 			// Acceleration from accelerometer
-			// (from Richard - Use vehicle_local_position if you want the EKF acceleration output in the body frame)
+			// (this uses EKF acceleration - we could use sensor_combined and drop the added 9.81 below)
 			const float &ax = _vehicle_local_position.ax;
 			const float &ay = _vehicle_local_position.ay;
 			const float &az = _vehicle_local_position.az;
 			Vector3f acc_measured_body(ax, ay, az);
 			Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
 
-			// Expected acceleration from thrust (note thrust_body[1] and thrust_body[2] will be zero)
+			// Expected acceleration from thrust (note thrust_body[0] and thrust_body[1] will be zero)
 			const float hover_thrust = math::max(0.1f, _hover_thrust_estimate.hover_thrust);
 			const float &acc_expected_x = _vehicle_attitude_setpoint.thrust_body[0] * 9.81f / hover_thrust;
 			const float &acc_expected_y = _vehicle_attitude_setpoint.thrust_body[1] * 9.81f / hover_thrust;
-			const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2] - hover_thrust) * 9.81f / hover_thrust;
+			const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2]) * 9.81f / hover_thrust;
 			Vector3f acc_expected_body(acc_expected_x, acc_expected_y, acc_expected_z);
-			Vector3f acc_expected = att_quat.conjugate(acc_expected_body);
+			Vector3f acc_expected = att_quat.conjugate(acc_expected_body) + Vector3f(0.f, 0.f, 9.81f);
 
 			// Subtract expected acceleration from measured acceleration to estimate drag acceleration.
 			// (assuming measured = expected + drag)
