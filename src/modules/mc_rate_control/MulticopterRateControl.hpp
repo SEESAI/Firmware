@@ -160,7 +160,9 @@ private:
 
 		(ParamBool<px4::params::MC_BAT_SCALE_EN>) _param_mc_bat_scale_en,
 
-		(ParamInt<px4::params::CBRK_RATE_CTRL>) _param_cbrk_rate_ctrl
+		(ParamInt<px4::params::CBRK_RATE_CTRL>) _param_cbrk_rate_ctrl,
+
+		(ParamFloat<px4::params::MC_PR_DRAG_K>) _param_mc_pr_drag_factor
 	)
 
 	matrix::Vector3f _acro_rate_max;	/**< max attitude rates in acro mode */
