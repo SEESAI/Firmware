@@ -71,7 +71,7 @@ int DragEstimator::task_spawn(int argc, char *argv[])
 	_task_id = px4_task_spawn_cmd("DragEstimator",
 				      SCHED_DEFAULT,
 				      SCHED_PRIORITY_DEFAULT,
-				      1024,
+				      1300,
 				      (px4_main_t)&run_trampoline,
 				      (char *const *)argv);
 
@@ -153,6 +153,8 @@ void DragEstimator::run()
 	fds[3].fd = _sensor_combined_sub;
 	fds[3].events = POLLIN;
 
+	parameters_update(true);
+
 	while (!should_exit()) {
 
 		// wait for up to 1000ms for data
@@ -167,7 +169,7 @@ void DragEstimator::run()
 			px4_usleep(50000);
 			continue;
 
-		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN || fds[2].revents & POLLIN) {
+		} else if (fds[0].revents & POLLIN || fds[1].revents & POLLIN || fds[2].revents & POLLIN || fds[3].revents & POLLIN) {
 
 			orb_copy(ORB_ID(vehicle_attitude), _vehicle_attitude_sub, &_vehicle_attitude);
 			orb_copy(ORB_ID(vehicle_attitude_setpoint), _vehicle_attitude_setpoint_sub, &_vehicle_attitude_setpoint);
@@ -178,26 +180,83 @@ void DragEstimator::run()
 			float ax = _sensor_combined.accelerometer_m_s2[0];
 			float ay = _sensor_combined.accelerometer_m_s2[1];
 			float az = _sensor_combined.accelerometer_m_s2[2];
+			Vector3f acc_ekf(ax, ay, az);
 
 			// TODO: maths
 
+			float qw = _vehicle_attitude.q[0];
+			float qx = _vehicle_attitude.q[1];
+			float qy = _vehicle_attitude.q[2];
+			float qz = _vehicle_attitude.q[3];
+			Quatf att_quat(qw, qx, qy, qz);
 
-			drag_estimator_s drag;
-			// TODO: populate drag for publishing
+			float acc_expected_x = _vehicle_attitude_setpoint.thrust_body[0] * 9.81f / _hover_thrust_estimate.hover_thrust;
+			float acc_expected_y = _vehicle_attitude_setpoint.thrust_body[1] * 9.81f / _hover_thrust_estimate.hover_thrust;
+			float acc_expected_z = _vehicle_attitude_setpoint.thrust_body[2] * 9.81f / _hover_thrust_estimate.hover_thrust;
+
+			// TODO:
+			Vector3f acc_expected_body(acc_expected_x, acc_expected_y, acc_expected_z);
+			//Quatf acc_quat(acc_expected_x, acc_expected_y, acc_expected_z, 0.f);
+
+			// Converting acc_expected to world frame
+			//Quatf acc_expected_world = att_quat * acc_quat;
+			Vector3f acc_expected_world = att_quat.conjugate(acc_expected_body);
+
+			// Subtract measured acceleration from expected acceleration to estimate drag acceleration.
+			Vector3f drag_acceleration = acc_expected_world - acc_ekf;
 
 
+			//Put drag acc through lowpass filter
+			hrt_abstime acc_timestamp = _sensor_combined.timestamp;
+			hrt_abstime sample_time = acc_timestamp - _timestamp_prev;
+			float freq = 1 / (sample_time/1e6);
+			_timestamp_prev = acc_timestamp;
+
+			// TODO: update in sync with one topic (sensor combined) as we're skipping some samples.
+			if (fabs(_lp_filter.get_cutoff_freq()) < 0.1f) {
+				_lp_filter.set_cutoff_frequency(freq, 10.f);
+				_lp_filter.reset(Vector3f(0.0f, 0.0f, 0.0f));
+			}
+
+			//mavlink_log_info(&_mavlink_log_pub, "sample freq %f", double(freq));
+			// TODO: set a proper sampling frequency
+
+			//Vector3f acc_expected_world_filtered = _lp_filter.apply(acc_expected_world);
+			Vector3f acc_expected_world_filtered = acc_expected_world;
+
+			// Convert drag_acceleration_filtered back into body fram
+			Vector3f drag_acceleration_filtered_body = att_quat.conjugate_inversed(acc_expected_world_filtered);
+
+			// Cross product with Centre of Pressure (CoP) offset z to get moment acting on Centre of Gravity (CoG) in body frame.
+			Vector3f drag_acc_moment_body = drag_acceleration_filtered_body.cross(Vector3f(0.f, 0.f, 0.1f));
+			// TODO: change z value to _param_cop_offset_z.get()
+
+
+			// Populate drag for publishing
+			drag_estimator_s drag{};
+			acc_expected_world.copyTo(drag.acc_expected_xyz);
+			drag_acceleration.copyTo(drag.drag_acceleration_xyz);
+			drag_acceleration_filtered_body.copyTo(drag.drag_acceleration_xyz_filtered);
+			drag_acc_moment_body.copyTo(drag.drag_acceleration_moment_body);
+			drag.timestamp = hrt_absolute_time();
 			_drag_estimator_pub.publish(drag);
 
+			// mavlink_log_info(&_mavlink_log_pub, "acc ekf 0 = %f", double(ax));
+
+
+			parameters_update();
 
 
 
-			// TODO: do something with the data...
+
+			// PULL timestamps from subs, find difference, 1/ them and use that as freq.
+			// Initialise at 100Hz and if this changes by 3-5Hz ish then reset the filter.
+
+
+			// TODO: Delete sandbox below
 /*
 			// Take attitude in quaternions
-			qw = _vehicle_attitude.q[0];
-			qx = _vehicle_attitude.q[1];
-			qy = _vehicle_attitude.q[2];
-			qz = _vehicle_attitude.q[3];
+
 
 			// Take hover thrust estimate to quantify relationship between thrust and acceleration.
 			// i.e hover thrust should be equal to g
@@ -216,20 +275,11 @@ void DragEstimator::run()
 
 
 			float roll = AttQuatToRoll(qw, qx, qy, qz);
-*/
 
 
-
-
-
-
-
-
-
-
-			mavlink_log_info(&_mavlink_log_pub, "quat0 = %f, roll = %f", double(quat(0)), double(roll));
+			//mavlink_log_info(&_mavlink_log_pub, "quat0 = %f, roll = %f", double(quat(0)), double(roll));
 			//mavlink_log_info(&_mavlink_log_pub, "vec2(0) = %f, vec2(1) = %f, vec2(2) = %f", double(vec2(0)), double(vec2(1)), double(vec2(2)));
-
+*/
 
 
 
@@ -241,6 +291,19 @@ void DragEstimator::run()
 	orb_unsubscribe(_vehicle_attitude_sub);
 	orb_unsubscribe(_vehicle_attitude_setpoint_sub);
 	orb_unsubscribe(_hover_thrust_estimate_sub);
+}
+
+void DragEstimator::parameters_update(bool force)
+{
+	// check for parameter updates
+	if (_parameter_update_sub.updated() || force) {
+		// clear update
+		parameter_update_s update;
+		_parameter_update_sub.copy(&update);
+
+		// update parameters from storage
+		updateParams();
+	}
 }
 
 

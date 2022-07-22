@@ -36,6 +36,7 @@
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/module_params.h>
 #include <uORB/Subscription.hpp>
+#include <uORB/SubscriptionInterval.hpp>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
@@ -45,6 +46,9 @@
 #include <uORB/Publication.hpp>
 #include <systemlib/mavlink_log.h>
 #include <matrix/math.hpp>
+#include <lib/mathlib/math/filter/LowPassFilter2p.hpp>
+
+using namespace matrix;
 
 
 extern "C" __EXPORT int drag_estimator_main(int argc, char *argv[]);
@@ -77,11 +81,6 @@ public:
 
 	float AttQuatToRoll(float _qw, float _qx, float _qy, float _qz);
 
-	// Quaternion values from vehicle_attitude
-	float qw{0};
-	float qx{0};
-	float qy{0};
-	float qz{0};
 
 	float acc_fwd{0};
 	float acc_right{0};
@@ -92,6 +91,20 @@ public:
 
 
 private:
+	/**
+	 * Check for parameter changes and update them if needed.
+	 * @param parameter_update_sub uorb subscription to parameter_update
+	 * @param force for a parameter update
+	 */
+	void parameters_update(bool force = false);
+
+	// TODO: remove unwanted params, set cop offset
+	DEFINE_PARAMETERS(
+		//(ParamFloat<px4::params::COP_OFFSET_Z) _param_cop_offset_z,
+		(ParamInt<px4::params::SYS_AUTOSTART>) _param_sys_autostart,   /**< example parameter */
+		(ParamInt<px4::params::SYS_AUTOCONFIG>) _param_sys_autoconfig  /**< another parameter */
+	)
+
 
 	//Subscriptions
 
@@ -105,7 +118,11 @@ private:
 	vehicle_attitude_setpoint_s	_vehicle_attitude_setpoint{};
 	hover_thrust_estimate_s		_hover_thrust_estimate;
 
+	math::LowPassFilter2p<matrix::Vector3f> _lp_filter{100.f, 10.f};
+	hrt_abstime _timestamp_prev{0};
+
 	uORB::Publication<drag_estimator_s>	_drag_estimator_pub{ORB_ID(drag_estimator)};
+	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1'000'000};
 
 	orb_advert_t           _mavlink_log_pub{nullptr};
 
