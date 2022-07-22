@@ -189,7 +189,7 @@ void DragEstimator::run()
 			const float hover_thrust = math::max(0.1f, _hover_thrust_estimate.hover_thrust);
 			const float &acc_expected_x = _vehicle_attitude_setpoint.thrust_body[0] * 9.81f / hover_thrust;
 			const float &acc_expected_y = _vehicle_attitude_setpoint.thrust_body[1] * 9.81f / hover_thrust;
-			const float &acc_expected_z = _vehicle_attitude_setpoint.thrust_body[2] * 9.81f / hover_thrust;
+			const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2] - hover_thrust) * 9.81f / hover_thrust;
 			Vector3f acc_expected_body(acc_expected_x, acc_expected_y, acc_expected_z);
 			Vector3f acc_expected = att_quat.conjugate(acc_expected_body);
 
