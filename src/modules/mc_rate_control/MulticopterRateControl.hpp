@@ -110,7 +110,8 @@ private:
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	uORB::PublicationMulti<rate_ctrl_status_s>	_controller_status_pub{ORB_ID(rate_ctrl_status)};	/**< controller status publication */
-	uORB::Publication<vehicle_rates_setpoint_s>	_v_rates_sp_pub{ORB_ID(vehicle_rates_setpoint)};			/**< rate setpoint publication */
+	uORB::Publication<vehicle_rates_setpoint_s>	_v_rates_sp_pub{ORB_ID(vehicle_rates_setpoint)};	/**< rate setpoint publication */
+	uORB::PublicationMulti<rate_ctrl_status_detail_s> _controller_status_detail_pub{ORB_ID(rate_ctrl_status_detail)};	/**< controller status publication */
 
 	vehicle_control_mode_s		_v_control_mode{};
 	vehicle_status_s		_vehicle_status{};

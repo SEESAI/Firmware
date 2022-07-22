@@ -84,6 +84,13 @@ Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, cons
 		updateIntegral(rate_error, dt);
 	}
 
+	// temporary copy of all values for logging (Richard - will remove once this has been tested)
+	_rate_int.copyTo(_rate_ctrl_status.integ);
+	rate_d_error.copyTo(_rate_ctrl_status.deriv);
+	rate_error.copyTo(_rate_ctrl_status.prop);
+	drag_moment.copyTo(_rate_ctrl_status.drag);
+	_rate_ctrl_status.dt = dt;
+
 	return torque;
 }
 
@@ -117,6 +124,11 @@ void RateControl::updateIntegral(Vector3f &rate_error, const float dt)
 			_rate_int(i) = math::constrain(rate_i, -_lim_int(i), _lim_int(i));
 		}
 	}
+}
+
+void RateControl::getRateControlStatus(rate_ctrl_status_detail_s &rate_ctrl_status)
+{
+	rate_ctrl_status = _rate_ctrl_status;
 }
 
 void RateControl::getRateControlStatus(rate_ctrl_status_s &rate_ctrl_status)

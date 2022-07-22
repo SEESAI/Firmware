@@ -44,6 +44,7 @@
 
 #include <lib/mixer/MultirotorMixer/MultirotorMixer.hpp>
 #include <uORB/topics/rate_ctrl_status.h>
+#include <uORB/topics/rate_ctrl_status_detail.h>
 
 class RateControl
 {
@@ -130,6 +131,8 @@ public:
 	 */
 	void getRateControlStatus(rate_ctrl_status_s &rate_ctrl_status);
 
+	void getRateControlStatus(rate_ctrl_status_detail_s &rate_ctrl_status);
+
 private:
 	void updateIntegral(matrix::Vector3f &rate_error, const float dt);
 
@@ -153,5 +156,8 @@ private:
 
 	bool _mixer_saturation_positive[3] {};
 	bool _mixer_saturation_negative[3] {};
+
+	// Outputs
+	rate_ctrl_status_detail_s _rate_ctrl_status;
 
 };

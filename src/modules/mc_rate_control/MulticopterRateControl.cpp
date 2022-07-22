@@ -246,6 +246,12 @@ MulticopterRateControl::Run()
 			rate_ctrl_status.timestamp = hrt_absolute_time();
 			_controller_status_pub.publish(rate_ctrl_status);
 
+			// temporary publish detail rate controller status (Richard - will remove once this is working)
+			rate_ctrl_status_detail_s rate_ctrl_status_detail{};
+			_rate_control.getRateControlStatus(rate_ctrl_status_detail);
+			rate_ctrl_status_detail.timestamp = hrt_absolute_time();
+			_controller_status_detail_pub.publish(rate_ctrl_status_detail);
+
 			// publish actuator controls
 			actuator_controls_s actuators{};
 			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
