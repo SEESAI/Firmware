@@ -195,7 +195,7 @@ void DragEstimator::run()
 
 			// Subtract expected acceleration from measured acceleration to estimate drag acceleration.
 			// (assuming measured = expected + drag)
-			Vector3f drag_acc = acc_measured * 0.8f - acc_expected;
+			Vector3f drag_acc = acc_measured - acc_expected; // * 0.8f // - scale acc_expected by 0.8 to test this in jmavsim
 
 			// Filter the drag acceleration
 			Vector3f drag_acc_filtered = _lp_filter.apply(drag_acc);
