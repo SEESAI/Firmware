@@ -197,6 +197,19 @@ void DragEstimator::run()
 			// (assuming measured = expected + drag)
 			Vector3f drag_acc = acc_measured - acc_expected; // * 0.8f // - scale acc_expected by 0.8 to test this in jmavsim
 
+			// ToDo: Force the above to zero when landed or maybe_landed
+			// if (_vehicle_land_detected_sub.updated()) {
+			// 	vehicle_land_detected_s vehicle_land_detected;
+			//
+			// 	if (_vehicle_land_detected_sub.copy(&vehicle_land_detected)) {
+			// 		_landed = vehicle_land_detected.landed;
+			// 		_maybe_landed = vehicle_land_detected.maybe_landed;
+			// 	}
+			// }
+			// if (_landed || _maybe_landed) {
+			// 	drag_acc = Vector3f(0.f,0.f,0.f);
+			// }
+
 			// Filter the drag acceleration
 			Vector3f drag_acc_filtered = _lp_filter.apply(drag_acc);
 
