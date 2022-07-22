@@ -53,31 +53,21 @@ public:
 	LowPassFilter1p(float sample_freq, float cutoff_freq)
 	{
 		// set initial parameters
-		set_cutoff_frequency(sample_freq, cutoff_freq);
+		set_cutoff_frequency(cutoff_freq);
+		set_sample_frequency(sample_freq);
 	}
 
 	// Change filter parameters
-	void set_cutoff_frequency(float sample_freq, float cutoff_freq)
+	void set_cutoff_frequency(float cutoff_freq, bool reset_states = true)
 	{
-		if ((sample_freq <= 0.f) || (cutoff_freq <= 0.f) || (cutoff_freq >= sample_freq / 2)
-		    || !isFinite(sample_freq) || !isFinite(cutoff_freq)) {
-
-			disable();
-			return;
-		}
-
-		// reset delay elements on filter change
-		_delay_element_1 = {};
-
 		_cutoff_freq = cutoff_freq;
+		update_alpha(reset_states);
+	}
+
+	void set_sample_frequency(float sample_freq, bool reset_states = true)
+	{
 		_sample_freq = sample_freq;
-
-		float r = 2 * M_PI_F * cutoff_freq / sample_freq;
-		_alpha = r / (1 + r);
-
-		if (!isFinite(_alpha)) {
-			disable();
-		}
+		update_alpha(reset_states);
 	}
 
 	/**
@@ -89,6 +79,16 @@ public:
 	{
 		_delay_element_1 += _alpha * (sample - _delay_element_1);
 
+		return _delay_element_1;
+	}
+
+	/**
+	 * Get the latest value
+	 *
+	 * @return retrieve the latest value
+	 */
+	inline T get()
+	{
 		return _delay_element_1;
 	}
 
@@ -115,12 +115,35 @@ public:
 
 	void disable()
 	{
-		_delay_element_1 = {};
-
 		// no filtering
-		_sample_freq = 0.f;
-		_cutoff_freq = 0.f;
 		_alpha = 1.f;
+		_delay_element_1 = {};
+	}
+
+	bool disabled() {
+		return fabsf(_alpha - 1.f) < 0.01f;
+	}
+
+protected:
+	void update_alpha(bool reset_states) {
+		if ((_sample_freq <= 0.f) || (_cutoff_freq <= 0.f) || (_cutoff_freq >= _sample_freq / 2)
+		    || !isFinite(_sample_freq) || !isFinite(_cutoff_freq)) {
+			disable();
+			return;
+		}
+
+		float r = 2 * M_PI_F * _cutoff_freq / _sample_freq;
+		_alpha = r / (1 + r);
+
+		if (!isFinite(_alpha) || (_alpha < 0.f)) {
+			disable();
+			return;
+		}
+
+		// optionally reset delay elements on filter change
+		if (reset_states) {
+			_delay_element_1 = {};
+		}
 	}
 
 protected:

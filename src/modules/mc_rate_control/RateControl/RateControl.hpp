@@ -40,6 +40,7 @@
 #pragma once
 
 #include <matrix/matrix/math.hpp>
+#include <mathlib/math/filter/LowPassFilter1p.hpp>
 
 #include <lib/mixer/MultirotorMixer/MultirotorMixer.hpp>
 #include <uORB/topics/rate_ctrl_status.h>
@@ -59,10 +60,17 @@ public:
 	void setGains(const matrix::Vector3f &P, const matrix::Vector3f &I, const matrix::Vector3f &D);
 
 	/**
-	 * Set the mximum absolute value of the integrator for all axes
+	 * Set the maximum absolute value of the integrator for all axes
 	 * @param integrator_limit limit value for all axes x, y, z
 	 */
 	void setIntegratorLimit(const matrix::Vector3f &integrator_limit) { _lim_int = integrator_limit; };
+
+	/**
+	 * Set drag estimator gain
+	 * @see _gain_ff
+	 * @param d 3D vector of feed forward gain for drag torque on body x,y,z axis
+	 */
+	void setDragEstimatorGain(const matrix::Vector3f &d) { _gain_drag = d; };
 
 	/**
 	 * Set direct rate to torque feed forward gain
@@ -78,6 +86,28 @@ public:
 	void setSaturationStatus(const MultirotorMixer::saturation_status &status);
 
 	/**
+	 * Set d term low pass filter cutoff frequency
+	 * @param cutoff_freq cutoff frequency - if zero then filter will be disabled
+	 */
+	void setDTermFilterCutoff(float cutoff_freq) {_d_filter.set_cutoff_frequency(cutoff_freq, false);}
+
+	/// Get d term low pass filter sample frequency
+	float getDTermFilterSampleFrequency() {return _d_filter.get_sample_freq();}
+
+	/**
+	 * Set d term low pass filter sample frequency
+	 * @param cutoff_freq sample frequency - if zero then filter will be disabled
+	 */
+	void setDTermFilterSampleFrequency(float sample_freq) {_d_filter.set_sample_frequency(sample_freq, false);}
+
+	/**
+	 * Set d term to use the setpoint
+	 * NB - this gives risk of derivative kick, so should be accompanied by a sensible filter setting
+	 * @param use_setpoint whether to use the setpoint in the d term (default false)
+	 */
+	void setDTermToUseSetpoint(bool use_setpoint) {_d_term_use_setpoint = use_setpoint;};
+
+	/**
 	 * Run one control loop cycle calculation
 	 * @param rate estimation of the current vehicle angular rate
 	 * @param rate_sp desired vehicle angular rate setpoint
@@ -85,7 +115,8 @@ public:
 	 * @return [-1,1] normalized torque vector to apply to the vehicle
 	 */
 	matrix::Vector3f update(const matrix::Vector3f &rate, const matrix::Vector3f &rate_sp,
-				const matrix::Vector3f &angular_accel, const float dt, const bool landed);
+				const matrix::Vector3f &angular_accel, const matrix::Vector3f &drag_moment,
+				const float dt, const bool landed);
 
 	/**
 	 * Set the integral term to 0 to prevent windup
@@ -102,16 +133,25 @@ public:
 private:
 	void updateIntegral(matrix::Vector3f &rate_error, const float dt);
 
+	// Settings
+	bool _d_term_use_setpoint{false}; ///< whether to use the setpoint in the d term
+
 	// Gains
 	matrix::Vector3f _gain_p; ///< rate control proportional gain for all axes x, y, z
 	matrix::Vector3f _gain_i; ///< rate control integral gain
 	matrix::Vector3f _gain_d; ///< rate control derivative gain
 	matrix::Vector3f _lim_int; ///< integrator term maximum absolute value
 	matrix::Vector3f _gain_ff; ///< direct rate to torque feed forward gain only useful for helicopters
+	matrix::Vector3f _gain_drag; ///< direct drag to torque feed forward - to adjust for drag disturbance on controller
+
+	// Filters
+	math::LowPassFilter1p<matrix::Vector3f> _d_filter; ///< lowpass filter for d term
 
 	// States
 	matrix::Vector3f _rate_int; ///< integral term of the rate controller
+	matrix::Vector3f _rate_sp_prev; ///< previous rate for derivative term
 
 	bool _mixer_saturation_positive[3] {};
 	bool _mixer_saturation_negative[3] {};
+
 };

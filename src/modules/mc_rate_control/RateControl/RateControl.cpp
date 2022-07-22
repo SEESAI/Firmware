@@ -58,13 +58,26 @@ void RateControl::setSaturationStatus(const MultirotorMixer::saturation_status &
 }
 
 Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, const Vector3f &angular_accel,
-			     const float dt, const bool landed)
+			     const Vector3f &drag_moment, const float dt, const bool landed)
 {
 	// angular rates error
 	Vector3f rate_error = rate_sp - rate;
 
-	// PID control with feed forward
-	const Vector3f torque = _gain_p.emult(rate_error) + _rate_int - _gain_d.emult(angular_accel) + _gain_ff.emult(rate_sp);
+	// angular derivative error
+	Vector3f rate_d_error = -angular_accel;
+
+	// use the setpoint in the d term if set to do so
+	if(_d_term_use_setpoint) {
+		rate_d_error += (rate_sp - _rate_sp_prev) / dt;
+	}
+	_rate_sp_prev = rate_sp;
+
+	// filter the d term (if filter is disabled then this just returns same number but updates the internal state)
+	rate_d_error =_d_filter.apply(rate_d_error);
+
+	// PID control with feed forward and drag gain compensation
+	const Vector3f torque = _gain_p.emult(rate_error) + _rate_int + _gain_d.emult(rate_d_error) + _gain_ff.emult(rate_sp) +
+				_gain_drag.emult(drag_moment);
 
 	// update integral only if we are not landed
 	if (!landed) {

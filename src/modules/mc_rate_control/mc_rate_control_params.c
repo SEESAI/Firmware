@@ -413,4 +413,32 @@ PARAM_DEFINE_INT32(MC_BAT_SCALE_EN, 0);
  * @increment 0.01
  * @group Multicopter Rate Control
  */
-PARAM_DEFINE_FLOAT(MC_PR_DRAG_K, 0.00f);
+PARAM_DEFINE_FLOAT(MC_PR_DRAG_K, 0.0f);
+
+/**
+ * D term lowpass filter cutoff Hz
+ *
+ * This acts in cooperation with the D term to result in a phase lead compensator
+ * If set to zero then the filter is disabled
+ * Pay attention to IMU_DGYRO_CUTOFF as this also acts on the vehicle rate.
+ *
+ * @min 0.0
+ * @max 100.0
+ * @decimal 1
+ * @increment 1.0
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_PR_D_CUTOFF, 0.0f);
+
+/**
+ * D term include setpoint
+ *
+ * This adds the setpoint to the derivative term.
+ * If set to true then it is recommended to include a filter on the D term to prevent
+ * derivative kick.
+ *
+ * @boolean
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_INT32(MC_PR_D_USE_SP, 0);
+

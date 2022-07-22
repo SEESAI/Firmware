@@ -92,7 +92,17 @@ TEST_F(LowPassFilter1pVector3fTest, setGet)
 	const float sample_freq = 1000.f;
 	const float cutoff_freq = 50.f;
 
-	_lpf.set_cutoff_frequency(sample_freq, cutoff_freq);
+	_lpf.set_sample_frequency(0.f);;
+	EXPECT_TRUE(_lpf.disabled());
+	_lpf.set_cutoff_frequency(0.f);;
+	EXPECT_TRUE(_lpf.disabled());
+
+	_lpf.set_cutoff_frequency(cutoff_freq);
+	EXPECT_TRUE(_lpf.disabled());
+
+	_lpf.set_sample_frequency(sample_freq);
+	EXPECT_FALSE(_lpf.disabled());
+
 	EXPECT_EQ(_lpf.get_sample_freq(), sample_freq);
 	EXPECT_EQ(_lpf.get_cutoff_freq(), cutoff_freq);
 }
@@ -107,7 +117,8 @@ TEST_F(LowPassFilter1pVector3fTest, simulate80HzCutoff)
 		const float sample_freq = 500.f;
 		const Vector3f phase_delay_deg = Vector3f{1.f, 35.66f, 35.79f}; // Given by simulation
 		const Vector3f gain_db{0.f, -4.11f, -8.26f}; // given by simulation
-		_lpf.set_cutoff_frequency(sample_freq, cutoff_freq);
+		_lpf.set_sample_frequency(sample_freq);
+		_lpf.set_cutoff_frequency(cutoff_freq);
 		runSimulatedFilter(signal_freq_hz, phase_delay_deg, gain_db);
 	}
 
@@ -116,8 +127,19 @@ TEST_F(LowPassFilter1pVector3fTest, simulate80HzCutoff)
 		const float sample_freq = 1000.f;
 		const Vector3f phase_delay_deg = Vector3f{0.f, 40.4f, 49.32f}; // Given by simulation
 		const Vector3f gain_db{0.f, -3.62f, -7.84f}; // Given by simulation
-		_lpf.set_cutoff_frequency(sample_freq, cutoff_freq);
+		_lpf.set_sample_frequency(sample_freq);
+		_lpf.set_cutoff_frequency(cutoff_freq);
 		runSimulatedFilter(signal_freq_hz, phase_delay_deg, gain_db);
+
+		// Check reset without resetting states works
+		Vector3f previous = _lpf.apply(Vector3f(100., 100., 100.));
+		_lpf.set_cutoff_frequency(cutoff_freq, false);
+		_lpf.set_sample_frequency(sample_freq, false);
+		EXPECT_NEAR(previous(1), _lpf.get()(1), _epsilon_near);
 	}
+
+	// Disable filter and check it returns identical numbers
+	_lpf.disable();
+	EXPECT_NEAR(100.f, _lpf.apply(Vector3f(100.f, 0.f, 0.f))(0), _epsilon_near);
 
 }
