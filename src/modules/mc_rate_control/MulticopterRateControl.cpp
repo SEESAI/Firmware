@@ -216,7 +216,7 @@ MulticopterRateControl::Run()
 			drag_estimator_s drag_estimator{};
 			if(_drag_estimator_sub.update(&drag_estimator)){
 				_drag_moment(0) = drag_estimator.drag_acceleration_moment_body[0];
-				_drag_moment(1) = drag_estimator.drag_acceleration_moment_body[2];
+				_drag_moment(1) = drag_estimator.drag_acceleration_moment_body[1];
 				_drag_moment(2) = 0; // ignore z drag moments
 			}
 
