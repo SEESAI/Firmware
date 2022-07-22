@@ -41,7 +41,7 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/hover_thrust_estimate.h>
-#include <uORB/topics/sensor_combined.h>
+#include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/drag_estimator.h>
 #include <uORB/Publication.hpp>
 #include <systemlib/mavlink_log.h>
@@ -107,16 +107,15 @@ private:
 
 
 	//Subscriptions
+	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
+	uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
+	uORB::Subscription _vehicle_attitude_setpoint_sub{ORB_ID(vehicle_attitude_setpoint)};
+	uORB::Subscription _hover_thrust_estimate_sub{ORB_ID(hover_thrust_estimate)};
 
-	int _sensor_combined_sub {-1};
-	int _vehicle_attitude_sub {-1};
-	int _vehicle_attitude_setpoint_sub {-1};
-	int _hover_thrust_estimate_sub {-1};
-
-	sensor_combined_s		_sensor_combined{};
+	vehicle_local_position_s	_vehicle_local_position{};
 	vehicle_attitude_s		_vehicle_attitude{};
 	vehicle_attitude_setpoint_s	_vehicle_attitude_setpoint{};
-	hover_thrust_estimate_s		_hover_thrust_estimate;
+	hover_thrust_estimate_s		_hover_thrust_estimate{};
 
 	math::LowPassFilter2p<matrix::Vector3f> _lp_filter{100.f, 10.f};
 	hrt_abstime _timestamp_prev{0};
