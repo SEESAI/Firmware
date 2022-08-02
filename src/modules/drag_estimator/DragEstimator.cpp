@@ -39,111 +39,56 @@
 
 #include <uORB/topics/parameter_update.h>
 
-int DragEstimator::print_status()
-{
-	PX4_INFO("Running");
-	// TODO: print additional runtime information about the state of the module
-
-	return 0;
-}
-
-int DragEstimator::custom_command(int argc, char *argv[])
-{
-	/*
-	if (!is_running()) {
-		print_usage("not running");
-		return 1;
-	}
-
-	// additional custom commands can be handled like this:
-	if (!strcmp(argv[0], "do-something")) {
-		get_instance()->do_something();
-		return 0;
-	}
-	 */
-
-	return print_usage("unknown command");
-}
-
-
-int DragEstimator::task_spawn(int argc, char *argv[])
-{
-	_task_id = px4_task_spawn_cmd("DragEstimator",
-				      SCHED_DEFAULT,
-				      SCHED_PRIORITY_DEFAULT,
-				      1300,
-				      (px4_main_t)&run_trampoline,
-				      (char *const *)argv);
-
-	if (_task_id < 0) {
-		_task_id = -1;
-		return -errno;
-	}
-
-	return 0;
-}
-
-DragEstimator *DragEstimator::instantiate(int argc, char *argv[])
-{
-	int example_param = 0;
-	bool example_flag = false;
-	bool error_flag = false;
-
-	int myoptind = 1;
-	int ch;
-	const char *myoptarg = nullptr;
-
-	// parse CLI arguments
-	while ((ch = px4_getopt(argc, argv, "p:f", &myoptind, &myoptarg)) != EOF) {
-		switch (ch) {
-		case 'p':
-			example_param = (int)strtol(myoptarg, nullptr, 10);
-			break;
-
-		case 'f':
-			example_flag = true;
-			break;
-
-		case '?':
-			error_flag = true;
-			break;
-
-		default:
-			PX4_WARN("unrecognized flag");
-			error_flag = true;
-			break;
-		}
-	}
-
-	if (error_flag) {
-		return nullptr;
-	}
-
-	DragEstimator *instance = new DragEstimator(example_param, example_flag);
-
-	if (instance == nullptr) {
-		PX4_ERR("alloc failed");
-	}
-
-	return instance;
-}
-
-DragEstimator::DragEstimator(int example_param, bool example_flag)
-	: ModuleParams(nullptr)
+DragEstimator::DragEstimator() :
+	ModuleParams(nullptr),
+	ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl) // TODO: Edit
 {
 }
 
-void DragEstimator::run()
+DragEstimator::~DragEstimator()
+{
+	perf_free(_loop_perf);
+	perf_free(_loop_interval_perf);
+}
+
+bool DragEstimator::init()
+{
+	// TODO: Edit to run with vehicle_attitude instead or put in 1ms schedule
+	// execute Run() on every sensor_accel publication
+	if (!_vehicle_attitude_setpoint_sub.registerCallback()) {
+		PX4_ERR("vehicle_attitude callback registration failed");
+		return false;
+	}
+
+	// alternatively, Run on fixed interval
+	// ScheduleOnInterval(10000_us); // 2000 us interval, 200 Hz rate
+
+	return true;
+}
+
+void DragEstimator::Run()
 {
 	// Set default hover thrust estimate to 0.5
 	_hover_thrust_estimate.hover_thrust = 0.5;
 
-	parameters_update(true);
+	if (should_exit()) {
+		ScheduleClear();
+		exit_and_cleanup();
+		return;
+	}
 
-	while (!should_exit()) {
-		px4_usleep(1000); // 1ms sleep time - we will replace this when we move to a work item
+	perf_begin(_loop_perf);
+	perf_count(_loop_interval_perf);
 
-		// Only run if vehicle_attitude is updated
+	// Check if parameters have changed
+	if (_parameter_update_sub.updated()) {
+		// clear update
+		parameter_update_s param_update;
+		_parameter_update_sub.copy(&param_update);
+		updateParams(); // update module parameters (in DEFINE_PARAMETERS)
+	}
+
+	// Only run if vehicle_attitude is updated
 		// Note - we use this as if it hasn't been updated after startup then quaternion will be zero
 		// Hence the maths generates NaNs
 		if (_vehicle_attitude_sub.updated())
@@ -167,7 +112,7 @@ void DragEstimator::run()
 					_lp_filter.set_cutoff_frequency(freq, 10.f);
 					 mavlink_log_info(&_mavlink_log_pub, "filter reset to %f Hz", double(freq));
 				}
-				// mavlink_log_info(&_mavlink_log_pub, "sample time %f", double(freq));
+				// mavlink_log_info(&_mavlink_log_pub, "Freq = %f", double(freq));
 			}
 
 			// Body attitude
@@ -197,18 +142,18 @@ void DragEstimator::run()
 			// (assuming measured = expected + drag)
 			Vector3f drag_acc = acc_measured - acc_expected; // * 0.8f // - scale acc_expected by 0.8 to test this in jmavsim
 
-			// ToDo: Force the above to zero when landed or maybe_landed
-			// if (_vehicle_land_detected_sub.updated()) {
-			// 	vehicle_land_detected_s vehicle_land_detected;
-			//
-			// 	if (_vehicle_land_detected_sub.copy(&vehicle_land_detected)) {
-			// 		_landed = vehicle_land_detected.landed;
-			// 		_maybe_landed = vehicle_land_detected.maybe_landed;
-			// 	}
-			// }
-			// if (_landed || _maybe_landed) {
-			// 	drag_acc = Vector3f(0.f,0.f,0.f);
-			// }
+			// Force the above to zero when landed or maybe_landed
+			if (_vehicle_land_detected_sub.updated()) {
+				vehicle_land_detected_s vehicle_land_detected;
+
+				if (_vehicle_land_detected_sub.copy(&vehicle_land_detected)) {
+					_landed = vehicle_land_detected.landed;
+					_maybe_landed = vehicle_land_detected.maybe_landed;
+				}
+			}
+			if (_landed || _maybe_landed) {
+				drag_acc = Vector3f(0.f,0.f,0.f);
+			}
 
 			// Filter the drag acceleration
 			Vector3f drag_acc_filtered = _lp_filter.apply(drag_acc);
@@ -232,76 +177,52 @@ void DragEstimator::run()
 			drag.timestamp = hrt_absolute_time();
 			_drag_estimator_pub.publish(drag);
 
-			// mavlink_log_info(&_mavlink_log_pub, "acc ekf 0 = %f", double(ax));
-
-			parameters_update();
-
-
-
-
-			// PULL timestamps from subs, find difference, 1/ them and use that as freq.
-			// Initialise at 100Hz and if this changes by 3-5Hz ish then reset the filter.
-
-
-			// TODO: Delete sandbox below
-/*
-			// Take attitude in quaternions
-
-
-			// Take hover thrust estimate to quantify relationship between thrust and acceleration.
-			// i.e hover thrust should be equal to g
-			thrust_coeff = float(9.81)/_hover_thrust_estimate.hover_thrust;
-
-			// Apply thrust_coeff to drone thrust to get acceleration
-			acc_fwd = _vehicle_attitude_setpoint.thrust_body[0] * thrust_coeff;
-			acc_right = _vehicle_attitude_setpoint.thrust_body[1] * thrust_coeff;
-			acc_down = _vehicle_attitude_setpoint.thrust_body[2] * thrust_coeff;
-			matrix::Vector3f acc(acc_fwd, acc_right, acc_down);
-
-			matrix::Quatf quat(_vehicle_attitude.q);
-			//matrix::Vector3f vec2 = quat.conjugate(acc);
-
-			matrix::Eulerf euler(quat);
-
-
-			float roll = AttQuatToRoll(qw, qx, qy, qz);
-
-
-			//mavlink_log_info(&_mavlink_log_pub, "quat0 = %f, roll = %f", double(quat(0)), double(roll));
-			//mavlink_log_info(&_mavlink_log_pub, "vec2(0) = %f, vec2(1) = %f, vec2(2) = %f", double(vec2(0)), double(vec2(1)), double(vec2(2)));
-*/
 
 
 
 
 		}
 
-	}
+
+	perf_end(_loop_perf);
 }
 
-void DragEstimator::parameters_update(bool force)
+int DragEstimator::task_spawn(int argc, char *argv[])
 {
-	// check for parameter updates
-	if (_parameter_update_sub.updated() || force) {
-		// clear update
-		parameter_update_s update;
-		_parameter_update_sub.copy(&update);
+	DragEstimator *instance = new DragEstimator();
 
-		// update parameters from storage
-		updateParams();
+	if (instance) {
+		_object.store(instance);
+		_task_id = task_id_is_work_queue;
+
+		if (instance->init()) {
+			return PX4_OK;
+		}
+
+	} else {
+		PX4_ERR("alloc failed");
 	}
+
+	delete instance;
+	_object.store(nullptr);
+	_task_id = -1;
+
+	return PX4_ERROR;
 }
 
 
-float DragEstimator::AttQuatToRoll(float _qw, float _qx, float _qy, float _qz) {
-
-	float x1 = 2 * (_qw * _qx + _qy * _qz);
-	float x2 = 1 - 2 * (pow(_qx, 2) + pow(_qy, 2));
-
-	return matrix::atan2(x1, x2) * 180.0f/3.14159f;
-
+int DragEstimator::print_status()
+{
+	perf_print_counter(_loop_perf);
+	perf_print_counter(_loop_interval_perf);
+	return 0;
 }
 
+
+int DragEstimator::custom_command(int argc, char *argv[])
+{
+	return print_usage("unknown command");
+}
 
 
 int DragEstimator::print_usage(const char *reason)

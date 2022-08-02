@@ -36,4 +36,7 @@ px4_add_module(
 	MAIN drag_estimator
 	SRCS
 		DragEstimator.cpp
+		DragEstimator.h
+	DEPENDS
+		px4_work_queue
 	)
