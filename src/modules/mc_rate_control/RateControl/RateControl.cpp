@@ -75,9 +75,15 @@ Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, cons
 	// filter the d term (if filter is disabled then this just returns same number but updates the internal state)
 	rate_d_error =_d_filter.apply(rate_d_error);
 
+	Vector3f drag_moment_checked;
+	drag_moment_checked(0) = PX4_ISFINITE(drag_moment(0)) ? drag_moment(0) : 0.0f;
+	drag_moment_checked(1) = PX4_ISFINITE(drag_moment(1)) ? drag_moment(1) : 0.0f;
+	drag_moment_checked(2) = PX4_ISFINITE(drag_moment(2)) ? drag_moment(2) : 0.0f;
+
+
 	// PID control with feed forward and drag gain compensation
 	const Vector3f torque = _gain_p.emult(rate_error) + _rate_int + _gain_d.emult(rate_d_error) + _gain_ff.emult(rate_sp) -
-				_gain_drag.emult(drag_moment);
+				_gain_drag.emult(drag_moment_checked);
 
 	// update integral only if we are not landed
 	if (!landed) {

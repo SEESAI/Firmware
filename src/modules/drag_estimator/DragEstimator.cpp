@@ -124,11 +124,12 @@ void DragEstimator::Run()
 
 			// Acceleration from accelerometer
 			// (this uses EKF acceleration - we could use sensor_combined and drop the added 9.81 below)
+			// TODO: double check if ekf acc is in world or body frame.
 			const float &ax = _vehicle_local_position.ax;
 			const float &ay = _vehicle_local_position.ay;
 			const float &az = _vehicle_local_position.az;
-			Vector3f acc_measured_body(ax, ay, az);
-			Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
+			Vector3f acc_measured(ax, ay, az);
+			//Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
 
 			// Expected acceleration from thrust (note thrust_body[0] and thrust_body[1] will be zero)
 			const float hover_thrust = math::max(0.1f, _hover_thrust_estimate.hover_thrust);
