@@ -109,10 +109,11 @@ private:
 	vehicle_local_position_s	_vehicle_local_position{};
 	vehicle_attitude_s		_vehicle_attitude{};
 	vehicle_attitude_setpoint_s	_vehicle_attitude_setpoint{};
-	hover_thrust_estimate_s		_hover_thrust_estimate{};
 	vehicle_land_detected_s		_vehicle_land_detected{};
 	sensor_combined_s		_sensor_combined{};
 	vehicle_acceleration_s		_vehicle_acceleration{};
+
+	float _hover_thrust{0.5};
 
 	bool _landed{true};
 	bool _maybe_landed{true};

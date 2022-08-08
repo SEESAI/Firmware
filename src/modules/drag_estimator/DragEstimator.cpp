@@ -67,9 +67,6 @@ bool DragEstimator::init()
 
 void DragEstimator::Run()
 {
-	// Set default hover thrust estimate to 0.5
-	_hover_thrust_estimate.hover_thrust = 0.5;
-
 	if (should_exit()) {
 		ScheduleClear();
 		exit_and_cleanup();
@@ -90,15 +87,20 @@ void DragEstimator::Run()
 	// Only run if vehicle_attitude is updated
 		// Note - we use this as if it hasn't been updated after startup then quaternion will be zero
 		// Hence the maths generates NaNs
-		if (_vehicle_attitude_sub.updated())
+		if (_vehicle_acceleration_sub.updated())
 		{
 
 			//Update data
 			_vehicle_attitude_sub.update(&_vehicle_attitude);
 			_vehicle_attitude_setpoint_sub.update(&_vehicle_attitude_setpoint);
-			_hover_thrust_estimate_sub.update(&_hover_thrust_estimate);
 			_vehicle_local_position_sub.update(&_vehicle_local_position);
 			_sensor_combined_sub.update(&_sensor_combined);
+			_vehicle_acceleration_sub.update(&_vehicle_acceleration);
+			hover_thrust_estimate_s hover{};
+			if (_hover_thrust_estimate_sub.update(&hover)) {
+				_hover_thrust = math::max(0.1f, hover.hover_thrust);
+			}
+
 
 			//Update filter if needed
 			hrt_abstime acc_timestamp = _vehicle_attitude_setpoint.timestamp;
@@ -125,19 +127,19 @@ void DragEstimator::Run()
 			// Acceleration from accelerometer
 			// (this uses EKF acceleration - we could use sensor_combined and drop the added 9.81 below)
 			// TODO: double check if ekf acc is in world or body frame.
-			const float &ax = _sensor_combined.accelerometer_m_s2[0];
-			const float &ay = _sensor_combined.accelerometer_m_s2[1];
-			const float &az = _sensor_combined.accelerometer_m_s2[2];
+			const float &ax = _vehicle_acceleration.xyz[0];
+			const float &ay = _vehicle_acceleration.xyz[1];
+			const float &az = _vehicle_acceleration.xyz[2];
 			Vector3f acc_measured_body(ax, ay, az);
 			// Uncomment
 			// Change seesanalytics to 10Hz, see if similar.
 			Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
 
 			// Expected acceleration from thrust (note thrust_body[0] and thrust_body[1] will be zero)
-			const float hover_thrust = math::max(0.1f, _hover_thrust_estimate.hover_thrust);
-			const float &acc_expected_x = _vehicle_attitude_setpoint.thrust_body[0] * 9.81f / hover_thrust;
-			const float &acc_expected_y = _vehicle_attitude_setpoint.thrust_body[1] * 9.81f / hover_thrust;
-			const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2]) * 9.81f / hover_thrust;
+			const float &acc_expected_x = _vehicle_attitude_setpoint.thrust_body[0] * 9.81f / _hover_thrust;
+			const float &acc_expected_y = _vehicle_attitude_setpoint.thrust_body[1] * 9.81f / _hover_thrust;
+			const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2]) * 9.81f / _hover_thrust;
+
 			Vector3f acc_expected_body(acc_expected_x, acc_expected_y, acc_expected_z);
 			Vector3f acc_expected = att_quat.conjugate(acc_expected_body);
 
@@ -157,6 +159,7 @@ void DragEstimator::Run()
 			if (_landed || _maybe_landed) {
 				drag_acc = Vector3f(0.f,0.f,0.f);
 			}
+			// TODO: Add NaN Check - Either don't updated filter or publish 0s (latter more likely)
 
 			// Filter the drag acceleration
 			Vector3f drag_acc_filtered = _lp_filter.apply(drag_acc);
