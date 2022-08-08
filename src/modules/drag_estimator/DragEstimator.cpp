@@ -53,10 +53,9 @@ DragEstimator::~DragEstimator()
 
 bool DragEstimator::init()
 {
-	// TODO: Edit to run with vehicle_attitude instead or put in 1ms schedule
-	// execute Run() on every sensor_accel publication
+	// execute Run() on every _vehicle_attitude_setpoint publication
 	if (!_vehicle_attitude_setpoint_sub.registerCallback()) {
-		PX4_ERR("vehicle_attitude callback registration failed");
+		PX4_ERR("vehicle_attitude_setpoint callback registration failed");
 		return false;
 	}
 
@@ -99,6 +98,7 @@ void DragEstimator::Run()
 			_vehicle_attitude_setpoint_sub.update(&_vehicle_attitude_setpoint);
 			_hover_thrust_estimate_sub.update(&_hover_thrust_estimate);
 			_vehicle_local_position_sub.update(&_vehicle_local_position);
+			_sensor_combined_sub.update(&_sensor_combined);
 
 			//Update filter if needed
 			hrt_abstime acc_timestamp = _vehicle_attitude_setpoint.timestamp;
@@ -125,11 +125,13 @@ void DragEstimator::Run()
 			// Acceleration from accelerometer
 			// (this uses EKF acceleration - we could use sensor_combined and drop the added 9.81 below)
 			// TODO: double check if ekf acc is in world or body frame.
-			const float &ax = _vehicle_local_position.ax;
-			const float &ay = _vehicle_local_position.ay;
-			const float &az = _vehicle_local_position.az;
-			Vector3f acc_measured(ax, ay, az);
-			//Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
+			const float &ax = _sensor_combined.accelerometer_m_s2[0];
+			const float &ay = _sensor_combined.accelerometer_m_s2[1];
+			const float &az = _sensor_combined.accelerometer_m_s2[2];
+			Vector3f acc_measured_body(ax, ay, az);
+			// Uncomment
+			// Change seesanalytics to 10Hz, see if similar.
+			Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
 
 			// Expected acceleration from thrust (note thrust_body[0] and thrust_body[1] will be zero)
 			const float hover_thrust = math::max(0.1f, _hover_thrust_estimate.hover_thrust);
@@ -137,7 +139,7 @@ void DragEstimator::Run()
 			const float &acc_expected_y = _vehicle_attitude_setpoint.thrust_body[1] * 9.81f / hover_thrust;
 			const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2]) * 9.81f / hover_thrust;
 			Vector3f acc_expected_body(acc_expected_x, acc_expected_y, acc_expected_z);
-			Vector3f acc_expected = att_quat.conjugate(acc_expected_body) + Vector3f(0.f, 0.f, 9.81f);
+			Vector3f acc_expected = att_quat.conjugate(acc_expected_body);
 
 			// Subtract expected acceleration from measured acceleration to estimate drag acceleration.
 			// (assuming measured = expected + drag)

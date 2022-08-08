@@ -138,10 +138,11 @@ MulticopterRateControl::Run()
 		_last_run = now;
 
 		// check the filter sample frequency is correct and update the filter if not
+		// TODO: fix sample rate, currently set change threshold high to mute mavlink info.
 		float freq = 1.f / dt;
-		if (fabsf(_rate_control.getDTermFilterSampleFrequency() - freq) > 5.f) {
+		if (fabsf(_rate_control.getDTermFilterSampleFrequency() - freq) > 200.f) {
 			_rate_control.setDTermFilterSampleFrequency(freq);
-			//mavlink_log_info(&_mavlink_log_pub, "Rate control sample frequency updated to %f", double(freq));
+			mavlink_log_info(&_mavlink_log_pub, "Rate control sample frequency updated to %f", double(freq));
 		}
 
 		const Vector3f angular_accel{v_angular_acceleration.xyz};

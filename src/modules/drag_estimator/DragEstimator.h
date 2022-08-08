@@ -49,6 +49,7 @@
 #include <uORB/topics/hover_thrust_estimate.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/drag_estimator.h>
+#include <uORB/topics/sensor_combined.h>
 #include <uORB/Publication.hpp>
 #include <systemlib/mavlink_log.h>
 #include <matrix/math.hpp>
@@ -101,12 +102,14 @@ private:
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_setpoint_sub{this, ORB_ID(vehicle_attitude_setpoint)};
 	uORB::Subscription _hover_thrust_estimate_sub{ORB_ID(hover_thrust_estimate)};
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
+	uORB::Subscription _sensor_combined_sub{ORB_ID(sensor_combined)};
 
 	vehicle_local_position_s	_vehicle_local_position{};
 	vehicle_attitude_s		_vehicle_attitude{};
 	vehicle_attitude_setpoint_s	_vehicle_attitude_setpoint{};
 	hover_thrust_estimate_s		_hover_thrust_estimate{};
 	vehicle_land_detected_s		_vehicle_land_detected{};
+	sensor_combined_s		_sensor_combined{};
 
 	bool _landed{true};
 	bool _maybe_landed{true};
