@@ -85,110 +85,104 @@ void DragEstimator::Run()
 	}
 
 	// Only run if vehicle_attitude is updated
-		// Note - we use this as if it hasn't been updated after startup then quaternion will be zero
-		// Hence the maths generates NaNs
-		if (_vehicle_acceleration_sub.updated())
-		{
+	// Note - we use this as if it hasn't been updated after startup then quaternion will be zero
+	// Hence the maths generates NaNs
+	if (_vehicle_acceleration_sub.updated()) {
 
-			//Update data
-			_vehicle_attitude_sub.update(&_vehicle_attitude);
-			_vehicle_attitude_setpoint_sub.update(&_vehicle_attitude_setpoint);
-			_vehicle_local_position_sub.update(&_vehicle_local_position);
-			_sensor_combined_sub.update(&_sensor_combined);
-			_vehicle_acceleration_sub.update(&_vehicle_acceleration);
-			hover_thrust_estimate_s hover{};
-			if (_hover_thrust_estimate_sub.update(&hover)) {
-				_hover_thrust = math::max(0.1f, hover.hover_thrust);
+		//Update data
+		_vehicle_attitude_sub.update(&_vehicle_attitude);
+		_vehicle_attitude_setpoint_sub.update(&_vehicle_attitude_setpoint);
+		_vehicle_local_position_sub.update(&_vehicle_local_position);
+		_sensor_combined_sub.update(&_sensor_combined);
+		_vehicle_acceleration_sub.update(&_vehicle_acceleration);
+		hover_thrust_estimate_s hover{};
+		if (_hover_thrust_estimate_sub.update(&hover)) {
+			_hover_thrust = math::max(0.1f, hover.hover_thrust);
+		}
+
+		//Update filter if needed
+		hrt_abstime acc_timestamp = _vehicle_attitude_setpoint.timestamp;
+		hrt_abstime sample_time = acc_timestamp - _timestamp_prev;
+		_timestamp_prev = acc_timestamp;
+		if (sample_time > 0) {
+			float freq = 1.f / (float(sample_time) * 1e-6f);
+			if (fabs(_lp_filter.get_sample_freq() - freq) > 20.0f) {
+				_lp_filter.set_cutoff_frequency(freq, 5.f);
+				mavlink_log_info(&_mavlink_log_pub, "filter reset to %f Hz", double(freq));
 			}
+		}
 
+		// Body attitude
+		const float &qw = _vehicle_attitude.q[0];
+		const float &qx = _vehicle_attitude.q[1];
+		const float &qy = _vehicle_attitude.q[2];
+		const float &qz = _vehicle_attitude.q[3];
+		Quatf att_quat(qw, qx, qy, qz);
 
-			//Update filter if needed
-			hrt_abstime acc_timestamp = _vehicle_attitude_setpoint.timestamp;
-			hrt_abstime sample_time = acc_timestamp - _timestamp_prev;
-			_timestamp_prev = acc_timestamp;
-			if (sample_time > 0) {
-				float freq = 1.f / (float(sample_time) * 1e-6f);
-				// TODO: this doesn't work well - sample freq jumps around hence 50Hz threshold
-				//       might get better when we move to a work item
-				if (fabs(_lp_filter.get_sample_freq() - freq) > 50.0f) {
-					_lp_filter.set_cutoff_frequency(freq, 10.f);
-					 mavlink_log_info(&_mavlink_log_pub, "filter reset to %f Hz", double(freq));
-				}
-				// mavlink_log_info(&_mavlink_log_pub, "Freq = %f", double(freq));
+		// Acceleration from accelerometer (using vehicle_acceleration as this has bias and filter applied)
+		const float &ax = _vehicle_acceleration.xyz[0];
+		const float &ay = _vehicle_acceleration.xyz[1];
+		const float &az = _vehicle_acceleration.xyz[2];
+		Vector3f acc_measured_body(ax, ay, az);
+		Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
+
+		// Expected acceleration from thrust (note thrust_body[0] and thrust_body[1] are always zero for a multicopter)
+		const float &acc_expected_x = 0.f;
+		const float &acc_expected_y = 0.f;
+		const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2]) * 9.81f / _hover_thrust;
+		Vector3f acc_expected_body(acc_expected_x, acc_expected_y, acc_expected_z);
+		Vector3f acc_expected = att_quat.conjugate(acc_expected_body);
+
+		// Subtract expected acceleration from measured acceleration to estimate drag acceleration.
+		// (assuming measured = expected + drag)
+		Vector3f drag_acc = acc_measured - acc_expected;
+
+		// Force the above to zero when landed or maybe_landed
+		if (_vehicle_land_detected_sub.updated()) {
+			vehicle_land_detected_s vehicle_land_detected;
+
+			if (_vehicle_land_detected_sub.copy(&vehicle_land_detected)) {
+				_landed = vehicle_land_detected.landed;
+				_maybe_landed = vehicle_land_detected.maybe_landed;
 			}
+		}
+		if (_landed || _maybe_landed) {
+			drag_acc = Vector3f(0.f,0.f,0.f);
+		}
 
-			// Body attitude
-			const float &qw = _vehicle_attitude.q[0];
-			const float &qx = _vehicle_attitude.q[1];
-			const float &qy = _vehicle_attitude.q[2];
-			const float &qz = _vehicle_attitude.q[3];
-			Quatf att_quat(qw, qx, qy, qz);
-
-			// Acceleration from accelerometer
-			// (this uses EKF acceleration - we could use sensor_combined and drop the added 9.81 below)
-			// TODO: double check if ekf acc is in world or body frame.
-			const float &ax = _vehicle_acceleration.xyz[0];
-			const float &ay = _vehicle_acceleration.xyz[1];
-			const float &az = _vehicle_acceleration.xyz[2];
-			Vector3f acc_measured_body(ax, ay, az);
-			// Uncomment
-			// Change seesanalytics to 10Hz, see if similar.
-			Vector3f acc_measured = att_quat.conjugate(acc_measured_body);
-
-			// Expected acceleration from thrust (note thrust_body[0] and thrust_body[1] will be zero)
-			const float &acc_expected_x = _vehicle_attitude_setpoint.thrust_body[0] * 9.81f / _hover_thrust;
-			const float &acc_expected_y = _vehicle_attitude_setpoint.thrust_body[1] * 9.81f / _hover_thrust;
-			const float &acc_expected_z = (_vehicle_attitude_setpoint.thrust_body[2]) * 9.81f / _hover_thrust;
-
-			Vector3f acc_expected_body(acc_expected_x, acc_expected_y, acc_expected_z);
-			Vector3f acc_expected = att_quat.conjugate(acc_expected_body);
-
-			// Subtract expected acceleration from measured acceleration to estimate drag acceleration.
-			// (assuming measured = expected + drag)
-			Vector3f drag_acc = acc_measured - acc_expected; // * 0.8f // - scale acc_expected by 0.8 to test this in jmavsim
-
-			// Force the above to zero when landed or maybe_landed
-			if (_vehicle_land_detected_sub.updated()) {
-				vehicle_land_detected_s vehicle_land_detected;
-
-				if (_vehicle_land_detected_sub.copy(&vehicle_land_detected)) {
-					_landed = vehicle_land_detected.landed;
-					_maybe_landed = vehicle_land_detected.maybe_landed;
-				}
-			}
-			if (_landed || _maybe_landed) {
-				drag_acc = Vector3f(0.f,0.f,0.f);
-			}
-			// TODO: Add NaN Check - Either don't updated filter or publish 0s (latter more likely)
-
+		// Check that things are not NAN before filtering, so as to avoid the filter becoming NAN
+		Vector3f drag_acc_filtered;
+		Vector3f drag_acc_filtered_body;
+		Vector3f drag_acc_moment_body;
+		if (PX4_ISFINITE(drag_acc_filtered[0]) && PX4_ISFINITE(drag_acc_filtered[1]) && PX4_ISFINITE(drag_acc_filtered[2])) {
 			// Filter the drag acceleration
-			Vector3f drag_acc_filtered = _lp_filter.apply(drag_acc);
+			drag_acc_filtered = _lp_filter.apply(drag_acc);
 
 			// Convert drag_acceleration_filtered back into body fram
-			Vector3f drag_acc_filtered_body = att_quat.conjugate_inversed(drag_acc_filtered);
+			drag_acc_filtered_body = att_quat.conjugate_inversed(drag_acc_filtered);
 
 			// Cross product with Centre of Pressure (CoP) offset z to get moment acting on Centre of Gravity (CoG) in body frame.
 			// We use a fixed 0.1m offset above the CoG
 			// This can then be scaled accordingly with the gain in the rate controller
-			Vector3f drag_acc_moment_body = drag_acc_filtered_body.cross(Vector3f(0.f, 0.f, -0.1f));
-
-			// Populate drag for publishing
-			drag_estimator_s drag{};
-			acc_measured.copyTo(drag.acc_measured);
-			acc_expected.copyTo(drag.acc_expected);
-			drag_acc.copyTo(drag.drag_acc);
-			drag_acc_filtered.copyTo(drag.drag_acc_filtered);
-			drag_acc_filtered_body.copyTo(drag.drag_acc_filtered_body);
-			drag_acc_moment_body.copyTo(drag.drag_acceleration_moment_body);
-			drag.timestamp = hrt_absolute_time();
-			_drag_estimator_pub.publish(drag);
-
-
-
-
-
+			drag_acc_moment_body = drag_acc_filtered_body.cross(Vector3f(0.f, 0.f, -0.1f));
+		} else {
+			// Set all outputs to zero if any NANs
+			drag_acc_filtered = Vector3f(0.f,0.f,0.f);
+			drag_acc_filtered_body = Vector3f(0.f,0.f,0.f);
+			drag_acc_moment_body = Vector3f(0.f,0.f,0.f);
 		}
 
+		// Populate drag for publishing
+		drag_estimator_s drag{};
+		acc_measured.copyTo(drag.acc_measured);
+		acc_expected.copyTo(drag.acc_expected);
+		drag_acc.copyTo(drag.drag_acc);
+		drag_acc_filtered.copyTo(drag.drag_acc_filtered);
+		drag_acc_filtered_body.copyTo(drag.drag_acc_filtered_body);
+		drag_acc_moment_body.copyTo(drag.drag_acceleration_moment_body);
+		drag.timestamp = hrt_absolute_time();
+		_drag_estimator_pub.publish(drag);
+	}
 
 	perf_end(_loop_perf);
 }
