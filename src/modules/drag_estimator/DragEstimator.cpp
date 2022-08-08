@@ -169,7 +169,7 @@ void DragEstimator::Run()
 			// Cross product with Centre of Pressure (CoP) offset z to get moment acting on Centre of Gravity (CoG) in body frame.
 			// We use a fixed 0.1m offset above the CoG
 			// This can then be scaled accordingly with the gain in the rate controller
-			drag_acc_moment_body = drag_acc_filtered_body.cross(Vector3f(0.f, 0.f, -0.1f));
+			drag_acc_moment_body = drag_acc_filtered_body.cross(Vector3f(0.f, 0.f, _param_de_z_offset.get()));
 		} else {
 			// Set all outputs to zero if any NANs
 			_drag_acc_filtered = Vector3f(0.f,0.f,0.f);

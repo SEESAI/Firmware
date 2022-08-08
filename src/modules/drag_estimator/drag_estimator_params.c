@@ -51,3 +51,16 @@
  * @group Drag Estimator
  */
 PARAM_DEFINE_FLOAT(DE_CUTOFF, 5.f);
+
+/**
+ * Drag estimator CoG z offset
+ *
+ * Drag estimator CoG offset in z for calculating the drag moment, note -ve values mean drag moment applied above CoG
+ *
+ * @min -1
+ * @max 1
+ * @decimal 2
+ * @increment 0.01
+ * @group Drag Estimator
+ */
+PARAM_DEFINE_FLOAT(DE_COG_Z_OFFSET, -0.1f);

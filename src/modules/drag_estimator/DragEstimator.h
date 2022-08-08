@@ -91,11 +91,10 @@ private:
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
 
-	// TODO: remove unwanted params, set cop offset
 	DEFINE_PARAMETERS(
-		(ParamFloat<px4::params::DE_CUTOFF>) _param_de_cutoff
+		(ParamFloat<px4::params::DE_CUTOFF>) _param_de_cutoff,
+		(ParamFloat<px4::params::DE_COG_Z_OFFSET>) _param_de_z_offset
 	)
-
 
 	//Subscriptions
 	uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
