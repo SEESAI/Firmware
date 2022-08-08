@@ -65,6 +65,13 @@ bool DragEstimator::init()
 	return true;
 }
 
+void DragEstimator::ResetFilterParams() {
+	// Update the filter cutoff, and reset the filter to the last output
+	_lp_filter.set_cutoff_frequency(_filter_sample_freq, _param_de_cutoff.get());
+	_lp_filter.reset(_drag_acc_filtered);
+	mavlink_log_info(&_mavlink_log_pub, "filter reset to %f Hz cutoff, %f Hz sample rate", double(_param_de_cutoff.get()), double(_filter_sample_freq));
+}
+
 void DragEstimator::Run()
 {
 	if (should_exit()) {
@@ -81,7 +88,9 @@ void DragEstimator::Run()
 		// clear update
 		parameter_update_s param_update;
 		_parameter_update_sub.copy(&param_update);
+
 		updateParams(); // update module parameters (in DEFINE_PARAMETERS)
+		ResetFilterParams();
 	}
 
 	// Only run if vehicle_attitude is updated
@@ -91,9 +100,6 @@ void DragEstimator::Run()
 
 		//Update data
 		_vehicle_attitude_sub.update(&_vehicle_attitude);
-		_vehicle_attitude_setpoint_sub.update(&_vehicle_attitude_setpoint);
-		_vehicle_local_position_sub.update(&_vehicle_local_position);
-		_sensor_combined_sub.update(&_sensor_combined);
 		_vehicle_acceleration_sub.update(&_vehicle_acceleration);
 		hover_thrust_estimate_s hover{};
 		if (_hover_thrust_estimate_sub.update(&hover)) {
@@ -101,14 +107,14 @@ void DragEstimator::Run()
 		}
 
 		//Update filter if needed
-		hrt_abstime acc_timestamp = _vehicle_attitude_setpoint.timestamp;
+		hrt_abstime acc_timestamp = _vehicle_acceleration.timestamp;
 		hrt_abstime sample_time = acc_timestamp - _timestamp_prev;
 		_timestamp_prev = acc_timestamp;
 		if (sample_time > 0) {
 			float freq = 1.f / (float(sample_time) * 1e-6f);
-			if (fabs(_lp_filter.get_sample_freq() - freq) > 20.0f) {
-				_lp_filter.set_cutoff_frequency(freq, 5.f);
-				mavlink_log_info(&_mavlink_log_pub, "filter reset to %f Hz", double(freq));
+			if (fabs(_filter_sample_freq - freq) > 20.0f) {
+				_filter_sample_freq = freq;
+				ResetFilterParams();
 			}
 		}
 
@@ -151,15 +157,14 @@ void DragEstimator::Run()
 		}
 
 		// Check that things are not NAN before filtering, so as to avoid the filter becoming NAN
-		Vector3f drag_acc_filtered;
 		Vector3f drag_acc_filtered_body;
 		Vector3f drag_acc_moment_body;
 		if (PX4_ISFINITE(drag_acc(0)) && PX4_ISFINITE(drag_acc(1)) && PX4_ISFINITE(drag_acc(2))) {
 			// Filter the drag acceleration
-			drag_acc_filtered = _lp_filter.apply(drag_acc);
+			_drag_acc_filtered = _lp_filter.apply(drag_acc);
 
 			// Convert drag_acceleration_filtered back into body fram
-			drag_acc_filtered_body = att_quat.conjugate_inversed(drag_acc_filtered);
+			drag_acc_filtered_body = att_quat.conjugate_inversed(_drag_acc_filtered);
 
 			// Cross product with Centre of Pressure (CoP) offset z to get moment acting on Centre of Gravity (CoG) in body frame.
 			// We use a fixed 0.1m offset above the CoG
@@ -167,7 +172,7 @@ void DragEstimator::Run()
 			drag_acc_moment_body = drag_acc_filtered_body.cross(Vector3f(0.f, 0.f, -0.1f));
 		} else {
 			// Set all outputs to zero if any NANs
-			drag_acc_filtered = Vector3f(0.f,0.f,0.f);
+			_drag_acc_filtered = Vector3f(0.f,0.f,0.f);
 			drag_acc_filtered_body = Vector3f(0.f,0.f,0.f);
 			drag_acc_moment_body = Vector3f(0.f,0.f,0.f);
 		}
@@ -177,7 +182,7 @@ void DragEstimator::Run()
 		acc_measured.copyTo(drag.acc_measured);
 		acc_expected.copyTo(drag.acc_expected);
 		drag_acc.copyTo(drag.drag_acc);
-		drag_acc_filtered.copyTo(drag.drag_acc_filtered);
+		_drag_acc_filtered.copyTo(drag.drag_acc_filtered);
 		drag_acc_filtered_body.copyTo(drag.drag_acc_filtered_body);
 		drag_acc_moment_body.copyTo(drag.drag_acceleration_moment_body);
 		drag.timestamp = hrt_absolute_time();
