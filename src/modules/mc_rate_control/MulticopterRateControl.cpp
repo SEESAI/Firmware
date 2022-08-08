@@ -216,13 +216,10 @@ MulticopterRateControl::Run()
 
 			drag_estimator_s drag_estimator{};
 			if(_drag_estimator_sub.update(&drag_estimator)){
-				_drag_moment(0) = drag_estimator.drag_acceleration_moment_body[0];
-				_drag_moment(1) = drag_estimator.drag_acceleration_moment_body[1];
+				_drag_moment(0) = PX4_ISFINITE(drag_estimator.drag_acceleration_moment_body[0]) ? drag_estimator.drag_acceleration_moment_body[0] : 0.f;
+				_drag_moment(1) = PX4_ISFINITE(drag_estimator.drag_acceleration_moment_body[1]) ? drag_estimator.drag_acceleration_moment_body[1] : 0.f;
 				_drag_moment(2) = 0; // ignore z drag moments
 			}
-			_drag_moment(0) = PX4_ISFINITE(_drag_moment(0)) ? _drag_moment(0) : 0.0f;
-			_drag_moment(1) = PX4_ISFINITE(_drag_moment(1)) ? _drag_moment(1) : 0.0f;
-			_drag_moment(2) = PX4_ISFINITE(_drag_moment(2)) ? _drag_moment(2) : 0.0f;
 
 			// reset integral if disarmed
 			if (!_v_control_mode.flag_armed || _vehicle_status.vehicle_type != vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {

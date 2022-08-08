@@ -54,7 +54,7 @@ DragEstimator::~DragEstimator()
 bool DragEstimator::init()
 {
 	// execute Run() on every _vehicle_attitude_setpoint publication
-	if (!_vehicle_attitude_setpoint_sub.registerCallback()) {
+	if (!_vehicle_acceleration_sub.registerCallback()) {
 		PX4_ERR("vehicle_attitude_setpoint callback registration failed");
 		return false;
 	}
