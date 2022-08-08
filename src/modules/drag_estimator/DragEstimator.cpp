@@ -154,7 +154,7 @@ void DragEstimator::Run()
 		Vector3f drag_acc_filtered;
 		Vector3f drag_acc_filtered_body;
 		Vector3f drag_acc_moment_body;
-		if (PX4_ISFINITE(drag_acc_filtered[0]) && PX4_ISFINITE(drag_acc_filtered[1]) && PX4_ISFINITE(drag_acc_filtered[2])) {
+		if (PX4_ISFINITE(drag_acc(0)) && PX4_ISFINITE(drag_acc(1)) && PX4_ISFINITE(drag_acc(2))) {
 			// Filter the drag acceleration
 			drag_acc_filtered = _lp_filter.apply(drag_acc);
 
