@@ -100,6 +100,7 @@ void DragEstimator::Run()
 
 		//Update data
 		_vehicle_attitude_sub.update(&_vehicle_attitude);
+		_vehicle_attitude_setpoint_sub.update(&_vehicle_attitude_setpoint);
 		_vehicle_acceleration_sub.update(&_vehicle_acceleration);
 		hover_thrust_estimate_s hover{};
 		if (_hover_thrust_estimate_sub.update(&hover)) {

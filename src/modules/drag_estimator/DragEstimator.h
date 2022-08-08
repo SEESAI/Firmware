@@ -98,12 +98,14 @@ private:
 
 	//Subscriptions
 	uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
+	uORB::Subscription _vehicle_attitude_setpoint_sub{ORB_ID(vehicle_attitude_setpoint)};
 	uORB::Subscription _hover_thrust_estimate_sub{ORB_ID(hover_thrust_estimate)};
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_acceleration_sub{this, ORB_ID(vehicle_acceleration)};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
+	vehicle_attitude_setpoint_s	_vehicle_attitude_setpoint{};
 	vehicle_attitude_s		_vehicle_attitude{};
 	vehicle_land_detected_s		_vehicle_land_detected{};
 	vehicle_acceleration_s		_vehicle_acceleration{};
