@@ -93,9 +93,7 @@ private:
 
 	// TODO: remove unwanted params, set cop offset
 	DEFINE_PARAMETERS(
-		//(ParamFloat<px4::params::COP_OFFSET_Z) _param_cop_offset_z,
-		(ParamInt<px4::params::SYS_AUTOSTART>) _param_sys_autostart,   /**< example parameter */
-		(ParamInt<px4::params::SYS_AUTOCONFIG>) _param_sys_autoconfig  /**< another parameter */
+		(ParamFloat<px4::params::DE_CUTOFF>) _param_de_cutoff
 	)
 
 

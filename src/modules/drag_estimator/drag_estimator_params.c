@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file mc_drag_estimator_params.c
+ * @file drag_estimator_params.c
  * Parameters for drag estimator
  *
  * @author David Patrick <dpatrick@sees.ai>
