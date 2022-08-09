@@ -72,7 +72,7 @@ public:
 	 */
 	inline T apply(const T &sample, float dt)
 	{
-		float alpha = (_k > 0) ? _k*dt / (1 + _k*dt) : 1.f;
+		float alpha = (_k > 0) ? _k * dt / (1 + _k * dt) : 1.f;
 		_delay_element_1 += alpha * (sample - _delay_element_1);
 		return _delay_element_1;
 	}
@@ -108,12 +108,14 @@ public:
 		}
 	}
 
-	bool disabled() {
+	bool disabled()
+	{
 		return _k < 0.01f;
 	}
 
 protected:
-	void update_alpha(bool reset_states) {
+	void update_alpha(bool reset_states)
+	{
 		if ((_cutoff_freq <= 0.f) || !isFinite(_cutoff_freq)) {
 			disable(reset_states);
 			return;

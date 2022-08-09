@@ -67,13 +67,14 @@ Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, cons
 	Vector3f rate_d_error = -angular_accel;
 
 	// use the setpoint in the d term if set to do so
-	if(_d_term_use_setpoint) {
+	if (_d_term_use_setpoint) {
 		rate_d_error += (rate_sp - _rate_sp_prev) / dt;
 	}
+
 	_rate_sp_prev = rate_sp;
 
 	// filter the d term (if filter is disabled then this just returns same number but updates the internal state)
-	rate_d_error =_d_filter.apply(rate_d_error, dt);
+	rate_d_error = _d_filter.apply(rate_d_error, dt);
 
 	// PID control with feed forward and drag gain compensation
 	const Vector3f torque = _gain_p.emult(rate_error) + _rate_int + _gain_d.emult(rate_d_error) + _gain_ff.emult(rate_sp) -

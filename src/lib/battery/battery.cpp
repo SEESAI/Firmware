@@ -213,12 +213,12 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 		cell_voltage_filtered_load += _params.r_internal * current_a;
 
 		// Derives initial SoC Estimation from the voltage. A 15 second timer is included to allow voltage to settle whilst components initialise.
-		if(first_run || ((hrt_absolute_time() - first_run_time) < 15'000'000)){
+		if (first_run || ((hrt_absolute_time() - first_run_time) < 15'000'000)) {
 			struct Lookup {
 				float OCVoltage;
 				float SOC;
 			};
-				Lookup SOCLookup[] {
+			Lookup SOCLookup[] {
 				{4.17, 100.0},
 				{4.09, 89.5},
 				{3.99, 79.1},
@@ -240,23 +240,27 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 				_state_of_charge = 1.0;
 				below_max = false;
 			}
+
 			if (cell_voltage_filtered <= SOCLookup[10].OCVoltage) {
 				_state_of_charge = 0.0;
 				above_min = false;
 			}
+
 			if (above_min && below_max) {
 				for (int i = 0; i < 10; i++) {
 					float voltage_key = SOCLookup[i].OCVoltage;
+
 					if (cell_voltage_filtered > voltage_key) {
 						const float volt1 = SOCLookup[i].OCVoltage;
 						const float soc1 = SOCLookup[i].SOC;
-						const float volt2 = SOCLookup[i+1].OCVoltage;
-						const float soc2 = SOCLookup[i+1].SOC;
-						soc_initial = (soc1 + (soc2 - soc1) * (cell_voltage_filtered - volt1) / (volt2 - volt1))/100;
+						const float volt2 = SOCLookup[i + 1].OCVoltage;
+						const float soc2 = SOCLookup[i + 1].SOC;
+						soc_initial = (soc1 + (soc2 - soc1) * (cell_voltage_filtered - volt1) / (volt2 - volt1)) / 100;
 						break;
 					}
 				}
 			}
+
 			if (first_run) {
 				first_run_time = hrt_absolute_time();
 				first_run = false;
@@ -264,12 +268,13 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 		}
 
 		// CURRENT SOC CALC
-		_state_of_charge = soc_initial - (_discharged_mah/_params.capacity);
+		_state_of_charge = soc_initial - (_discharged_mah / _params.capacity);
 
 		// Voltage Monitor warning - Coulomb counting won't catch cell failures so we add a warning if cell voltage drops to a critical level (3.4V).
 		// This is derived from.........
 		if (cell_voltage_filtered < float(3.4) && (hrt_absolute_time() - sees_warning_last > 10'000'000)) {
-			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %fV. Land Immediately!", double(cell_voltage_filtered_load));
+			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %fV. Land Immediately!",
+					     double(cell_voltage_filtered_load));
 		}
 	}
 
@@ -306,8 +311,8 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 			const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _params.capacity, 0.f);
 
 			_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
-		}
-		else {
+
+		} else {
 			_state_of_charge = _state_of_charge_volt_based;
 		}
 	}

@@ -47,7 +47,8 @@ using matrix::Vector3f;
 class LowPassFilter1pVector3fTest : public ::testing::Test
 {
 public:
-	void runSimulatedFilter(const Vector3f &signal_freq_hz, const Vector3f &phase_delay_deg, const Vector3f &gain_db, float dt);
+	void runSimulatedFilter(const Vector3f &signal_freq_hz, const Vector3f &phase_delay_deg, const Vector3f &gain_db,
+				float dt);
 
 	math::LowPassFilter1p<Vector3f> _lpf{30.f};
 

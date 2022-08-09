@@ -207,9 +207,12 @@ MulticopterRateControl::Run()
 		if (_v_control_mode.flag_control_rates_enabled && !_actuators_0_circuit_breaker_enabled) {
 
 			drag_estimator_s drag_estimator{};
-			if(_drag_estimator_sub.update(&drag_estimator)){
-				_drag_moment(0) = PX4_ISFINITE(drag_estimator.drag_acceleration_moment_body[0]) ? drag_estimator.drag_acceleration_moment_body[0] : 0.f;
-				_drag_moment(1) = PX4_ISFINITE(drag_estimator.drag_acceleration_moment_body[1]) ? drag_estimator.drag_acceleration_moment_body[1] : 0.f;
+
+			if (_drag_estimator_sub.update(&drag_estimator)) {
+				_drag_moment(0) = PX4_ISFINITE(drag_estimator.drag_acceleration_moment_body[0]) ?
+						  drag_estimator.drag_acceleration_moment_body[0] : 0.f;
+				_drag_moment(1) = PX4_ISFINITE(drag_estimator.drag_acceleration_moment_body[1]) ?
+						  drag_estimator.drag_acceleration_moment_body[1] : 0.f;
 				_drag_moment(2) = 0; // ignore z drag moments
 			}
 
@@ -231,7 +234,8 @@ MulticopterRateControl::Run()
 			}
 
 			// run rate controller
-			const Vector3f att_control = _rate_control.update(rates, _rates_sp, angular_accel, _drag_moment, dt, _maybe_landed || _landed);
+			const Vector3f att_control = _rate_control.update(rates, _rates_sp, angular_accel, _drag_moment, dt, _maybe_landed
+						     || _landed);
 
 			// publish rate controller status
 			rate_ctrl_status_s rate_ctrl_status{};
