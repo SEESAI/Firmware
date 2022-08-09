@@ -73,10 +73,7 @@ Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, cons
 	_rate_sp_prev = rate_sp;
 
 	// filter the d term (if filter is disabled then this just returns same number but updates the internal state)
-	// TODO: Richard, fix rate, currently set change threshold high to mute mavlink info.
-	// Make dt as input to the filter instead of cascading sample rates.
-	rate_d_error =_d_filter.apply(rate_d_error);
-
+	rate_d_error =_d_filter.apply(rate_d_error, dt);
 
 	// PID control with feed forward and drag gain compensation
 	const Vector3f torque = _gain_p.emult(rate_error) + _rate_int + _gain_d.emult(rate_d_error) + _gain_ff.emult(rate_sp) -

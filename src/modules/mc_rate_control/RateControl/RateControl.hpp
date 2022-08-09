@@ -92,15 +92,6 @@ public:
 	 */
 	void setDTermFilterCutoff(float cutoff_freq) {_d_filter.set_cutoff_frequency(cutoff_freq, false);}
 
-	/// Get d term low pass filter sample frequency
-	float getDTermFilterSampleFrequency() {return _d_filter.get_sample_freq();}
-
-	/**
-	 * Set d term low pass filter sample frequency
-	 * @param cutoff_freq sample frequency - if zero then filter will be disabled
-	 */
-	void setDTermFilterSampleFrequency(float sample_freq) {_d_filter.set_sample_frequency(sample_freq, false);}
-
 	/**
 	 * Set d term to use the setpoint
 	 * NB - this gives risk of derivative kick, so should be accompanied by a sensible filter setting

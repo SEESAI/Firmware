@@ -47,15 +47,15 @@ using matrix::Vector3f;
 class LowPassFilter1pVector3fTest : public ::testing::Test
 {
 public:
-	void runSimulatedFilter(const Vector3f &signal_freq_hz, const Vector3f &phase_delay_deg, const Vector3f &gain_db);
+	void runSimulatedFilter(const Vector3f &signal_freq_hz, const Vector3f &phase_delay_deg, const Vector3f &gain_db, float dt);
 
-	math::LowPassFilter1p<Vector3f> _lpf{800.f, 30.f};
+	math::LowPassFilter1p<Vector3f> _lpf{30.f};
 
 	const float _epsilon_near = 0.01f;
 };
 
 void LowPassFilter1pVector3fTest::runSimulatedFilter(const Vector3f &signal_freq_hz, const Vector3f &phase_delay_deg,
-		const Vector3f &gain_db)
+		const Vector3f &gain_db, const float dt)
 {
 	const Vector3f phase_delay = phase_delay_deg * M_PI_F / 180.f;
 	const Vector3f omega = 2.f * M_PI_F * signal_freq_hz;
@@ -65,7 +65,6 @@ void LowPassFilter1pVector3fTest::runSimulatedFilter(const Vector3f &signal_freq
 		gain(i) = powf(10.f, gain_db(i) / 20.f);
 	}
 
-	const float dt = 1.f / _lpf.get_sample_freq();
 	const int n_steps = roundf(1.f / dt); // run for 1 second
 
 	float t = 0.f;
@@ -75,7 +74,7 @@ void LowPassFilter1pVector3fTest::runSimulatedFilter(const Vector3f &signal_freq
 		Vector3f output_expected{0.f,
 					 gain(1) *sinf(omega(1) * t - phase_delay(1)),
 					 -gain(2) *sinf(omega(2) * t - phase_delay(2))};
-		Vector3f out = _lpf.apply(input);
+		Vector3f out = _lpf.apply(input, dt);
 		t = i * dt;
 
 		// Let some time for the filter to settle
@@ -89,21 +88,14 @@ void LowPassFilter1pVector3fTest::runSimulatedFilter(const Vector3f &signal_freq
 
 TEST_F(LowPassFilter1pVector3fTest, setGet)
 {
-	const float sample_freq = 1000.f;
 	const float cutoff_freq = 50.f;
 
-	_lpf.set_sample_frequency(0.f);;
-	EXPECT_TRUE(_lpf.disabled());
 	_lpf.set_cutoff_frequency(0.f);;
 	EXPECT_TRUE(_lpf.disabled());
 
 	_lpf.set_cutoff_frequency(cutoff_freq);
-	EXPECT_TRUE(_lpf.disabled());
-
-	_lpf.set_sample_frequency(sample_freq);
 	EXPECT_FALSE(_lpf.disabled());
 
-	EXPECT_EQ(_lpf.get_sample_freq(), sample_freq);
 	EXPECT_EQ(_lpf.get_cutoff_freq(), cutoff_freq);
 }
 
@@ -115,31 +107,44 @@ TEST_F(LowPassFilter1pVector3fTest, simulate80HzCutoff)
 	{
 		// 500Hz sample frequency
 		const float sample_freq = 500.f;
+		const float dt = 1.f / sample_freq;
 		const Vector3f phase_delay_deg = Vector3f{1.f, 35.66f, 35.79f}; // Given by simulation
 		const Vector3f gain_db{0.f, -4.11f, -8.26f}; // given by simulation
-		_lpf.set_sample_frequency(sample_freq);
 		_lpf.set_cutoff_frequency(cutoff_freq);
-		runSimulatedFilter(signal_freq_hz, phase_delay_deg, gain_db);
+		runSimulatedFilter(signal_freq_hz, phase_delay_deg, gain_db, dt);
 	}
 
 	{
 		// 1000Hz sample frequency
 		const float sample_freq = 1000.f;
+		const float dt = 1.f / sample_freq;
 		const Vector3f phase_delay_deg = Vector3f{0.f, 40.4f, 49.32f}; // Given by simulation
 		const Vector3f gain_db{0.f, -3.62f, -7.84f}; // Given by simulation
-		_lpf.set_sample_frequency(sample_freq);
 		_lpf.set_cutoff_frequency(cutoff_freq);
-		runSimulatedFilter(signal_freq_hz, phase_delay_deg, gain_db);
-
-		// Check reset without resetting states works
-		Vector3f previous = _lpf.apply(Vector3f(100., 100., 100.));
-		_lpf.set_cutoff_frequency(cutoff_freq, false);
-		_lpf.set_sample_frequency(sample_freq, false);
-		EXPECT_NEAR(previous(1), _lpf.get()(1), _epsilon_near);
+		runSimulatedFilter(signal_freq_hz, phase_delay_deg, gain_db, dt);
 	}
+	const float dt = 0.01f;
 
-	// Disable filter and check it returns identical numbers
+	// Check filter ignores zero dt (should return same value)
+	Vector3f previous = _lpf.get();
+	EXPECT_NEAR(previous(1), _lpf.apply(Vector3f(100., 100., 100.), 0.f)(1), _epsilon_near);
+
+	// Check reset and disable without resetting states works
+	_lpf.set_cutoff_frequency(cutoff_freq, false);
+	EXPECT_NEAR(previous(1), _lpf.get()(1), _epsilon_near);
+	_lpf.disable(false);
+	EXPECT_NEAR(previous(1), _lpf.get()(1), _epsilon_near);
+
+	// Check reset and disable with resetting states works
+	_lpf.set_cutoff_frequency(cutoff_freq);
+	EXPECT_NEAR(0.f, _lpf.get()(1), _epsilon_near);
+	_lpf.reset(Vector3f(100., 100., 100.));
+	EXPECT_NEAR(100.f, _lpf.get()(1), _epsilon_near);
 	_lpf.disable();
-	EXPECT_NEAR(100.f, _lpf.apply(Vector3f(100.f, 0.f, 0.f))(0), _epsilon_near);
+	EXPECT_NEAR(0.f, _lpf.get()(1), _epsilon_near);
 
+	// Check filter returns last set value if disabled
+	_lpf.disable();
+	EXPECT_NEAR(100.f, _lpf.apply(Vector3f(100., 100., 100.), dt)(1), _epsilon_near);
+	EXPECT_NEAR(100.f, _lpf.get()(1), _epsilon_near);
 }

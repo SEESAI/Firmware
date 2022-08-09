@@ -34,6 +34,8 @@
 /// @file	LowPassFilter1p.hpp
 /// @brief	A class to implement a first order low pass filter
 /// Based on simple 1st order RC model - https://en.wikipedia.org/wiki/Low-pass_filter
+/// Note - no sample frequency is specified - instead a dt must be passed with each call
+///      - no checks are made regarding nyquist frequency
 
 #pragma once
 
@@ -50,11 +52,10 @@ class LowPassFilter1p
 public:
 	LowPassFilter1p() = default;
 
-	LowPassFilter1p(float sample_freq, float cutoff_freq)
+	LowPassFilter1p(float cutoff_freq)
 	{
 		// set initial parameters
 		set_cutoff_frequency(cutoff_freq);
-		set_sample_frequency(sample_freq);
 	}
 
 	// Change filter parameters
@@ -64,21 +65,15 @@ public:
 		update_alpha(reset_states);
 	}
 
-	void set_sample_frequency(float sample_freq, bool reset_states = true)
-	{
-		_sample_freq = sample_freq;
-		update_alpha(reset_states);
-	}
-
 	/**
-	 * Add a new raw value to the filter
+	 * Add a new raw value to the filter with a time delta
 	 *
 	 * @return retrieve the filtered result
 	 */
-	inline T apply(const T &sample)
+	inline T apply(const T &sample, float dt)
 	{
-		_delay_element_1 += _alpha * (sample - _delay_element_1);
-
+		float alpha = (_k > 0) ? _k*dt / (1 + _k*dt) : 1.f;
+		_delay_element_1 += alpha * (sample - _delay_element_1);
 		return _delay_element_1;
 	}
 
@@ -92,19 +87,8 @@ public:
 		return _delay_element_1;
 	}
 
-	// Filter array of samples in place
-	inline void applyArray(T samples[], int num_samples)
-	{
-		for (int n = 0; n < num_samples; n++) {
-			samples[n] = apply(samples[n]);
-		}
-	}
-
 	// Return the cutoff frequency
 	float get_cutoff_freq() const { return _cutoff_freq; }
-
-	// Return the sample frequency
-	float get_sample_freq() const { return _sample_freq; }
 
 	// Reset the filter state to this value
 	T reset(const T &sample)
@@ -113,30 +97,32 @@ public:
 		return _delay_element_1;
 	}
 
-	void disable()
+	void disable(bool reset_states = true)
 	{
 		// no filtering
-		_alpha = 1.f;
-		_delay_element_1 = {};
+		_k = 0.f;
+
+		// optionally reset delay elements on disable
+		if (reset_states) {
+			_delay_element_1 = {};
+		}
 	}
 
 	bool disabled() {
-		return fabsf(_alpha - 1.f) < 0.01f;
+		return _k < 0.01f;
 	}
 
 protected:
 	void update_alpha(bool reset_states) {
-		if ((_sample_freq <= 0.f) || (_cutoff_freq <= 0.f) || (_cutoff_freq >= _sample_freq / 2)
-		    || !isFinite(_sample_freq) || !isFinite(_cutoff_freq)) {
-			disable();
+		if ((_cutoff_freq <= 0.f) || !isFinite(_cutoff_freq)) {
+			disable(reset_states);
 			return;
 		}
 
-		float r = 2 * M_PI_F * _cutoff_freq / _sample_freq;
-		_alpha = r / (1 + r);
+		_k = 2 * M_PI_F * _cutoff_freq;
 
-		if (!isFinite(_alpha) || (_alpha < 0.f)) {
-			disable();
+		if (!isFinite(_k) || (_k < 0.f)) {
+			disable(reset_states);
 			return;
 		}
 
@@ -147,12 +133,9 @@ protected:
 	}
 
 protected:
-	T _delay_element_1{}; // buffered output -1
-
-	float _alpha{1.f}; // new sample gain
-
-	float _cutoff_freq{0.f};
-	float _sample_freq{0.f};
+	T _delay_element_1{}; 		// buffered output -1
+	float _k{0.f}; 			// 2 * pi * cutoff frequency
+	float _cutoff_freq{0.f};	// cutoff frequency - Hz
 };
 
 } // namespace math
