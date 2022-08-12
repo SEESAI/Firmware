@@ -55,6 +55,8 @@
 #include <lib/ecl/AlphaFilter/AlphaFilter.hpp>
 #include <uORB/PublicationMulti.hpp>
 #include <uORB/topics/battery_status.h>
+#include <uORB/Subscription.hpp>
+#include <uORB/topics/vehicle_control_mode.h>
 
 #include <systemlib/mavlink_log.h>
 
@@ -204,11 +206,47 @@ private:
 	uint8_t _warning{battery_status_s::BATTERY_WARNING_NONE};
 	hrt_abstime _last_timestamp{0};
 
-	float first_run_time;
-	bool first_run{true};
-	float cell_voltage_filtered;
-	float cell_voltage_filtered_load;
-	float soc_initial{0};
-	float sees_warning_last;
-	orb_advert_t _mavlink_log_pub{nullptr};
+	// Sees SOC calculation - a lookup table vs OC voltage at low current, and then pure coulomb coutning at high current
+	float _soc_initial{0}; /// SOC at last low-current time (initialisation point for columnb counting)
+	float _discharged_mah_initial{0}; /// discharged mah at last low-current time (initialisation point for column counting)
+	hrt_abstime _sees_warning_last{0}; /// Time we last warned about cell voltage - used to limit warning frequency
+	orb_advert_t _mavlink_log_pub{nullptr}; /// pointer to the mavlink publisher for the warning
+	bool _armed{false}; /// Whether the drone is armed (Read from vehicle control mode sub)
+	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
+
+	/**
+	 * Self-contained simple lookup class for SOC given a voltage
+	 *
+	 * NB
+	 *   - currently const (not reading from params) just to get going quickly
+	 *   - Please ensure _lookup_size is correctly set otherwise will seg_fault
+	 *   - Please ensure _lookup is monotonic decreasing in voltage and SOC
+	 *   - We couldn't find a nuttx table which has a .size() method!  Suggestions welcome
+	 */
+	struct SOCLookup {
+		// return soc [0, 1] given open circuit cell voltage
+		float GetSOC(float voltage);
+
+	private:
+		struct Lookup {
+			float _oc_voltage{0.f};
+			float _soc{0.f};
+		};
+		/// size of lookup table - NB MUST be correct or risk of seg_fault / bad lookup
+		const int _lookup_size = 11;
+		/// lookup table - NB MUST be monontonic descending
+		const Lookup _lookup[11] {
+			{4.17, 100.0},
+			{4.09, 89.5},
+			{3.99, 79.1},
+			{3.93, 68.6},
+			{3.87, 58.2},
+			{3.82, 47.7},
+			{3.79, 37.3},
+			{3.77, 26.8},
+			{3.73, 16.4},
+			{3.69, 5.9},
+			{3.50, 0.0}
+		};
+	} _soc_lookup;
 };
