@@ -59,6 +59,9 @@
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/vehicle_magnetometer.h>
 
+#include <uORB/topics/magnetometer_noise.h>
+#include <lib/mathlib/math/filter/LowPassFilter2p.hpp>
+using namespace matrix;
 using namespace time_literals;
 
 namespace sensors
@@ -76,6 +79,57 @@ public:
 	void PrintStatus();
 
 private:
+
+	class RMSNoiseCalculator
+	{
+
+		/**
+		 * Calculates the RMS noise of the signal (vs the specified low-pass of the signal)
+		 */
+
+	public:
+		RMSNoiseCalculator() = default;
+
+		void set_cutoff_frequency(float sample_freq, float cutoff_freq)
+		{
+			_lp_filter_in.set_cutoff_frequency(sample_freq, cutoff_freq);
+			_lp_filter_out.set_cutoff_frequency(sample_freq, cutoff_freq);
+			_lp_filter_in.reset(Vector3f(0.0f, 0.0f, 0.0f));
+			_lp_filter_out.reset(Vector3f(0.0f, 0.0f, 0.0f));
+		}
+
+		Vector3f get_last_value() {return _last_value;}
+
+		Vector3f apply(const Vector3f &input)
+		{
+			// Highpass the input signal to get the noise amplitude
+			const Vector3f filtered_1Hz = _lp_filter_in.apply(input);
+			const Vector3f noise = input - filtered_1Hz;
+
+			// Lowpass the square of the noise to get the averaged squared noise
+			const Vector3f noise_sq = Vector3f(noise(0) * noise(0), //
+							   noise(1) * noise(1), //
+							   noise(2) * noise(2));
+			const Vector3f noise_average = (_lp_filter_out.apply(noise_sq));
+
+			// The output is the square root of the noise (sanity check for positive)
+			if (noise_average(0) < 0 || noise_average(1) < 0 || noise_average(2) < 0) {
+				_last_value = Vector3f(0.f, 0.f, 0.f);
+
+			} else {
+				_last_value = Vector3f(sqrt(noise_average(0)), sqrt(noise_average(1)), sqrt(noise_average(2)));
+			}
+
+			// Return the square root of the average squared noise
+			return _last_value;
+		}
+
+	private:
+		Vector3f _last_value {0.0f, 0.0f, 0.0f};
+		math::LowPassFilter2p<matrix::Vector3f> _lp_filter_in {};
+		math::LowPassFilter2p<matrix::Vector3f> _lp_filter_out {};
+	};
+
 	void Run() override;
 
 	void ParametersUpdate(bool force = false);
@@ -97,6 +151,13 @@ private:
 		{ORB_ID(vehicle_magnetometer)},
 		{ORB_ID(vehicle_magnetometer)},
 		{ORB_ID(vehicle_magnetometer)},
+	};
+
+	uORB::PublicationMulti<magnetometer_noise_s> _magnetometer_noise_pub[MAX_SENSOR_COUNT] {
+		{ORB_ID(magnetometer_noise)},
+		{ORB_ID(magnetometer_noise)},
+		{ORB_ID(magnetometer_noise)},
+		{ORB_ID(magnetometer_noise)},
 	};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
@@ -149,6 +210,13 @@ private:
 
 	sensor_mag_s _last_data[MAX_SENSOR_COUNT] {};
 	bool _advertised[MAX_SENSOR_COUNT] {};
+
+	const bool sees_filtered_mag {true};
+	math::LowPassFilter2p<matrix::Vector3f> _lp_filter[MAX_SENSOR_COUNT] {};
+	RMSNoiseCalculator _rms_calculator_raw[MAX_SENSOR_COUNT] {};
+	RMSNoiseCalculator _rms_calculator_filtered[MAX_SENSOR_COUNT] {};
+	hrt_abstime _mag_filtered_timestamp[MAX_SENSOR_COUNT] {};
+	matrix::Vector3f _mag_filtered[MAX_SENSOR_COUNT] {};
 
 	float _mag_angle_diff[2] {};			/**< filtered mag angle differences between sensor instances (Ga) */
 

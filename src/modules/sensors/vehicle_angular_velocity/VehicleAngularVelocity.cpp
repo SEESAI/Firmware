@@ -115,9 +115,9 @@ bool VehicleAngularVelocity::UpdateSampleRate()
 			_reset_filters = true;
 			_filter_sample_rate_hz = sample_rate_hz;
 
-			if (_param_imu_gyro_ratemax.get() > 0.f) {
+			if (_param_imu_integ_rate.get() > 0.f) {
 				// determine number of sensor samples that will get closest to the desired rate
-				const float configured_interval_us = 1e6f / _param_imu_gyro_ratemax.get();
+				const float configured_interval_us = 1e6f / _param_imu_integ_rate.get();
 				const float publish_interval_us = 1e6f / publish_rate_hz;
 
 				const uint8_t samples = roundf(configured_interval_us / publish_interval_us);

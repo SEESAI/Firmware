@@ -354,9 +354,36 @@ void VehicleMagnetometer::Run()
 
 					_last_data[uorb_index].timestamp_sample = report.timestamp_sample;
 					_last_data[uorb_index].device_id = report.device_id;
-					_last_data[uorb_index].x = vect(0);
-					_last_data[uorb_index].y = vect(1);
-					_last_data[uorb_index].z = vect(2);
+
+					if (sees_filtered_mag) {
+						// Reset Low Pass filter and RMS filters if not done already
+						// @ToDo - move filter cutoff to params, and auto-set the filter sample frequency
+						if (fabs(_lp_filter[uorb_index].get_cutoff_freq()) < 0.1f) {
+							_lp_filter[uorb_index].set_cutoff_frequency(140.0f, 10.0f);
+							_lp_filter[uorb_index].reset(vect);
+							_rms_calculator_raw[uorb_index].set_cutoff_frequency(140.f, 1.0f);
+							_rms_calculator_filtered[uorb_index].set_cutoff_frequency(140.0f, 1.0f);
+						}
+
+						// Apply filter and save result
+						_mag_filtered[uorb_index] = _lp_filter[uorb_index].apply(vect);
+						_mag_filtered_timestamp[uorb_index] = report.timestamp_sample;
+
+						// RMS the raw and filtered values for logging
+						_rms_calculator_raw[uorb_index].apply(vect);
+						_rms_calculator_filtered[uorb_index].apply(_mag_filtered[uorb_index]);
+
+						// Use filtered values for consistency check
+						_last_data[uorb_index].x = _mag_filtered[uorb_index](0);
+						_last_data[uorb_index].y = _mag_filtered[uorb_index](1);
+						_last_data[uorb_index].z = _mag_filtered[uorb_index](2);
+
+					} else {
+						// Else use the unfiltered values for consistency check
+						_last_data[uorb_index].x = vect(0);
+						_last_data[uorb_index].y = vect(1);
+						_last_data[uorb_index].z = vect(2);
+					}
 				}
 			}
 		}
@@ -453,8 +480,32 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 	if ((_param_sens_mag_rate.get() > 0) && ((_last_publication_timestamp[instance] == 0) ||
 			(hrt_elapsed_time(&_last_publication_timestamp[instance]) >= (1e6f / _param_sens_mag_rate.get())))) {
 
-		const Vector3f magnetometer_data = _mag_sum[instance] / _mag_sum_count[instance];
-		const hrt_abstime timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
+		Vector3f magnetometer_data{};
+		hrt_abstime timestamp_sample{};
+		magnetometer_noise_s mag_noise_out{};
+
+		if (sees_filtered_mag) {
+			// Output filtered values to the main message
+			magnetometer_data = _mag_filtered[instance];
+			timestamp_sample = _mag_filtered_timestamp[instance];
+
+			// Copy raw mag, RMS raw mag and RMS filtered mag to mag_noise_out message ready to be published.
+			const Vector3f mag_raw = _mag_sum[instance] / _mag_sum_count[instance];
+			const Vector3f mag_noise_raw_rms = _rms_calculator_raw[instance].get_last_value();
+			const Vector3f mag_noise_filtered_rms = _rms_calculator_filtered[instance].get_last_value();
+
+			mag_noise_out.timestamp_sample = _mag_filtered_timestamp[instance];
+			mag_noise_out.device_id = _calibration[instance].device_id();
+			mag_noise_raw_rms.copyTo(mag_noise_out.magnetometer_raw_rms);
+			mag_noise_filtered_rms.copyTo(mag_noise_out.magnetometer_filtered_rms);
+			mag_raw.copyTo(mag_noise_out.magnetometer_raw);
+			mag_noise_out.timestamp = hrt_absolute_time();
+
+		} else {
+			// PX4 default behaviour - output averaged value
+			magnetometer_data = _mag_sum[instance] / _mag_sum_count[instance];
+			timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
+		}
 
 		// reset
 		_timestamp_sample_sum[instance] = 0;
@@ -470,12 +521,15 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 
 		out.timestamp = hrt_absolute_time();
 
+		// Publish - We don't mind publishing empty mag_noise_out if sees boolean is disabled as this is purely for debugging purposes.
 		if (multi) {
 			_vehicle_magnetometer_pub[instance].publish(out);
+			_magnetometer_noise_pub[instance].publish(mag_noise_out);
 
 		} else {
 			// otherwise only ever publish the first instance
 			_vehicle_magnetometer_pub[0].publish(out);
+			_magnetometer_noise_pub[0].publish(mag_noise_out);
 		}
 
 		_last_publication_timestamp[instance] = out.timestamp;
