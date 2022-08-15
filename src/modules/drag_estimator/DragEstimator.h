@@ -54,7 +54,7 @@
 #include <uORB/Publication.hpp>
 #include <systemlib/mavlink_log.h>
 #include <matrix/math.hpp>
-#include <lib/mathlib/math/filter/LowPassFilter2p.hpp>
+#include <lib/mathlib/math/filter/LowPassFilter1p.hpp>
 
 using namespace matrix;
 using namespace time_literals;
@@ -118,8 +118,10 @@ private:
 	float _filter_sample_freq{200.};
 	Vector3f _drag_acc_filtered{0.f, 0.f, 0.f};
 
-	math::LowPassFilter2p<matrix::Vector3f> _lp_filter{100.f, 10.f};
+	math::LowPassFilter1p<matrix::Vector3f> _lp_filter1{10.f};
+	math::LowPassFilter1p<matrix::Vector3f> _lp_filter2{10.f};
 	hrt_abstime _timestamp_prev{0};
+	hrt_abstime _last_warning_time{0};
 
 	uORB::Publication<drag_estimator_s>	_drag_estimator_pub{ORB_ID(drag_estimator)};
 

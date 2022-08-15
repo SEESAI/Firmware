@@ -68,10 +68,10 @@ bool DragEstimator::init()
 void DragEstimator::ResetFilterParams()
 {
 	// Update the filter cutoff, and reset the filter to the last output
-	_lp_filter.set_cutoff_frequency(_filter_sample_freq, _param_de_cutoff.get());
-	_lp_filter.reset(_drag_acc_filtered);
-	mavlink_log_info(&_mavlink_log_pub, "filter reset to %f Hz cutoff, %f Hz sample rate", double(_param_de_cutoff.get()),
-			 double(_filter_sample_freq));
+	_lp_filter1.set_cutoff_frequency(_param_de_cutoff.get());
+	_lp_filter2.set_cutoff_frequency(_param_de_cutoff.get());
+	_lp_filter1.reset(_drag_acc_filtered);
+	_lp_filter2.reset(_drag_acc_filtered);
 }
 
 void DragEstimator::Run()
@@ -98,31 +98,36 @@ void DragEstimator::Run()
 	// Only run if vehicle_attitude is updated
 	// Note - we use this as if it hasn't been updated after startup then quaternion will be zero
 	// Hence the maths generates NaNs
-	if (_vehicle_acceleration_sub.updated()) {
+	if (_vehicle_acceleration_sub.update(&_vehicle_acceleration)) {
 
 		//Update data
 		_vehicle_attitude_sub.update(&_vehicle_attitude);
 		_vehicle_attitude_setpoint_sub.update(&_vehicle_attitude_setpoint);
-		_vehicle_acceleration_sub.update(&_vehicle_acceleration);
 		hover_thrust_estimate_s hover{};
 
 		if (_hover_thrust_estimate_sub.update(&hover)) {
 			_hover_thrust = math::max(0.1f, hover.hover_thrust);
 		}
 
-		//Update filter if needed
-		hrt_abstime acc_timestamp = _vehicle_acceleration.timestamp;
-		hrt_abstime sample_time = acc_timestamp - _timestamp_prev;
+		// Work out delta time since last update for filter
+		hrt_abstime acc_timestamp = _vehicle_acceleration.timestamp_sample;
+		float dt = float(acc_timestamp - _timestamp_prev) * 1e-6f;
 		_timestamp_prev = acc_timestamp;
 
-		if (sample_time > 0) {
-			float freq = 1.f / (float(sample_time) * 1e-6f);
+		// Update rate warnings - disabled for now but needs attention if we wish to move back to Filter2p
+		// if (dt > 0) {
+		// 	float freq = 1.f / dt;
 
-			if (fabs(_filter_sample_freq - freq) > 20.0f) {
-				_filter_sample_freq = freq;
-				ResetFilterParams();
-			}
-		}
+		// 	if (fabs(_filter_sample_freq - freq) > 20.0f) {
+		// 		_filter_sample_freq = freq;
+		// 		hrt_abstime now = hrt_absolute_time();
+
+		// 		if (now - _last_warning_time > 3_s) {
+		// 			mavlink_log_info(&_mavlink_log_pub, "Drag Estimator input rate %f Hz", double(_filter_sample_freq));
+		// 			_last_warning_time = now;
+		// 		}
+		// 	}
+		// }
 
 		// Body attitude
 		const float &qw = _vehicle_attitude.q[0];
@@ -169,7 +174,7 @@ void DragEstimator::Run()
 
 		if (PX4_ISFINITE(drag_acc(0)) && PX4_ISFINITE(drag_acc(1)) && PX4_ISFINITE(drag_acc(2))) {
 			// Filter the drag acceleration
-			_drag_acc_filtered = _lp_filter.apply(drag_acc);
+			_drag_acc_filtered = _lp_filter2.apply(_lp_filter1.apply(drag_acc, dt), dt);
 
 			// Convert drag_acceleration_filtered back into body fram
 			drag_acc_filtered_body = att_quat.conjugate_inversed(_drag_acc_filtered);
