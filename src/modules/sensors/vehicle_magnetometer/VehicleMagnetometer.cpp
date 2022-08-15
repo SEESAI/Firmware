@@ -486,19 +486,18 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 	if ((_param_sens_mag_rate.get() > 0) && ((_last_publication_timestamp[instance] == 0) ||
 			(hrt_elapsed_time(&_last_publication_timestamp[instance]) >= (1e6f / _param_sens_mag_rate.get())))) {
 
-		vehicle_magnetometer_s out{};
 		magnetometer_noise_s mag_noise_out{};
-		Vector3f magnetometer_data = _mag_sum[instance];
+		Vector3f magnetometer_data{};
+		hrt_abstime timestamp_sample{};
 
 		if (sees_filtered_mag) {
 			// Here we hijack their "sum" variables which were used to calulate an average.
 			// Our low-pass filter inherently averages, so we skip that and input the final values.
 			magnetometer_data = _mag_sum[instance];
+			timestamp_sample = _timestamp_sample_sum[instance];
 
-			// We still want to include raw magnetometer data for debugging
+			// Copy raw mag, RMS raw mag and RMS filtered mag to mag_noise_out ready to be published.
 			const Vector3f mag_raw = _mag_raw_sum[instance] / _mag_sum_count[instance];
-
-			// Here we copy raw mag, RMS raw mag and RMS filtered mag to mag_noise_out ready to be published.
 			const Vector3f mag_noise_raw_rms = _rms_calculator_raw[instance].get_last_value();
 			const Vector3f mag_noise_filtered_rms = _rms_calculator_filtered[instance].get_last_value();
 			mag_noise_out.timestamp_sample = _timestamp_sample_sum[instance];
@@ -506,26 +505,26 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 			mag_noise_raw_rms.copyTo(mag_noise_out.magnetometer_raw_rms);
 			mag_noise_filtered_rms.copyTo(mag_noise_out.magnetometer_filtered_rms);
 			mag_raw.copyTo(mag_noise_out.magnetometer_raw);
+			mag_noise_out.timestamp = hrt_absolute_time();
 
 		} else {
 			magnetometer_data = _mag_sum[instance] / _mag_sum_count[instance];
-			const hrt_abstime timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
+			timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
 		}
-
-		// Populate vehicle_magnetometer with primary mag and publish
-		out.timestamp_sample = _timestamp_sample_sum[instance];
-		out.device_id = _calibration[instance].device_id();
-		magnetometer_data.copyTo(out.magnetometer_ga);
-		out.calibration_count = _calibration[instance].calibration_count();
-		out.timestamp = hrt_absolute_time();
-
-		// Matching timestamps to the vanilla PX4 mag sub
-		mag_noise_out.timestamp = out.timestamp;
 
 		// Reset
 		_timestamp_sample_sum[instance] = 0;
 		_mag_sum[instance].zero();
 		_mag_sum_count[instance] = 0;
+
+		// Populate vehicle_magnetometer with primary mag and publish
+		vehicle_magnetometer_s out{};
+		out.timestamp_sample = timestamp_sample;
+		out.device_id = _calibration[instance].device_id();
+		magnetometer_data.copyTo(out.magnetometer_ga);
+		out.calibration_count = _calibration[instance].calibration_count();
+
+		out.timestamp = hrt_absolute_time();
 
 		// Publish - We don't mind publishing empty mag_noise_out if sees boolean is disabled as this is purely for debugging purposes.
 		if (multi) {
