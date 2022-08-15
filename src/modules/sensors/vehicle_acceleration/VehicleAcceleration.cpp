@@ -99,11 +99,9 @@ void VehicleAcceleration::CheckAndUpdateFilters()
 				_filter_sample_rate = sample_rate_hz;
 				sample_rate_changed = true;
 
-				hrt_abstime now = hrt_absolute_time();
-
-				if (now - _last_warning_time > 3_s) {
-					mavlink_log_info(&_mavlink_log_pub, "Vehicle Acceleration Filter Reset To %f Hz", double(_filter_sample_rate));
-					_last_warning_time = now;
+				if (hrt_absolute_time() - _last_frequency_warning > 3_s) {
+					mavlink_log_info(&_mavlink_log_pub, "VehicleAcc SampleTime Reset %fHz", double(_filter_sample_rate));
+					_last_frequency_warning = hrt_absolute_time();
 				}
 
 				// determine number of sensor samples that will get closest to the desired rate

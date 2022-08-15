@@ -89,7 +89,7 @@ private:
 	uORB::SubscriptionCallbackWorkItem _sensor_sub{this, ORB_ID(sensor_accel)};
 
 	orb_advert_t	 _mavlink_log_pub{nullptr};
-	hrt_abstime 	_last_warning_time{};
+	hrt_abstime 	_last_frequency_warning{};
 
 	calibration::Accelerometer _calibration{};
 

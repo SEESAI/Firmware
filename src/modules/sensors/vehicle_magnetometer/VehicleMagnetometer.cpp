@@ -367,12 +367,13 @@ void VehicleMagnetometer::Run()
 							_rms_calculator_filtered[uorb_index].set_cutoff_frequency(140.0f, 1.0f);
 						}
 
-						// Frequency check (until we make the frequency auto-updating)
+						// Frequency check (until we make the frequency auto-updating) - external sensors only (to avoid cube orange internal)
+						// @ToDo - figure out how to get cube orange internal running at higher rate
 						float freq = 1.f / (float(dt) * 1e-6f);
 
-						if (fabsf(freq - 140.f) > 20.f) {
+						if ((fabsf(freq - 140.f) > 20.f) && report.is_external) {
 							if (hrt_absolute_time() - _last_frequency_warning > 3_s) {
-								mavlink_log_info(&_mavlink_log_pub, "Mag %d at %f Hz (target 140Hz)", uorb_index, double(freq));
+								mavlink_log_info(&_mavlink_log_pub, "VehicleMag %d at %fHz (target 140Hz)", uorb_index, double(freq));
 								_last_frequency_warning = hrt_absolute_time();
 							}
 						}
