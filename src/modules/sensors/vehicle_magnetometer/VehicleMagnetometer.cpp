@@ -375,6 +375,7 @@ void VehicleMagnetometer::Run()
 						// RMS the raw and filtered values for logging
 						_rms_calculator_raw[uorb_index].apply(vect);
 						_rms_calculator_filtered[uorb_index].apply(mag_filtered);
+
 					} else {
 						// Else publish the unfiltered values
 						_last_data[uorb_index].x = vect(0);
@@ -490,25 +491,25 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 		Vector3f magnetometer_data = _mag_sum[instance];
 
 		if (sees_filtered_mag) {
-		// Here we hijack their "sum" variables which were used to calulate an average.
-		// Our low-pass filter inherently averages, so we skip that and input the final values.
-		magnetometer_data = _mag_sum[instance];
+			// Here we hijack their "sum" variables which were used to calulate an average.
+			// Our low-pass filter inherently averages, so we skip that and input the final values.
+			magnetometer_data = _mag_sum[instance];
 
-		// We still want to include raw magnetometer data for debugging
-		const Vector3f mag_raw = _mag_raw_sum[instance] / _mag_sum_count[instance];
+			// We still want to include raw magnetometer data for debugging
+			const Vector3f mag_raw = _mag_raw_sum[instance] / _mag_sum_count[instance];
 
-		// Here we copy raw mag, RMS raw mag and RMS filtered mag to mag_noise_out ready to be published.
-		const Vector3f mag_noise_raw_rms = _rms_calculator_raw[instance].get_last_value();
-		const Vector3f mag_noise_filtered_rms = _rms_calculator_filtered[instance].get_last_value();
-		mag_noise_out.timestamp_sample = _timestamp_sample_sum[instance];
-		mag_noise_out.device_id = out.device_id;
-		mag_noise_raw_rms.copyTo(mag_noise_out.magnetometer_raw_rms);
-		mag_noise_filtered_rms.copyTo(mag_noise_out.magnetometer_filtered_rms);
-		mag_raw.copyTo(mag_noise_out.magnetometer_raw);
-		}
-		else {
-		magnetometer_data = _mag_sum[instance] / _mag_sum_count[instance];
-		const hrt_abstime timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
+			// Here we copy raw mag, RMS raw mag and RMS filtered mag to mag_noise_out ready to be published.
+			const Vector3f mag_noise_raw_rms = _rms_calculator_raw[instance].get_last_value();
+			const Vector3f mag_noise_filtered_rms = _rms_calculator_filtered[instance].get_last_value();
+			mag_noise_out.timestamp_sample = _timestamp_sample_sum[instance];
+			mag_noise_out.device_id = out.device_id;
+			mag_noise_raw_rms.copyTo(mag_noise_out.magnetometer_raw_rms);
+			mag_noise_filtered_rms.copyTo(mag_noise_out.magnetometer_filtered_rms);
+			mag_raw.copyTo(mag_noise_out.magnetometer_raw);
+
+		} else {
+			magnetometer_data = _mag_sum[instance] / _mag_sum_count[instance];
+			const hrt_abstime timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
 		}
 
 		// Populate vehicle_magnetometer with primary mag and publish

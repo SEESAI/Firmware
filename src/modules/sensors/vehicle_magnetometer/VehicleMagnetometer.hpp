@@ -80,16 +80,18 @@ public:
 
 private:
 
-	class RMSNoiseCalculator {
+	class RMSNoiseCalculator
+	{
 
-	/**
-	 * Calculates the RMS noise of the signal (vs the specified low-pass of the signal)
-	 */
+		/**
+		 * Calculates the RMS noise of the signal (vs the specified low-pass of the signal)
+		 */
 
 	public:
 		RMSNoiseCalculator() = default;
 
-		void set_cutoff_frequency(float sample_freq, float cutoff_freq) {
+		void set_cutoff_frequency(float sample_freq, float cutoff_freq)
+		{
 			_lp_filter_in.set_cutoff_frequency(sample_freq, cutoff_freq);
 			_lp_filter_out.set_cutoff_frequency(sample_freq, cutoff_freq);
 			_lp_filter_in.reset(Vector3f(0.0f, 0.0f, 0.0f));
@@ -111,19 +113,21 @@ private:
 			const Vector3f noise_average = (_lp_filter_out.apply(noise_sq));
 
 			// The output is the square root of the noise (sanity check for positive)
-			if (noise_average(0) < 0 || noise_average(1) < 0 || noise_average(2) < 0)
+			if (noise_average(0) < 0 || noise_average(1) < 0 || noise_average(2) < 0) {
 				_last_value = Vector3f(0.f, 0.f, 0.f);
-			else
-				_last_value = Vector3f (sqrt(noise_average(0)), sqrt(noise_average(1)), sqrt(noise_average(2)));
+
+			} else {
+				_last_value = Vector3f(sqrt(noise_average(0)), sqrt(noise_average(1)), sqrt(noise_average(2)));
+			}
 
 			// Return the square root of the average squared noise
 			return _last_value;
 		}
 
-		private:
-			Vector3f _last_value {0.0f, 0.0f, 0.0f};
-			math::LowPassFilter2p<matrix::Vector3f> _lp_filter_in {};
-			math::LowPassFilter2p<matrix::Vector3f> _lp_filter_out {};
+	private:
+		Vector3f _last_value {0.0f, 0.0f, 0.0f};
+		math::LowPassFilter2p<matrix::Vector3f> _lp_filter_in {};
+		math::LowPassFilter2p<matrix::Vector3f> _lp_filter_out {};
 	};
 
 	void Run() override;
