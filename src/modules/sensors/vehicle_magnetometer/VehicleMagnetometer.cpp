@@ -500,7 +500,7 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 			const Vector3f mag_noise_raw_rms = _rms_calculator_raw[instance].get_last_value();
 			const Vector3f mag_noise_filtered_rms = _rms_calculator_filtered[instance].get_last_value();
 			mag_noise_out.timestamp_sample = _timestamp_sample_sum[instance];
-			mag_noise_out.device_id = out.device_id;
+			mag_noise_out.device_id = _calibration[instance].device_id();
 			mag_noise_raw_rms.copyTo(mag_noise_out.magnetometer_raw_rms);
 			mag_noise_filtered_rms.copyTo(mag_noise_out.magnetometer_filtered_rms);
 			mag_raw.copyTo(mag_noise_out.magnetometer_raw);
