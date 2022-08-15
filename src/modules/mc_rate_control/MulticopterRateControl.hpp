@@ -60,7 +60,6 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-#include <systemlib/mavlink_log.h>
 
 using namespace time_literals;
 
@@ -101,8 +100,6 @@ private:
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
 	uORB::Subscription _drag_estimator_sub{ORB_ID(drag_estimator)};
-
-	orb_advert_t           _mavlink_log_pub{nullptr};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
