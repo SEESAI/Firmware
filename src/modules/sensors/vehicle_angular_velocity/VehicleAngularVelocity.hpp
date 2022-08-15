@@ -56,6 +56,7 @@
 #include <uORB/topics/sensor_selection.h>
 #include <uORB/topics/vehicle_angular_acceleration.h>
 #include <uORB/topics/vehicle_angular_velocity.h>
+#include <systemlib/mavlink_log.h>
 
 using namespace time_literals;
 
@@ -113,6 +114,9 @@ private:
 	uORB::SubscriptionCallbackWorkItem _sensor_selection_sub{this, ORB_ID(sensor_selection)};
 	uORB::SubscriptionCallbackWorkItem _sensor_sub{this, ORB_ID(sensor_gyro)};
 	uORB::SubscriptionCallbackWorkItem _sensor_fifo_sub{this, ORB_ID(sensor_gyro_fifo)};
+
+	hrt_abstime _last_frequency_warning{0};
+	orb_advert_t _mavlink_log_pub{nullptr};
 
 	calibration::Gyroscope _calibration{};
 

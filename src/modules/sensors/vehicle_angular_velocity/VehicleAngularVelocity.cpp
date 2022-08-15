@@ -115,6 +115,11 @@ bool VehicleAngularVelocity::UpdateSampleRate()
 			_reset_filters = true;
 			_filter_sample_rate_hz = sample_rate_hz;
 
+			if (hrt_absolute_time() - _last_frequency_warning > 3_s) {
+				mavlink_log_info(&_mavlink_log_pub, "VehicleAngVel Filter Reset %fHz", double(_filter_sample_rate_hz));
+				_last_frequency_warning = hrt_absolute_time();
+			}
+
 			if (_param_imu_integ_rate.get() > 0.f) {
 				// determine number of sensor samples that will get closest to the desired rate
 				const float configured_interval_us = 1e6f / _param_imu_integ_rate.get();
