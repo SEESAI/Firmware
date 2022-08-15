@@ -382,14 +382,13 @@ void VehicleMagnetometer::Run()
 						_last_data[uorb_index].y = vect(1);
 						_last_data[uorb_index].z = vect(2);
 
+						_timestamp_sample_sum[uorb_index] += report.timestamp_sample;
 						_mag_sum[uorb_index] += vect;
 						_mag_sum_count[uorb_index]++;
-						_timestamp_sample_sum[uorb_index] += report.timestamp_sample;
 					}
 
 					_last_data[uorb_index].timestamp_sample = report.timestamp_sample;
 					_last_data[uorb_index].device_id = report.device_id;
-
 				}
 			}
 		}
