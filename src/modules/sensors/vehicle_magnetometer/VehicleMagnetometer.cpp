@@ -348,47 +348,42 @@ void VehicleMagnetometer::Run()
 					float mag_array[3] {vect(0), vect(1), vect(2)};
 					_voter.put(uorb_index, report.timestamp, mag_array, report.error_count, _priority[uorb_index]);
 
+					_timestamp_sample_sum[uorb_index] += report.timestamp_sample;
+					_mag_sum[uorb_index] += vect;
+					_mag_sum_count[uorb_index]++;
+
+					_last_data[uorb_index].timestamp_sample = report.timestamp_sample;
+					_last_data[uorb_index].device_id = report.device_id;
+
 					if (sees_filtered_mag) {
-						//Reset Low Pass filter and RMS filters if not done already
+						// Reset Low Pass filter and RMS filters if not done already
+						// @ToDo - move filter cutoff to params, and auto-set the filter sample frequency
 						if (fabs(_lp_filter[uorb_index].get_cutoff_freq()) < 0.1f) {
 							_lp_filter[uorb_index].set_cutoff_frequency(140.0f, 10.0f);
-							_lp_filter[uorb_index].reset(Vector3f(0.0f, 0.0f, 0.0f));
+							_lp_filter[uorb_index].reset(vect);
 							_rms_calculator_raw[uorb_index].set_cutoff_frequency(140.f, 1.0f);
 							_rms_calculator_filtered[uorb_index].set_cutoff_frequency(140.0f, 1.0f);
 						}
 
-						// Apply filter
-						const Vector3f mag_filtered = _lp_filter[uorb_index].apply(vect);
-
-						// Publish _last_data with the filtered values
-						_last_data[uorb_index].x = mag_filtered(0);
-						_last_data[uorb_index].y = mag_filtered(1);
-						_last_data[uorb_index].z = mag_filtered(2);
-
-						// We hijack their _mag_sum to publish filtered values to rest of PX4, but we also
-						// publish raw values for debugging purposes.
-						_timestamp_sample_sum[uorb_index] = report.timestamp_sample;
-						_mag_sum[uorb_index] = mag_filtered;
-						_mag_raw_sum[uorb_index] = vect;
-						_mag_sum_count[uorb_index]++;
+						// Apply filter and save result
+						_mag_filtered[uorb_index] = _lp_filter[uorb_index].apply(vect);
+						_mag_filtered_timestamp[uorb_index] = report.timestamp_sample;
 
 						// RMS the raw and filtered values for logging
 						_rms_calculator_raw[uorb_index].apply(vect);
-						_rms_calculator_filtered[uorb_index].apply(mag_filtered);
+						_rms_calculator_filtered[uorb_index].apply(_mag_filtered[uorb_index]);
+
+						// Use filtered values for consistency check
+						_last_data[uorb_index].x = _mag_filtered[uorb_index](0);
+						_last_data[uorb_index].y = _mag_filtered[uorb_index](1);
+						_last_data[uorb_index].z = _mag_filtered[uorb_index](2);
 
 					} else {
-						// Else publish the unfiltered values
+						// Else use the unfiltered values for consistency check
 						_last_data[uorb_index].x = vect(0);
 						_last_data[uorb_index].y = vect(1);
 						_last_data[uorb_index].z = vect(2);
-
-						_timestamp_sample_sum[uorb_index] += report.timestamp_sample;
-						_mag_sum[uorb_index] += vect;
-						_mag_sum_count[uorb_index]++;
 					}
-
-					_last_data[uorb_index].timestamp_sample = report.timestamp_sample;
-					_last_data[uorb_index].device_id = report.device_id;
 				}
 			}
 		}
@@ -490,16 +485,16 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 		magnetometer_noise_s mag_noise_out{};
 
 		if (sees_filtered_mag) {
-			// Here we hijack their "sum" variables which were used to calulate an average.
-			// Our low-pass filter inherently averages, so we skip that and input the final values.
-			magnetometer_data = _mag_sum[instance];
-			timestamp_sample = _timestamp_sample_sum[instance];
+			// Output filtered values to the main message
+			magnetometer_data = _mag_filtered[instance];
+			timestamp_sample = _mag_filtered_timestamp[instance];
 
-			// Copy raw mag, RMS raw mag and RMS filtered mag to mag_noise_out ready to be published.
-			const Vector3f mag_raw = _mag_raw_sum[instance] / _mag_sum_count[instance];
+			// Copy raw mag, RMS raw mag and RMS filtered mag to mag_noise_out message ready to be published.
+			const Vector3f mag_raw = _mag_sum[instance] / _mag_sum_count[instance];
 			const Vector3f mag_noise_raw_rms = _rms_calculator_raw[instance].get_last_value();
 			const Vector3f mag_noise_filtered_rms = _rms_calculator_filtered[instance].get_last_value();
-			mag_noise_out.timestamp_sample = _timestamp_sample_sum[instance];
+
+			mag_noise_out.timestamp_sample = _mag_filtered_timestamp[instance];
 			mag_noise_out.device_id = _calibration[instance].device_id();
 			mag_noise_raw_rms.copyTo(mag_noise_out.magnetometer_raw_rms);
 			mag_noise_filtered_rms.copyTo(mag_noise_out.magnetometer_filtered_rms);
@@ -507,6 +502,7 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 			mag_noise_out.timestamp = hrt_absolute_time();
 
 		} else {
+			// PX4 default behaviour - output averaged value
 			magnetometer_data = _mag_sum[instance] / _mag_sum_count[instance];
 			timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
 		}

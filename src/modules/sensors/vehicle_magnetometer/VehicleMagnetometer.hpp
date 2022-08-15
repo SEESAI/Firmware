@@ -215,7 +215,8 @@ private:
 	math::LowPassFilter2p<matrix::Vector3f> _lp_filter[MAX_SENSOR_COUNT] {};
 	RMSNoiseCalculator _rms_calculator_raw[MAX_SENSOR_COUNT] {};
 	RMSNoiseCalculator _rms_calculator_filtered[MAX_SENSOR_COUNT] {};
-	matrix::Vector3f _mag_raw_sum[MAX_SENSOR_COUNT];
+	hrt_abstime _mag_filtered_timestamp[MAX_SENSOR_COUNT] {};
+	matrix::Vector3f _mag_filtered[MAX_SENSOR_COUNT];
 
 	float _mag_angle_diff[2] {};			/**< filtered mag angle differences between sensor instances (Ga) */
 
