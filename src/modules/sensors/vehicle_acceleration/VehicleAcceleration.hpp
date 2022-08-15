@@ -50,6 +50,7 @@
 #include <uORB/topics/sensor_accel.h>
 #include <uORB/topics/sensor_selection.h>
 #include <uORB/topics/vehicle_acceleration.h>
+#include <systemlib/mavlink_log.h>
 
 using namespace time_literals;
 
@@ -86,6 +87,9 @@ private:
 
 	uORB::SubscriptionCallbackWorkItem _sensor_selection_sub{this, ORB_ID(sensor_selection)};
 	uORB::SubscriptionCallbackWorkItem _sensor_sub{this, ORB_ID(sensor_accel)};
+
+	orb_advert_t	 _mavlink_log_pub{nullptr};
+	hrt_abstime 	_last_warning_time{};
 
 	calibration::Accelerometer _calibration{};
 

@@ -99,6 +99,13 @@ void VehicleAcceleration::CheckAndUpdateFilters()
 				_filter_sample_rate = sample_rate_hz;
 				sample_rate_changed = true;
 
+				hrt_abstime now = hrt_absolute_time();
+
+				if (now - _last_warning_time > 3_s) {
+					mavlink_log_info(&_mavlink_log_pub, "Vehicle Acceleration Filter Reset To %f Hz", double(_filter_sample_rate));
+					_last_warning_time = now;
+				}
+
 				// determine number of sensor samples that will get closest to the desired rate
 				if (_param_imu_integ_rate.get() > 0) {
 					const float configured_interval_us = 1e6f / _param_imu_integ_rate.get();
