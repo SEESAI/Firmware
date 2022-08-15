@@ -274,7 +274,7 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 	// temporarily overwrites the manual_control_setpoint_mav timestamp with the RC timestamp from manual_control_setpoint_rc.
 	// Switch == 1 is off, Switch == 3 is off. (0 is unassigned, 2 is middle)
 
-	if ((manual_control_switches->kill_switch == manual_control_switches_s::SWITCH_POS_ON) || (kill_prev == true)) {
+	if ((manual_control_switches->kill_switch == manual_control_switches_s::SWITCH_POS_ON) || kill_prev) {
 		_manual_control_setpoint.timestamp = _manual_control_setpoint_rc.timestamp;
 
 		switch (manual_control_switches->kill_switch) {
@@ -341,17 +341,11 @@ bool OBManualControl::SwitchToggled(manual_control_switches_s *manual_control_sw
 		first_run = false;
 	}
 
-	toggled_rc = transition_switch_rc_prev ^
-		     manual_control_switches_rc->transition_switch; // Xor => Output != 0 if they are different
+	// Xor => Output != 0 if they are different
+	toggled_rc = transition_switch_rc_prev ^ manual_control_switches_rc->transition_switch;
 
-	if (transition_switch_mav_prev == 0
-	    && manual_control_switches_mav->transition_switch ==
-	    1) { // Joystick is momentary button default value 0, so only looking for transition from 0 to 1
-		toggled_mav = true;
-
-	} else {
-		toggled_mav = false;
-	}
+	// Joystick is momentary button default value 0, so only looking for transition from 0 to 1
+	toggled_mav = transition_switch_mav_prev == 0 && manual_control_switches_mav->transition_switch == 1;
 
 	toggled = toggled_rc | toggled_mav ; // true if any of them toggle
 
