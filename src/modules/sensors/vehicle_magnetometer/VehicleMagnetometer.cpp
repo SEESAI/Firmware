@@ -367,10 +367,10 @@ void VehicleMagnetometer::Run()
 
 						// We hijack their _mag_sum to publish filtered values to rest of PX4, but we also
 						// publish raw values for debugging purposes.
-						_mag_sum[uorb_index] = mag_filtered;
 						_timestamp_sample_sum[uorb_index] = report.timestamp_sample;
-						_mag_sum_count[uorb_index]++;
+						_mag_sum[uorb_index] = mag_filtered;
 						_mag_raw_sum[uorb_index] = vect;
+						_mag_sum_count[uorb_index]++;
 
 						// RMS the raw and filtered values for logging
 						_rms_calculator_raw[uorb_index].apply(vect);
@@ -485,9 +485,9 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 	if ((_param_sens_mag_rate.get() > 0) && ((_last_publication_timestamp[instance] == 0) ||
 			(hrt_elapsed_time(&_last_publication_timestamp[instance]) >= (1e6f / _param_sens_mag_rate.get())))) {
 
-		magnetometer_noise_s mag_noise_out{};
 		Vector3f magnetometer_data{};
 		hrt_abstime timestamp_sample{};
+		magnetometer_noise_s mag_noise_out{};
 
 		if (sees_filtered_mag) {
 			// Here we hijack their "sum" variables which were used to calulate an average.
@@ -511,12 +511,12 @@ void VehicleMagnetometer::Publish(uint8_t instance, bool multi)
 			timestamp_sample = _timestamp_sample_sum[instance] / _mag_sum_count[instance];
 		}
 
-		// Reset
+		// reset
 		_timestamp_sample_sum[instance] = 0;
 		_mag_sum[instance].zero();
 		_mag_sum_count[instance] = 0;
 
-		// Populate vehicle_magnetometer with primary mag and publish
+		// populate vehicle_magnetometer with primary mag and publish
 		vehicle_magnetometer_s out{};
 		out.timestamp_sample = timestamp_sample;
 		out.device_id = _calibration[instance].device_id();
