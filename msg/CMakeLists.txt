@@ -53,6 +53,7 @@ set(msg_files
 	cpuload.msg
 	differential_pressure.msg
 	distance_sensor.msg
+	drag_estimator.msg
 	ekf2_timestamps.msg
 	ekf_gps_drift.msg
 	esc_report.msg
@@ -118,6 +119,7 @@ set(msg_files
 	qshell_retval.msg
 	radio_status.msg
 	rate_ctrl_status.msg
+	rate_ctrl_status_detail.msg
 	rc_channels.msg
 	rc_parameter_map.msg
 	rpm.msg

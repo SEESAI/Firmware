@@ -90,6 +90,7 @@ px4_add_board(
 		vmount
 		vtol_att_control
 		ob_manual_control
+		drag_estimator
 	SYSTEMCMDS
 		bl_update
 		dmesg

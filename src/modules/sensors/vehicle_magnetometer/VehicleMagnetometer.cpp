@@ -348,6 +348,8 @@ void VehicleMagnetometer::Run()
 					float mag_array[3] {vect(0), vect(1), vect(2)};
 					_voter.put(uorb_index, report.timestamp, mag_array, report.error_count, _priority[uorb_index]);
 
+					hrt_abstime dt = report.timestamp_sample - _last_data[uorb_index].timestamp_sample;
+
 					_timestamp_sample_sum[uorb_index] += report.timestamp_sample;
 					_mag_sum[uorb_index] += vect;
 					_mag_sum_count[uorb_index]++;
@@ -363,6 +365,17 @@ void VehicleMagnetometer::Run()
 							_lp_filter[uorb_index].reset(vect);
 							_rms_calculator_raw[uorb_index].set_cutoff_frequency(140.f, 1.0f);
 							_rms_calculator_filtered[uorb_index].set_cutoff_frequency(140.0f, 1.0f);
+						}
+
+						// Frequency check (until we make the frequency auto-updating) - external sensors only (to avoid cube orange internal)
+						// @ToDo - figure out how to get cube orange internal running at higher rate
+						float freq = 1.f / (float(dt) * 1e-6f);
+
+						if ((fabsf(freq - 140.f) > 20.f) && report.is_external) {
+							if (hrt_absolute_time() - _last_frequency_warning > 3_s) {
+								mavlink_log_info(&_mavlink_log_pub, "VehicleMag %d at %fHz (target 140Hz)", uorb_index, double(freq));
+								_last_frequency_warning = hrt_absolute_time();
+							}
 						}
 
 						// Apply filter and save result

@@ -75,3 +75,8 @@ land_detector start multicopter
 # Start Observer Manual Control module
 #
 ob_manual_control start
+
+#
+# Start Drag Estimator module
+#
+drag_estimator start
