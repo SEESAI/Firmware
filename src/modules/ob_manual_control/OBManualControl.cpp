@@ -216,11 +216,14 @@ void OBManualControl::run()
 
 					_manual_control_switches_sub.publish(_manual_control_switches);
 					_manual_control_setpoint_sub.publish(_manual_control_setpoint);
+
+					// _position_override should always be false when in RC_CONTROL.
+					_position_override = false;
 					break;
 				}
 
 			case MAV_CONTROL: {
-					if (switch_toggled) {
+					if (switch_toggled || _position_override) {
 						//PX4_INFO("Switching to RC control");
 						mavlink_log_critical(&_mavlink_log_pub, "Switching to RC control");
 						_state = RC_CONTROL;
@@ -308,6 +311,20 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 		manual_control_switches->mode_slot =
 			manual_control_switches_rc->mode_slot;    // This switch is used when setting the mode with a single channel
 
+		// ADDITION -- David Patrick 25/08/2022
+		// Previously, we had D on Herelink send a mavlink message to switch to Position Control. QGC crashes have comprimised this as a failsafe reaction.
+		// We have now set D to be a Radio Switch (Herelink settings) mapped to the PX4 Flight Mode channel which toggles between Slot 1 and Slot 6
+		// (both set to PositionCtl).
+		// If we are in MAV_CONTROL and we press D to switch to position, the RC switch isn't updated
+		// (Same reasons as changes to Kill Switch above by David Patrick 03/03/2022)
+		// Therefore, the following modifications have been implemented.
+		// If in MAV_CONTROL and the Flight Mode Slot changes (D pressed) we revert to RC control.
+		// This makes the switch to PositionCtl register at a higher level in rc_update. If we are in RC control already, then the D button
+		// works as normal by triggering PositionCtl whilst remaining in RC_CONTROL.
+		// Note: the _state == MAV_CONTROL is not needed as UseRCSetpoints is only called when in MAV_CONTROL already, but kept as a sanity check.
+		_position_override =  	(manual_control_switches_rc->mode_slot != _mode_slot_prev) &&
+					(_state == MAV_CONTROL);
+		_mode_slot_prev = manual_control_switches_rc->mode_slot;
 	} else {
 		PX4_INFO("Multi Channel mode");
 		// Mode selection set by multiple Channels, only interested in these:

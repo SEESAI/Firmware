@@ -105,6 +105,8 @@ private:
 
 	bool kill_prev{false};
 
+	uint8_t _mode_slot_prev{};
+	bool _position_override{false};
 
 
 };
