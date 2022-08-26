@@ -217,13 +217,13 @@ void OBManualControl::run()
 					_manual_control_switches_sub.publish(_manual_control_switches);
 					_manual_control_setpoint_sub.publish(_manual_control_setpoint);
 
-					// _position_override should always be false when in RC_CONTROL.
-					_position_override = false;
+					// _position_override_rc_request should always be false when in RC_CONTROL (we dont need to change _state).
+					_position_control_rc_request_received = false;
 					break;
 				}
 
 			case MAV_CONTROL: {
-					if (switch_toggled || _position_override) {
+					if (switch_toggled || _position_control_rc_request_received) {
 						//PX4_INFO("Switching to RC control");
 						mavlink_log_critical(&_mavlink_log_pub, "Switching to RC control");
 						_state = RC_CONTROL;
@@ -322,8 +322,8 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 		// This makes the switch to PositionCtl register at a higher level in rc_update. If we are in RC control already, then the D button
 		// works as normal by triggering PositionCtl whilst remaining in RC_CONTROL.
 		// Note: the _state == MAV_CONTROL is not needed as UseRCSetpoints is only called when in MAV_CONTROL already, but kept as a sanity check.
-		_position_override =  	(manual_control_switches_rc->mode_slot != _mode_slot_prev) &&
-					(_state == MAV_CONTROL);
+		_position_control_rc_request_received = (manual_control_switches_rc->mode_slot != _mode_slot_prev) &&
+							(_state == MAV_CONTROL);
 		_mode_slot_prev = manual_control_switches_rc->mode_slot;
 	} else {
 		PX4_INFO("Multi Channel mode");
