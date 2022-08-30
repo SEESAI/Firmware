@@ -325,6 +325,7 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 		_position_control_rc_request_received = (manual_control_switches_rc->mode_slot != _mode_slot_prev) &&
 							(_state == MAV_CONTROL);
 		_mode_slot_prev = manual_control_switches_rc->mode_slot;
+
 	} else {
 		PX4_INFO("Multi Channel mode");
 		// Mode selection set by multiple Channels, only interested in these:
