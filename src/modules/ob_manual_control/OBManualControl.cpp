@@ -219,6 +219,7 @@ void OBManualControl::run()
 
 					// _position_override_rc_request should always be false when in RC_CONTROL (we dont need to change _state).
 					_position_control_rc_request_received = false;
+					_mode_slot_prev = _manual_control_switches_rc.mode_slot;
 					break;
 				}
 
@@ -239,6 +240,7 @@ void OBManualControl::run()
 
 					_manual_control_switches_sub.publish(_manual_control_switches);
 					_manual_control_setpoint_sub.publish(_manual_control_setpoint);
+					_mode_slot_prev = _manual_control_switches_rc.mode_slot;
 					break;
 				}
 			}
@@ -324,7 +326,6 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 		// Note: the _state == MAV_CONTROL is not needed as UseRCSetpoints is only called when in MAV_CONTROL already, but kept as a sanity check.
 		_position_control_rc_request_received = (manual_control_switches_rc->mode_slot != _mode_slot_prev) &&
 							(_state == MAV_CONTROL);
-		_mode_slot_prev = manual_control_switches_rc->mode_slot;
 
 	} else {
 		PX4_INFO("Multi Channel mode");
