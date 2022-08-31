@@ -105,6 +105,8 @@ private:
 
 	bool kill_prev{false};
 
+	uint8_t _mode_slot_prev{};
+	bool _position_control_rc_request_received {false};	/**< true when drone is in Mav Joystick control but request to Position flight mode is received via RC channel */
 
 
 };
