@@ -324,8 +324,12 @@ void OBManualControl::UseRCSetpoints(manual_control_switches_s *manual_control_s
 		// This makes the switch to PositionCtl register at a higher level in rc_update. If we are in RC control already, then the D button
 		// works as normal by triggering PositionCtl whilst remaining in RC_CONTROL.
 		// Note: the _state == MAV_CONTROL is not needed as UseRCSetpoints is only called when in MAV_CONTROL already, but kept as a sanity check.
-		_position_control_rc_request_received = (manual_control_switches_rc->mode_slot != _mode_slot_prev) &&
-							(_state == MAV_CONTROL);
+		if (_mode_slot_prev != manual_control_switches_s::MODE_SLOT_NONE) {
+			_position_control_rc_request_received = (manual_control_switches_rc->mode_slot != _mode_slot_prev) &&
+								(_state == MAV_CONTROL);
+		}
+		//TODO: Check that it's MODE_SLOT_NONE and not SWITCH_POS_NONE
+
 
 	} else {
 		PX4_INFO("Multi Channel mode");
