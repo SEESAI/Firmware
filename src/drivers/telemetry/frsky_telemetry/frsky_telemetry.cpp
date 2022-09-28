@@ -100,15 +100,15 @@ uint16_t get_telemetry_flight_mode(int px4_flight_mode)
 	// modes
 
 	switch (px4_flight_mode) {
-	case 0: return 0; // manual
+	case 0: return 20; // manual
 
-	case 1: return 2; // alt control
+	case 1: return 1; // alt control
 
-	case 2: return 3; // pos control
+	case 2: return 2; // pos control
 
-	case 3: return 20; // mission
+	case 3: return 22; // mission
 
-	case 4: return 10; // loiter
+	case 4: return 11; // loiter
 
 	case 5:
 	case 6:
@@ -116,17 +116,17 @@ uint16_t get_telemetry_flight_mode(int px4_flight_mode)
 
 	case 10: return 21; // acro
 
-	case 14: return 4; // offboard
+	case 14: return 3; // offboard
 
-	case 15: return 1; // stabilized
+	case 15: return 0; // stabilized
 
-	case 17: return 11; // takeoff
+	case 17: return 10; // takeoff
 
 	case 8:
 	case 9:
 	case 18: return 12; // land
 
-	case 19: return 22; // follow target
+	case 19: return 23; // follow target
 	}
 
 	return -1;
