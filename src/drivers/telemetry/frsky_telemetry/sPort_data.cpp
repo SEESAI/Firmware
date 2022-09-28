@@ -59,6 +59,7 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_gps_position.h>
+#include <uORB/topics/manual_control_setpoint.h>
 
 #include <drivers/drv_hrt.h>
 
@@ -72,7 +73,9 @@ struct s_port_subscription_data_s {
 	uORB::SubscriptionData<vehicle_gps_position_s> vehicle_gps_position_sub{ORB_ID(vehicle_gps_position)};
 	uORB::SubscriptionData<vehicle_local_position_s> vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	uORB::SubscriptionData<manual_control_setpoint_s> manual_sub{ORB_ID(manual_control_setpoint)};
 };
+
 
 static struct s_port_subscription_data_s *s_port_subscription_data = nullptr;
 
@@ -108,6 +111,7 @@ void sPort_update_topics()
 	s_port_subscription_data->vehicle_gps_position_sub.update();
 	s_port_subscription_data->vehicle_local_position_sub.update();
 	s_port_subscription_data->vehicle_status_sub.update();
+	s_port_subscription_data->manual_sub.update();
 }
 
 static void update_crc(uint16_t *crc, unsigned char b)
@@ -215,9 +219,15 @@ void sPort_send_SPD(int uart)
 // TODO: verify scaling
 void sPort_send_VSPD(int uart, float speed)
 {
+	/* Hijacked to Send OBManual Control mode (Edu @sees.ai)
+	manual.data_source;       // Indicates wether the drone is controlled by RC (1) or Mavlink( 2-5) */
+	int32_t data_source = (int) 100 * s_port_subscription_data->manual_sub.get().data_source;
+	//PX4_INFO("Sending Manual Source %d", data_source);
+	sPort_send_data(uart, SMARTPORT_ID_VARIO, data_source);
+
 	/* send data for VARIO vertical speed: int16 cm/sec */
-	int32_t ispeed = (int)(100 * speed);
-	sPort_send_data(uart, SMARTPORT_ID_VARIO, ispeed);
+	//int32_t ispeed = (int)(100 * speed);
+	//sPort_send_data(uart, SMARTPORT_ID_VARIO, ispeed);
 }
 
 // verified scaling
