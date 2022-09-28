@@ -221,7 +221,7 @@ void sPort_send_VSPD(int uart, float speed)
 {
 	/* Hijacked to Send OBManual Control mode (Edu @sees.ai)
 	manual.data_source;       // Indicates wether the drone is controlled by RC (1) or Mavlink( 2-5) */
-	int32_t data_source = (int) s_port_subscription_data->manual_sub.get().data_source;
+	int32_t data_source = (int) 100 * s_port_subscription_data->manual_sub.get().data_source;
 	PX4_INFO("Sending Manual Source %d", data_source);
 	sPort_send_data(uart, SMARTPORT_ID_VARIO, data_source);
 
