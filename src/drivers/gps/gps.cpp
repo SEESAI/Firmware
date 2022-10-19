@@ -848,9 +848,7 @@ GPS::run()
 			if (ubx_mode == GPSDriverUBX::UBXMode::RoverWithMovingBase) {
 				/* The MB rover will wait as long as possible to compute a navigation solution,
 				 * possibly lowering the navigation rate all the way to 1 Hz while doing so. */
-				//
-				// Sees.ai reduced timeout to 2.5Hz
-				receive_timeout = TIMEOUT_2_5Hz;
+				receive_timeout = receive_timeout;
 			}
 
 			while ((helper_ret = _helper->receive(receive_timeout)) > 0 && !should_exit()) {
@@ -910,6 +908,8 @@ GPS::run()
 					_healthy = true;
 				}
 			}
+
+			GPS_INFO("Ublox Reconfiguring");
 
 			if (_healthy) {
 				_healthy = false;
