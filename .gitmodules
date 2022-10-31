@@ -66,7 +66,3 @@
 [submodule "src/lib/crypto/monocypher"]
 	path = src/lib/crypto/monocypher
 	url = https://github.com/PX4/Monocypher.git
-[submodule "src/drivers/gps/devices"]
-	path = src/drivers/gps/devices
-	url = git@github.com:SEESAI/PX4-GPSDrivers.git
-	branch = 6534b05_dev
