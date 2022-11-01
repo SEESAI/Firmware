@@ -64,7 +64,7 @@ private:
 
 		while ((_mavlink->get_free_tx_buf() >= get_size()) && _radio_status_sub.update(&radio_status)) {
 			mavlink_radio_status_t msg{};
-			
+
 			msg.rssi = radio_status.rssi;
 			msg.remrssi = radio_status.remote_rssi;
 			msg.txbuf = radio_status.txbuf;
