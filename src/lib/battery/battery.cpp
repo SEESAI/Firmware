@@ -236,8 +236,10 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 
 		// Voltage Monitor warning - Coulomb counting won't catch cell failures so we add a warning if cell voltage drops to a critical level (3.4V).
 		// Note - doing this on actual cell voltage (not current-corrected OC voltage) as that's the critical parameter for pack safety
-		if (_armed && cell_voltage < float(3.4) && (hrt_absolute_time() - _sees_warning_last > 10'000'000)) {
-			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %fV. Land Immediately!", double(cell_voltage));
+		if (_armed && cell_voltage < float(3.45) && (hrt_absolute_time() - _sees_warning_last > 10'000'000)
+		    && _params.capacity > 0) {
+			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %.2fV. Land Immediately!",
+					     double(cell_voltage));
 			_sees_warning_last = hrt_absolute_time();
 		}
 	}
