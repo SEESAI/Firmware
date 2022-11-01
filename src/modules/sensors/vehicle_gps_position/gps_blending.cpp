@@ -117,6 +117,7 @@ bool GpsBlending::blend_gps_data(uint64_t hrt_now_us)
 			if (_gps_state[i].timestamp != 0) {
 				mavlink_log_critical(&_mavlink_log_pub, "GPS Sensor [%i] Timeout. Switch to Altitude mode.", i);
 			}
+
 			_gps_state[i].timestamp = 0;
 			_gps_state[i].fix_type = 0;
 			_gps_state[i].satellites_used = 0;
