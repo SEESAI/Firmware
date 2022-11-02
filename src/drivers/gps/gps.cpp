@@ -908,6 +908,8 @@ GPS::run()
 				}
 			}
 
+			GPS_INFO("Ublox Reconfiguring");
+
 			if (_healthy) {
 				_healthy = false;
 				_rate = 0.0f;

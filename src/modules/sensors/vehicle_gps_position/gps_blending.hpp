@@ -41,6 +41,7 @@
 #include <lib/matrix/matrix/math.hpp>
 #include <px4_platform_common/defines.h>
 #include <uORB/topics/sensor_gps.h>
+#include <lib/systemlib/mavlink_log.h>
 
 #include <float.h>
 #include <lib/ecl/geo/geo.h>
@@ -142,6 +143,8 @@ private:
 	bool _blend_use_spd_acc{false};
 	bool _blend_use_hpos_acc{false};
 	bool _blend_use_vpos_acc{false};
+
+	orb_advert_t _mavlink_log_pub{nullptr};
 
 	float _blending_time_constant{0.f};
 };
