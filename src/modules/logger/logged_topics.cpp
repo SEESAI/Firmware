@@ -68,13 +68,16 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic("heater_status");
 	add_topic("home_position");
 	add_topic("hover_thrust_estimate", 100);
-	add_topic("input_rc", 500);
+	add_topic("input_rc", 100);					// Sees.ai - Increased rate from 2Hz to 10Hz
+	add_topic("rc_channels", 100);					// Sees.ai - Added logging to see parsed rc_channels
 	add_optional_topic("internal_combustion_engine_status", 10);
-	add_optional_topic("irlock_report", 1000);
-	add_optional_topic("landing_target_pose", 1000);
+	add_topic("irlock_report", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
+	add_topic("landing_target_pose", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
 	add_optional_topic("magnetometer_bias_estimate", 200);
+	add_topic("magnetometer_noise", 200);				// Sees.ai - Added topic for monitoring mag disturbance/filter performance
 	add_topic("manual_control_setpoint", 200);
 	add_topic("manual_control_switches");
+	add_topic("manual_control_input", 100);				// Sees.ai - Added topic for monitoring RC
 	add_topic("mission_result");
 	add_topic("navigator_mission_item");
 	add_topic("npfg_status", 100);
@@ -87,6 +90,7 @@ void LoggedTopics::add_default_topics()
 	add_topic("radio_status");
 	add_topic("rtl_time_estimate", 1000);
 	add_topic("safety");
+	add_topic("sees_manual_control_data", 100);				// Sees.ai - Added topic for monitoring Manual Control Setpoint meta data
 	add_topic("sensor_combined");
 	add_optional_topic("sensor_correction");
 	add_optional_topic("sensor_gyro_fft", 50);
@@ -106,11 +110,11 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_constraints", 1000);
 	add_topic("vehicle_control_mode");
 	add_topic("vehicle_global_position", 200);
-	add_topic("vehicle_gps_position", 500);
+	add_topic("vehicle_gps_position", 20);				// Sees.ai - Increased rate as used in SeesAnalytics plots
 	add_topic("vehicle_land_detected");
 	add_topic("vehicle_local_position", 100);
 	add_topic("vehicle_local_position_setpoint", 100);
-	add_topic("vehicle_magnetometer", 200);
+	add_topic("vehicle_magnetometer");				// Sees.ai - Increased rate to monitor mag disturbance
 	add_topic("vehicle_rates_setpoint", 20);
 	add_topic("vehicle_roi", 1000);
 	add_topic("vehicle_status");
@@ -171,15 +175,15 @@ void LoggedTopics::add_default_topics()
 	// log all raw sensors at minimal rate (at least 1 Hz)
 	add_topic_multi("battery_status", 200, 2);
 	add_topic_multi("differential_pressure", 1000, 2);
-	add_topic_multi("distance_sensor", 1000, 2);
+	add_topic_multi("distance_sensor", 0, 2);			// Sees.ai - Increased logging rate as generally helpful
 	add_topic_multi("optical_flow", 1000, 1);
 	add_optional_topic_multi("sensor_accel", 1000, 4);
 	add_optional_topic_multi("sensor_baro", 1000, 4);
-	add_topic_multi("sensor_gps", 1000, 2);
+	add_topic_multi("sensor_gps", 0, 2);				// Sees.ai - Increased logging rate for gps as generally helpful
 	add_topic_multi("sensor_gnss_relative", 1000, 1);
 	add_optional_topic("pps_capture", 1000);
 	add_optional_topic_multi("sensor_gyro", 1000, 4);
-	add_optional_topic_multi("sensor_mag", 1000, 4);
+	add_topic_multi("sensor_mag", 1000, 4);				// Sees.ai - Upgraded from "optional" to ensure raw mag is logged
 	add_topic_multi("vehicle_imu", 500, 4);
 	add_topic_multi("vehicle_imu_status", 1000, 4);
 	add_optional_topic_multi("vehicle_magnetometer", 500, 4);
@@ -244,10 +248,21 @@ void LoggedTopics::add_default_topics()
 void LoggedTopics::add_high_rate_topics()
 {
 	// maximum rate to analyze fast maneuvers (e.g. for racing)
-	add_topic("actuator_controls_0");
-	add_topic("actuator_outputs");
+	int32_t sys_ctrl_alloc = 0;
+	param_get(param_find("SYS_CTRL_ALLOC"), &sys_ctrl_alloc);
+
+	if (sys_ctrl_alloc >= 1) {
+		add_topic("vehicle_torque_setpoint");			// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Added topic for Actuator Control FFTs
+
+	} else {
+		add_topic("actuator_outputs");				// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Possibly not needed for Actuator Control FFTs
+	}
+
 	add_topic("manual_control_setpoint");
 	add_topic("rate_ctrl_status", 20);
+	add_topic("rate_ctrl_status_detail");				// Sees.ai - Added topic for rate loop tuning
 	add_topic("sensor_combined");
 	add_topic("vehicle_angular_acceleration");
 	add_topic("vehicle_angular_velocity");

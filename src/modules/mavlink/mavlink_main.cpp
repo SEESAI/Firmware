@@ -1507,9 +1507,11 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS2_RAW", 1.0f);
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 0.1f);
 		configure_stream_local("GPS_RAW_INT", 1.0f);
+		configure_stream_local("GPS_INPUT", 1.0f);
 		configure_stream_local("GPS_STATUS", 1.0f);
 		configure_stream_local("HOME_POSITION", 0.5f);
 		configure_stream_local("HYGROMETER_SENSOR", 0.1f);
+		configure_stream_local("LANDING_TARGET", 1.0f);
 		configure_stream_local("LOCAL_POSITION_NED", 1.0f);
 		configure_stream_local("NAV_CONTROLLER_OUTPUT", 1.0f);
 		configure_stream_local("OBSTACLE_DISTANCE", 1.0f);
@@ -1568,15 +1570,19 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS2_RAW", unlimited_rate);
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 1.0f);
 		configure_stream_local("GPS_RAW_INT", unlimited_rate);
+		configure_stream_local("GPS_INPUT", unlimited_rate);
+		configure_stream_local("GPS_RTCM_DATA", unlimited_rate);
 		configure_stream_local("GPS_STATUS", 1.0f);
 		configure_stream_local("HOME_POSITION", 0.5f);
 		configure_stream_local("HYGROMETER_SENSOR", 1.0f);
+		configure_stream_local("LANDING_TARGET", unlimited_rate);
 		configure_stream_local("NAV_CONTROLLER_OUTPUT", 10.0f);
 		configure_stream_local("OPTICAL_FLOW_RAD", 10.0f);
 		configure_stream_local("ORBIT_EXECUTION_STATUS", 5.0f);
 		configure_stream_local("PING", 1.0f);
 		configure_stream_local("POSITION_TARGET_GLOBAL_INT", 10.0f);
 		configure_stream_local("POSITION_TARGET_LOCAL_NED", 10.0f);
+		configure_stream_local("RADIO_STATUS", 1.0f);
 		configure_stream_local("RAW_RPM", 5.0f);
 		configure_stream_local("RC_CHANNELS", 20.0f);
 		configure_stream_local("SERVO_OUTPUT_RAW_0", 10.0f);
@@ -1682,7 +1688,26 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 
 	/* fallthrough */
 	case MAVLINK_MODE_CUSTOM:
-		//stream nothing
+		// This is used for the backup link
+		// EU regulations limit duty cycle to 10%
+		// RFD868 is configured to 200kbps, hence 20kbps effective (10%)
+		// Each mavlink message is 280 bytes
+		// To calculate throughput necessary  Total Hz rate x 280byes
+		// Currently 9.3x280 = 26kbps as of 08/03/2023!
+		// Have subsequently reduced rates/included streams.
+		// QGC also needs to send manual control, so need to bare that in mind.
+		configure_stream_local("ALTITUDE", 1.0f);
+		configure_stream_local("ATTITUDE", 2.0f);
+		configure_stream_local("BATTERY_STATUS", 0.1f);
+		configure_stream_local("EXTENDED_SYS_STATE", 0.1f);
+		configure_stream_local("GLOBAL_POSITION_INT", 1.5f);
+		configure_stream_local("GPS_RAW_INT", 0.5f);
+		configure_stream_local("GPS2_RAW", 0.5f);
+		configure_stream_local("HOME_POSITION", 0.1f);
+		configure_stream_local("SYS_STATUS", 0.1f);
+#if !defined(CONSTRAINED_FLASH)
+		configure_stream_local("LINK_NODE_STATUS", 0.1f);
+#endif // !CONSTRAINED_FLASH
 		break;
 
 	case MAVLINK_MODE_CONFIG: // USB
@@ -1712,10 +1737,13 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS2_RAW", unlimited_rate);
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 1.0f);
 		configure_stream_local("GPS_RAW_INT", unlimited_rate);
+		configure_stream_local("GPS_INPUT", unlimited_rate);
+		configure_stream_local("GPS_RTCM_DATA", unlimited_rate);
 		configure_stream_local("GPS_STATUS", 1.0f);
 		configure_stream_local("HIGHRES_IMU", 50.0f);
 		configure_stream_local("HOME_POSITION", 0.5f);
 		configure_stream_local("HYGROMETER_SENSOR", 1.0f);
+		configure_stream_local("LANDING_TARGET", 30.0f);
 		configure_stream_local("MAG_CAL_REPORT", 1.0f);
 		configure_stream_local("MANUAL_CONTROL", 5.0f);
 		configure_stream_local("NAV_CONTROLLER_OUTPUT", 10.0f);
@@ -1723,6 +1751,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("ORBIT_EXECUTION_STATUS", 5.0f);
 		configure_stream_local("PING", 1.0f);
 		configure_stream_local("POSITION_TARGET_GLOBAL_INT", 10.0f);
+		configure_stream_local("RADIO_STATUS", 1.0f);
 		configure_stream_local("RAW_RPM", 5.0f);
 		configure_stream_local("RC_CHANNELS", 10.0f);
 		configure_stream_local("SCALED_IMU", 25.0f);
@@ -1835,6 +1864,27 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 int
 Mavlink::task_main(int argc, char *argv[])
 {
+	// If stdin, stdout and/or stderr file descriptors (0, 1, 2)
+	// are not open when mavlink module starts (as might be the case for USB auto-start),
+	// use default /dev/null so that these numbers are not used by other other files.
+	if (fcntl(0, F_GETFD) == -1) {
+		int tmp = open("/dev/null", O_RDONLY);
+		dup2(tmp, 0);
+		close(tmp);
+	}
+
+	if (fcntl(1, F_GETFD) == -1) {
+		int tmp = open("/dev/null", O_WRONLY);
+		dup2(tmp, 1);
+		close(tmp);
+	}
+
+	if (fcntl(2, F_GETFD) == -1) {
+		int tmp = open("/dev/null", O_WRONLY);
+		dup2(tmp, 2);
+		close(tmp);
+	}
+
 	int ch;
 	_baudrate = 57600;
 	_datarate = 0;

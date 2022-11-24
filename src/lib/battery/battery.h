@@ -58,6 +58,8 @@
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/Subscription.hpp>
+#include <systemlib/mavlink_log.h>
 
 /**
  * BatteryBase is a base class for any type of battery.
@@ -117,6 +119,7 @@ protected:
 		param_t v_load_drop;
 		param_t r_internal;
 		param_t low_thr;
+		param_t crit_v;
 		param_t crit_thr;
 		param_t emergen_thr;
 		param_t source;
@@ -131,6 +134,7 @@ protected:
 		float v_load_drop;
 		float r_internal;
 		float low_thr;
+		float crit_v;
 		float crit_thr;
 		float emergen_thr;
 		int32_t source;
@@ -138,9 +142,57 @@ protected:
 	} _params{};
 
 	const int _index;
+	const uint8_t _source;
 
 	bool _first_parameter_update{true};
 	void updateParams() override;
+
+	/**
+	 * Self-contained simple lookup class for LiPo charge at a given OC voltage.
+	 * The SoC is then calculated by scaling to fit the operation max and min voltage (derived from factors such as voltage required to maintain sufficient thrust overhead).
+	 * It's important to understand these two steps and to know that this lookup table does not directly translate to the drone SoC.
+	 *
+	 * NB
+	 *   - currently const (not reading from params) just to get going quickly
+	 *   - Please ensure _lookup_size is correctly set otherwise will seg_fault
+	 *   - Please ensure _lookup is monotonic decreasing in voltage and SOC
+	 *   - We couldn't find a nuttx table which has a .size() method!  Suggestions welcome
+	 */
+	class SeesSOC
+	{
+
+	public:
+		SeesSOC(const decltype(_params) &params) : _soc_params(params) {}
+
+		// return soc [0, 1] given open circuit cell voltage
+		float ChemistryLookup(float voltage);
+		float GetSOC(float chemistry_soc);
+
+	private:
+		const decltype(_params) &_soc_params;
+		struct Lookup {
+			float _oc_voltage{0.f};
+			float _soc{0.f};
+		};
+		/// size of lookup table - NB MUST be correct or risk of seg_fault / bad lookup
+		const int _lookup_size = 12;
+		/// lookup table - NB MUST be monontonic descending
+		const Lookup _lookup[12] {
+			// Tattu 25Ah High Voltage packs; nominal 4.35V max
+			{4.350f, 1.0f},
+			{4.203f, 0.879f},
+			{4.095f, 0.779f},
+			{4.002f, 0.680f},
+			{3.902f, 0.578f},
+			{3.838f, 0.476f},
+			{3.795f, 0.377f},
+			{3.757f, 0.265f},
+			{3.722f, 0.175f},
+			{3.678f, 0.076f},
+			{3.554f, 0.027f},
+			{3.300f, 0.00f}
+		};
+	} _sees_soc;
 
 private:
 	void sumDischarged(const hrt_abstime &timestamp, float current_a);
@@ -154,7 +206,6 @@ private:
 	uORB::PublicationMulti<battery_status_s> _battery_status_pub{ORB_ID(battery_status)};
 
 	bool _connected{false};
-	const uint8_t _source;
 	uint8_t _priority{0};
 	bool _battery_initialized{false};
 	float _voltage_v{0.f};
@@ -171,4 +222,10 @@ private:
 	uint8_t _warning{battery_status_s::BATTERY_WARNING_NONE};
 	hrt_abstime _last_timestamp{0};
 	bool _armed{false};
+
+	// Sees SOC calculation - a lookup table vs OC voltage at low current, and then pure coulomb counting at high current
+	float _soc_initial{0}; /// SOC at last low-current time (initialisation point for coulomb counting)
+	float _discharged_mah_initial{0}; /// discharged mah at last low-current time (initialisation point for column counting)
+	hrt_abstime _sees_warning_last{0}; /// Time we last warned about cell voltage - used to limit warning frequency
+	orb_advert_t _mavlink_log_pub{nullptr}; /// pointer to the mavlink publisher for the warning
 };

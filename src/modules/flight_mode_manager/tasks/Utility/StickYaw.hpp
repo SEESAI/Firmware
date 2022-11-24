@@ -40,6 +40,7 @@
 #pragma once
 
 #include "SlewRate.hpp"
+#include <parameters/param.h>
 
 class StickYaw
 {

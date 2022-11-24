@@ -119,3 +119,14 @@ PARAM_DEFINE_FLOAT(PLD_SRCH_TOUT, 10.0f);
  * @group Precision Land
  */
 PARAM_DEFINE_INT32(PLD_MAX_SRCH, 3);
+
+/**
+ * Target yaw for Precision Land in degrees.
+ *
+ * Set to -1 to disable (will land with current yaw).
+ *
+ * @min -1
+ * @max 360
+ * @group Precision Land
+*/
+PARAM_DEFINE_FLOAT(PLD_TARGET_YAW, 0.0f);

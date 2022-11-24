@@ -94,34 +94,40 @@ extern "C" __EXPORT int frsky_telemetry_main(int argc, char *argv[]);
 uint16_t get_telemetry_flight_mode(int px4_flight_mode)
 {
 	// map the flight modes (see https://github.com/ilihack/LuaPilot_Taranis_Telemetry/blob/master/SCRIPTS/TELEMETRY/LuaPil.lua#L790)
+
+	// -----sees.ai-----
+	// Nav States defined in msg/vehicle_status.msg*/
+	// The mapping chosen by default is not very helpful, obviously has some historical reasons.
+	// Remapped it to something easier for the pilot to remember. 0-4 Flight modes. 10-13 Automatic actions used regularly >20 Rarely used
+	// modes
 	switch (px4_flight_mode) {
-	case 0: return 18; // manual
+	case 0: return 20; // manual
 
-	case 1: return 23; // alt control
+	case 1: return 1; // alt control
 
-	case 2: return 22; // pos control
+	case 2: return 2; // pos control
 
-	case 3: return 27; // mission
+	case 3: return 22; // mission
 
-	case 4: return 26; // loiter
+	case 4: return 11; // loiter
 
 	case 5:
 	case 6:
-	case 7: return 28; // rtl
+	case 7: return 13; // rtl
 
-	case 10: return 19; // acro
+	case 10: return 21; // acro
 
-	case 14: return 24; // offboard
+	case 14: return 3; // offboard
 
-	case 15: return 20; // stabilized
+	case 15: return 0; // stabilized
 
-	case 17: return 25; // takeoff
+	case 17: return 10; // takeoff
 
 	case 8:
 	case 9:
-	case 18: return 29; // land
+	case 18: return 12; // land
 
-	case 19: return 30; // follow target
+	case 19: return 23; // follow target
 	}
 
 	return -1;
@@ -405,8 +411,12 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 		uint32_t lastFUEL_ms = 0;
 		uint32_t lastVSPD_ms = 0;
 		uint32_t lastGPS_ms = 0;
-		uint32_t lastNAV_STATE_ms = 0;
-		uint32_t lastGPS_FIX_ms = 0;
+		// uint32_t lastNAV_STATE_ms = 0;
+		// uint32_t lastGPS_FIX_ms = 0;
+		uint32_t lastDIY_rov_ms = 0;
+		uint32_t lastDIY_mb_ms = 0;
+		uint32_t lastDIY_rcmav_ms = 0;
+		uint32_t lastDIY_flgtmode_ms = 0;
 
 		/* send S.port telemetry */
 		while (!thread_should_exit) {
@@ -584,21 +594,70 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 
 			/* FALLTHROUGH */
 
-			case SMARTPORT_POLL_8:
+			// ---Sees.ai---
+			// Removed these vanilla DIY states whilst adding our own instead of hijacking for clarity.
+			// Note: we've added 4 data 'streams' (GPS1, GPS2, RC/Mav, FlightMode) across SmartPort polls 8-11.
+			// Also, at 2Hz some streams were not reliable.
+			// For some reason, 5Hz seems to keep all streams publishing properly, although not sure why.
+			// As a result, we've chosen 5Hz even though it's overkill.
+			// Tried different configurations of number of streams across number of polls.
+			// Ultimately, one per poll proved most reliable.
 
-				/* report nav_state as DIY_NAVSTATE 2Hz */
-				if (now_ms - lastNAV_STATE_ms > 500) {
-					lastNAV_STATE_ms = now_ms;
-					/* send T1 */
-					sPort_send_NAV_STATE(uart);
+			// ---Sees.ai---
+			// Disabled vanilla DIY streams
+			// case SMARTPORT_POLL_8:
+			// /* report nav_state as DIY_NAVSTATE 2Hz */
+			// if (now_ms - lastNAV_STATE_ms > 500) {
+			// 	lastNAV_STATE_ms = now_ms;
+			// 	/* send T1 */
+			// 	sPort_send_NAV_STATE(uart);
+			// 	sentPackets++;
+			// }
+
+			// /* report satcount and fix as DIY_GPSFIX at 2Hz */
+			// else if (now_ms - lastGPS_FIX_ms > 500) {
+			// 	lastGPS_FIX_ms = now_ms;
+			// 	/* send T2 */
+			// 	sPort_send_GPS_FIX(uart);
+			// 	sentPackets++;
+			// }
+			// break;
+
+			case SMARTPORT_POLL_8:
+				if (now_ms - lastDIY_rov_ms > 200) {
+					lastDIY_rov_ms = now_ms;
+					/* sees.ai send GPS1 */
+					sPort_send_DIY_gps_rov(uart);
 					sentPackets++;
 				}
 
-				/* report satcount and fix as DIY_GPSFIX at 2Hz */
-				else if (now_ms - lastGPS_FIX_ms > 500) {
-					lastGPS_FIX_ms = now_ms;
-					/* send T2 */
-					sPort_send_GPS_FIX(uart);
+				break;
+
+			case SMARTPORT_POLL_9:
+				if (now_ms - lastDIY_mb_ms > 200) {
+					lastDIY_mb_ms = now_ms;
+					/* sees.ai send GPS2 */
+					sPort_send_DIY_gps_mb(uart);
+					sentPackets++;
+				}
+
+				break;
+
+			case SMARTPORT_POLL_10:
+				if (now_ms - lastDIY_rcmav_ms > 200) {
+					lastDIY_rcmav_ms = now_ms;
+					/* sees.ai send RcMav control mode */
+					sPort_send_DIY_rcmav(uart);
+					sentPackets++;
+				}
+
+				break;
+
+			case SMARTPORT_POLL_11:
+				if (now_ms - lastDIY_flgtmode_ms > 200) {
+					lastDIY_flgtmode_ms = now_ms;
+					/* sees.ai send Flight mode */
+					sPort_send_DIY_flgt_mode(uart);
 					sentPackets++;
 				}
 

@@ -52,6 +52,7 @@
 #include <lib/geo/geo.h>
 
 #include <uORB/Subscription.hpp>
+#include <uORB/SubscriptionMultiArray.hpp>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/vehicle_acceleration.h>
 #include <uORB/topics/vehicle_air_data.h>
@@ -59,10 +60,14 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_gps_position.h>
+#include <uORB/topics/sensor_gps.h>
+#include <uORB/topics/manual_control_setpoint.h>
 
 #include <drivers/drv_hrt.h>
 
 #define frac(f) (f - (int)f)
+
+static constexpr int GPS_MAX_RECEIVERS = 2;
 
 struct s_port_subscription_data_s {
 	uORB::SubscriptionData<battery_status_s> battery_status_sub{ORB_ID(battery_status)};
@@ -72,6 +77,9 @@ struct s_port_subscription_data_s {
 	uORB::SubscriptionData<vehicle_gps_position_s> vehicle_gps_position_sub{ORB_ID(vehicle_gps_position)};
 	uORB::SubscriptionData<vehicle_local_position_s> vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	uORB::SubscriptionData<manual_control_setpoint_s> manual_control_setpoint_sub{ORB_ID(manual_control_setpoint)};
+	uORB::SubscriptionMultiArray<sensor_gps_s> sensor_gps_subs{ORB_ID::sensor_gps};
+	sensor_gps_s sensor_gps_data[GPS_MAX_RECEIVERS];
 };
 
 static struct s_port_subscription_data_s *s_port_subscription_data = nullptr;
@@ -108,6 +116,11 @@ void sPort_update_topics()
 	s_port_subscription_data->vehicle_gps_position_sub.update();
 	s_port_subscription_data->vehicle_local_position_sub.update();
 	s_port_subscription_data->vehicle_status_sub.update();
+	s_port_subscription_data->manual_control_setpoint_sub.update();
+
+	for (int i = 0; i < GPS_MAX_RECEIVERS; i++) {
+		s_port_subscription_data->sensor_gps_subs[i].update(&s_port_subscription_data->sensor_gps_data[i]);
+	}
 }
 
 static void update_crc(uint16_t *crc, unsigned char b)
@@ -186,9 +199,33 @@ void sPort_send_BATV(int uart)
 // verified scaling
 void sPort_send_CUR(int uart)
 {
-	/* send data */
-	uint32_t current = (int)(10 * s_port_subscription_data->battery_status_sub.get().current_a);
-	sPort_send_data(uart, SMARTPORT_ID_CURR, current);
+	/* Hijacked to send Data Source type (Mav/RC Control)(David @sees.ai) */
+	int16_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
+	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
+
+	// If the input has been invalid for >0.5s, then set it to 0
+	if ((!control_source_valid) && (hrt_absolute_time() - control_source_timestamp > 500'000)) {
+		control_source = manual_control_setpoint_s::SOURCE_UNKNOWN; // This equates to 0
+	}
+
+	// If the input type is RC then set it to 1
+	// Note - *10 is required
+	else if (control_source == manual_control_setpoint_s::SOURCE_RC) {
+		control_source = 10 * manual_control_setpoint_s::SOURCE_RC; // This equates to 1
+	}
+
+	// Else if the input type is Mavlink then set it to 2
+	else if (control_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
+		 && control_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
+		control_source = 10 * manual_control_setpoint_s::SOURCE_MAVLINK_0; // This equates to 2
+	}
+
+	sPort_send_data(uart, SMARTPORT_ID_CURR, control_source);
+
+	// /* send data */
+	// uint32_t current = (int)(10 * s_port_subscription_data->battery_status_sub.get().current_a);
+	// sPort_send_data(uart, SMARTPORT_ID_CURR, current);
 }
 
 // verified scaling for "custom" altitude option
@@ -215,9 +252,17 @@ void sPort_send_SPD(int uart)
 // TODO: verify scaling
 void sPort_send_VSPD(int uart, float speed)
 {
+	/* Hijacked to send additional GPS data (David @sees.ai) */
+	// const vehicle_gps_position_s &gps = s_port_subscription_data->vehicle_gps_position_sub.get();
+	// s_port_subscription_data->sensor_gps_data[1];
+	sensor_gps_s gps_raw;
+	s_port_subscription_data->sensor_gps_subs[1].copy(&gps_raw);
+	int32_t gps2_fix_type = (int) 100 * gps_raw.fix_type;
+	sPort_send_data(uart, SMARTPORT_ID_VARIO, gps2_fix_type);
+
 	/* send data for VARIO vertical speed: int16 cm/sec */
-	int32_t ispeed = (int)(100 * speed);
-	sPort_send_data(uart, SMARTPORT_ID_VARIO, ispeed);
+	// int32_t ispeed = (int)(100 * speed);
+	// sPort_send_data(uart, SMARTPORT_ID_VARIO, ispeed);
 }
 
 // verified scaling
@@ -336,6 +381,73 @@ void sPort_send_flight_mode(int uart)
 
 void sPort_send_GPS_info(int uart)
 {
-	const vehicle_gps_position_s &gps = s_port_subscription_data->vehicle_gps_position_sub.get();
-	sPort_send_data(uart, FRSKY_ID_TEMP2, gps.satellites_used * 10 + gps.fix_type);
+	sensor_gps_s gps_raw;
+	s_port_subscription_data->sensor_gps_subs[0].copy(&gps_raw);
+	sPort_send_data(uart, FRSKY_ID_TEMP2, gps_raw.satellites_used * 10 + gps_raw.fix_type);
+}
+
+
+
+// ---Sees.ai---
+// We've added 4 DIY streams to decouple from the vanilla streams and handle the following additional telemetry:
+// ID 5002 = GPS1
+// ID 5003 = GPS2
+// ID 5004 = RC/MAV
+// ID 5005 = Flight Mode
+// Note: the GPS2 and Flight Mode streams already exist as DIY streams in vanilla PX4 , however for clarity they have
+// been duplicated with small sees.ai modifications to structure and naming. These vanilla streams have been disabled at point of transmission.
+// In the short-term, the 'hijack' modifications to the vanilla streams have been retained to
+// provide cross-compatability with both FRSky controller configurations (Taranis and Horus).
+// Once we finalise a single configuration, the 'hijack' mods will be reverted.
+void sPort_send_DIY_gps_rov(int uart)
+{
+	// GPS 1
+	sensor_gps_s gps_raw_rov;
+	s_port_subscription_data->sensor_gps_subs[0].copy(&gps_raw_rov);
+	sPort_send_data(uart, SMARTPORT_ID_ROV_GPS, gps_raw_rov.satellites_used * 10 + gps_raw_rov.fix_type);
+}
+
+void sPort_send_DIY_gps_mb(int uart)
+{
+	// GPS 2
+	sensor_gps_s gps_raw_mb;
+	s_port_subscription_data->sensor_gps_subs[1].copy(&gps_raw_mb);
+	int32_t gps2_fix_type = (int)gps_raw_mb.fix_type;
+	sPort_send_data(uart, SMARTPORT_ID_MB_GPS, gps2_fix_type);
+
+}
+
+void sPort_send_DIY_rcmav(int uart)
+{
+	// OBManual Control Mode
+	int16_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
+	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
+
+	// If the input has been invalid for >0.5s, then set it to 0
+	if ((!control_source_valid) && (hrt_absolute_time() - control_source_timestamp > 500'000)) {
+		control_source =
+			manual_control_setpoint_s::SOURCE_UNKNOWN; // This equates to 0 and in this case indicates no valid setpoint.
+	}
+
+	// If the input type is RC then set it to 1
+	else if (control_source == manual_control_setpoint_s::SOURCE_RC) {
+		control_source = manual_control_setpoint_s::SOURCE_RC; // This equates to 1
+	}
+
+	// Else if the input type is Mavlink then set it to 2
+	else if (control_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
+		 && control_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
+		control_source = manual_control_setpoint_s::SOURCE_MAVLINK_0; // This equates to 2
+	}
+
+	sPort_send_data(uart, SMARTPORT_ID_RCMAV, control_source);
+}
+
+void sPort_send_DIY_flgt_mode(int uart)
+{
+	// Flight Mode
+	int16_t telem_flight_mode = get_telemetry_flight_mode(s_port_subscription_data->vehicle_status_sub.get().nav_state);
+	sPort_send_data(uart, SMARTPORT_ID_FLGT_MODE,
+			telem_flight_mode); // send flight mode as TEMP1. This matches with OpenTX & APM
 }

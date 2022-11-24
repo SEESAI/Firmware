@@ -53,4 +53,6 @@ float32 aux6
 
 bool sticks_moving
 
+bool toggle_control_source		 # request to toggle between Mavlink and RC control source
+
 # TOPICS manual_control_setpoint manual_control_input

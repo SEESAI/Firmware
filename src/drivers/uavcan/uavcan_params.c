@@ -367,3 +367,46 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_RNG, 0);
  * @group UAVCAN
  */
 PARAM_DEFINE_INT32(UAVCAN_SUB_BTN, 0);
+
+/**
+ * Specified Rover GPS CAN ID
+ *
+ * Added by sees.ai for Dual ARK RTK GPS system.
+ * This CAN ID will be initialised as uorb sensor_gps instance 0.
+ * Does not affect non-CAN systems.
+ *
+ * @min 0
+ * @max 125
+ *
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(UAVCAN_ROVER_ID, 125);
+
+/**
+ * UAVCAN Component ID 1
+ *
+ * Added by sees.ai for Param Management system.
+ * Currently there is no other way to determine all CAN Nodes on a system which is required for getting and setting params robustly.
+ *
+ * @min -1
+ * @max 125
+ *
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(UAVCAN_COMPID_1, -1);
+
+/**
+ * UAVCAN Component ID 2
+ *
+ * Added by sees.ai for Param Management system.
+ * Currently there is no other way to determine all CAN Nodes on a system which is required for getting and setting params robustly.
+ *
+ * @min -1
+ * @max 125
+ *
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(UAVCAN_COMPID_2, -1);

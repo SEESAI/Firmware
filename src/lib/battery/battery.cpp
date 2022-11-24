@@ -50,7 +50,8 @@ using namespace time_literals;
 Battery::Battery(int index, ModuleParams *parent, const int sample_interval_us, const uint8_t source) :
 	ModuleParams(parent),
 	_index(index < 1 || index > 9 ? 1 : index),
-	_source(source)
+	_source(source),
+	_sees_soc(_params)
 {
 	const float expected_filter_dt = static_cast<float>(sample_interval_us) / 1_s;
 	_voltage_filter_v.setParameters(expected_filter_dt, 1.f);
@@ -91,6 +92,7 @@ Battery::Battery(int index, ModuleParams *parent, const int sample_interval_us, 
 	_param_handles.source = param_find(param_name);
 
 	_param_handles.low_thr = param_find("BAT_LOW_THR");
+	_param_handles.crit_v = param_find("BAT_CRIT_V");
 	_param_handles.crit_thr = param_find("BAT_CRIT_THR");
 	_param_handles.emergen_thr = param_find("BAT_EMERGEN_THR");
 
@@ -194,45 +196,142 @@ void Battery::sumDischarged(const hrt_abstime &timestamp, float current_a)
 
 void Battery::estimateStateOfCharge(const float voltage_v, const float current_a)
 {
-	// remaining battery capacity based on voltage
-	float cell_voltage = voltage_v / _params.n_cells;
+	bool sees_coulomb_counting_only = true;
 
-	// correct battery voltage locally for load drop to avoid estimation fluctuations
-	if (_params.r_internal >= 0.f) {
-		cell_voltage += _params.r_internal * current_a;
+	// -------------------------------------------
+	// If bool is true, do sees desired behaviour
+	// -------------------------------------------
+	if (sees_coulomb_counting_only) {
 
-	} else {
-		actuator_controls_s actuator_controls{};
-		_actuator_controls_0_sub.copy(&actuator_controls);
-		const float throttle = actuator_controls.control[actuator_controls_s::INDEX_THROTTLE];
-		_throttle_filter.update(throttle);
+		// This ensures the cell voltage is derived from the filtered voltage and corrects for any voltage load drop as PX4 uses the raw voltage values.
+		float cell_voltage = voltage_v / _params.n_cells;
+		// Adjust for current and resistance to get open circuit voltage
+		float oc_cell_voltage = cell_voltage + _params.r_internal * current_a;
 
-		if (!_battery_initialized) {
-			_throttle_filter.reset(throttle);
+		// We're using armed as a proxy for high current to avoid having to have a parameter that works on all drones
+		if (_vehicle_status_sub.updated()) {
+			vehicle_status_s vehicle_status;
+
+			if (_vehicle_status_sub.copy(&vehicle_status)) {
+				_armed = (vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED);
+			}
 		}
 
-		// assume linear relation between throttle and voltage drop
-		cell_voltage += throttle * _params.v_load_drop;
+		if (!_armed) {
+
+			// Get the initial SOC from cell voltage
+			_soc_initial = _sees_soc.GetSOC(oc_cell_voltage);
+
+			// If the 'initial' SoC is refreshed (e.g between flights), the discharged_initial is updated
+			// to ensure appropriate continuity in coulomb counting.
+			_discharged_mah_initial = _discharged_mah;
+		}
+
+		// Coulomb count to estimate current SOC
+		_state_of_charge = _soc_initial - ((_discharged_mah - _discharged_mah_initial) / _params.capacity);
+
+		if (_state_of_charge < 0.f) {
+			_state_of_charge = 0.f;
+		}
+
+		// Voltage Monitor warning - Coulomb counting won't catch cell failures so we add a warning if cell voltage drops to a critical level
+		// Note - doing this on actual cell voltage (not current-corrected OC voltage) as that's the critical parameter for pack safety
+		if (_armed && cell_voltage < _params.crit_v && (hrt_absolute_time() - _sees_warning_last > 10'000'000)
+		    && _params.capacity > 0) {
+			mavlink_log_critical(&_mavlink_log_pub, "Warning, Critical cell voltage %.2fV. Land Immediately!",
+					     double(cell_voltage));
+			_sees_warning_last = hrt_absolute_time();
+		}
 	}
 
-	_state_of_charge_volt_based = math::gradual(cell_voltage, _params.v_empty, _params.v_charged, 0.f, 1.f);
+	// -----------------------------
+	// Else do PX4 Default Behaviour
+	// -----------------------------
 
-	// choose which quantity we're using for final reporting
-	if (_params.capacity > 0.f && _battery_initialized) {
-		// if battery capacity is known, fuse voltage measurement with used capacity
-		// The lower the voltage the more adjust the estimate with it to avoid deep discharge
-		const float weight_v = 3e-4f * (1 - _state_of_charge_volt_based);
-		_state_of_charge = (1 - weight_v) * _state_of_charge + weight_v * _state_of_charge_volt_based;
-		// directly apply current capacity slope calculated using current
-		_state_of_charge -= _discharged_mah_loop / _params.capacity;
-		_state_of_charge = math::max(_state_of_charge, 0.f);
+	else {
+		// remaining battery capacity based on voltage
+		float cell_voltage = voltage_v / _params.n_cells;
 
-		const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _params.capacity, 0.f);
-		_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
+		// correct battery voltage locally for load drop to avoid estimation fluctuations
+		if (_params.r_internal >= 0.f) {
+			cell_voltage += _params.r_internal * current_a;
+
+		} else {
+			actuator_controls_s actuator_controls{};
+			_actuator_controls_0_sub.copy(&actuator_controls);
+			const float throttle = actuator_controls.control[actuator_controls_s::INDEX_THROTTLE];
+			_throttle_filter.update(throttle);
+
+			if (!_battery_initialized) {
+				_throttle_filter.reset(throttle);
+			}
+
+			// assume linear relation between throttle and voltage drop
+			cell_voltage += throttle * _params.v_load_drop;
+		}
+
+		_state_of_charge_volt_based = math::gradual(cell_voltage, _params.v_empty, _params.v_charged, 0.f, 1.f);
+
+		// choose which quantity we're using for final reporting
+		if (_params.capacity > 0.f && _battery_initialized) {
+			// if battery capacity is known, fuse voltage measurement with used capacity
+			// The lower the voltage the more adjust the estimate with it to avoid deep discharge
+			const float weight_v = 3e-4f * (1 - _state_of_charge_volt_based);
+			_state_of_charge = (1 - weight_v) * _state_of_charge + weight_v * _state_of_charge_volt_based;
+			// directly apply current capacity slope calculated using current
+			_state_of_charge -= _discharged_mah_loop / _params.capacity;
+			_state_of_charge = math::max(_state_of_charge, 0.f);
+
+			const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _params.capacity, 0.f);
+			_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
+
+		} else {
+			_state_of_charge = _state_of_charge_volt_based;
+		}
+	}
+}
+
+float Battery::SeesSOC::ChemistryLookup(float voltage)
+{
+	if (voltage >= _lookup[0]._oc_voltage) {
+		return 1.f;
+
+	} else if (voltage <= _lookup[_lookup_size - 1]._oc_voltage) {
+		return 0.f;
 
 	} else {
-		_state_of_charge = _state_of_charge_volt_based;
+		for (int i = 1; i < _lookup_size; i++) {
+			float voltage_key = _lookup[i]._oc_voltage;
+
+			if (voltage > voltage_key) {
+				const float volt1 = _lookup[i]._oc_voltage;
+				const float soc1 = _lookup[i]._soc;
+				const float volt2 = _lookup[i - 1]._oc_voltage;
+				const float soc2 = _lookup[i - 1]._soc;
+				return math::gradual(voltage, volt1, volt2, soc1, soc2);
+			}
+		}
 	}
+
+	return 0.0;
+}
+
+float Battery::SeesSOC::GetSOC(float oc_voltage)
+{
+	// Limit to max and min operational voltage
+	if (oc_voltage <= _soc_params.v_empty) {
+		return 0.0f;
+	}
+
+	if (oc_voltage >= _soc_params.v_charged) {
+		return 1.0f;
+	}
+
+	// Lookup chemistry charge, then scale for to operational max & min voltages for SoC
+	float chemistry_cap = ChemistryLookup(oc_voltage);
+	const float max_chemistry_cap = ChemistryLookup(_soc_params.v_charged);
+	const float min_chemistry_cap = ChemistryLookup(_soc_params.v_empty);
+	return (chemistry_cap - min_chemistry_cap) / (max_chemistry_cap - min_chemistry_cap);
 }
 
 uint8_t Battery::determineWarning(float state_of_charge)
@@ -309,6 +408,7 @@ void Battery::updateParams()
 	param_get(_param_handles.r_internal, &_params.r_internal);
 	param_get(_param_handles.source, &_params.source);
 	param_get(_param_handles.low_thr, &_params.low_thr);
+	param_get(_param_handles.crit_v, &_params.crit_v);
 	param_get(_param_handles.crit_thr, &_params.crit_thr);
 	param_get(_param_handles.emergen_thr, &_params.emergen_thr);
 	param_get(_param_handles.bat_avrg_current, &_params.bat_avrg_current);

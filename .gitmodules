@@ -1,7 +1,3 @@
-[submodule "src/modules/mavlink/mavlink"]
-	path = src/modules/mavlink/mavlink
-	url = https://github.com/mavlink/mavlink.git
-	branch = master
 [submodule "src/drivers/uavcan/libuavcan"]
 	path = src/drivers/uavcan/libuavcan
 	url = https://github.com/dronecan/libuavcan.git
@@ -13,10 +9,6 @@
 [submodule "Tools/sitl_gazebo"]
 	path = Tools/sitl_gazebo
 	url = https://github.com/PX4/PX4-SITL_gazebo.git
-	branch = master
-[submodule "src/drivers/gps/devices"]
-	path = src/drivers/gps/devices
-	url = https://github.com/PX4/PX4-GPSDrivers.git
 	branch = master
 [submodule "src/modules/micrortps_bridge/micro-CDR"]
 	path = src/modules/micrortps_bridge/micro-CDR
@@ -67,3 +59,11 @@
 [submodule "src/modules/microdds_client/Micro-XRCE-DDS-Client"]
 	path = src/modules/microdds_client/Micro-XRCE-DDS-Client
 	url = https://github.com/eProsima/Micro-XRCE-DDS-Client.git
+[submodule "devices"]
+	path = src/drivers/gps/devices
+	url = https://github.com/SEESAI/PX4-GPSDrivers.git
+	branch = 6534b05_dev
+[submodule "src/modules/mavlink/mavlink"]
+	path = src/modules/mavlink/mavlink
+	url = https://github.com/SEESAI/mavlink.git
+	branch = 3b52eac_dev

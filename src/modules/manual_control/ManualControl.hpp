@@ -46,11 +46,13 @@
 #include <uORB/topics/manual_control_switches.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/parameter_update.h>
+#include <uORB/topics/sees_manual_control_data.h>
 #include <uORB/Publication.hpp>
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/SubscriptionCallback.hpp>
 #include "ManualControlSelector.hpp"
 #include "MovingDiff.hpp"
+#include <systemlib/mavlink_log.h>
 
 using namespace time_literals;
 
@@ -75,6 +77,7 @@ public:
 
 private:
 	static constexpr int MAX_MANUAL_INPUT_COUNT = 3;
+	static constexpr int SEES_SOURCE_SELECTOR_ENABLED = 5;
 
 	void Run() override;
 	void processStickArming(const manual_control_setpoint_s &input);
@@ -82,6 +85,7 @@ private:
 	void evaluateModeSlot(uint8_t mode_slot);
 	void sendActionRequest(int8_t action, int8_t source, int8_t mode = 0);
 	void publishLandingGear(int8_t action);
+	void rc_switches_execute(bool switches_updated, const manual_control_switches_s &switches, hrt_abstime now);
 
 	uORB::Publication<action_request_s> _action_request_pub{ORB_ID(action_request)};
 	uORB::Publication<landing_gear_s> _landing_gear_pub{ORB_ID(landing_gear)};
@@ -93,8 +97,10 @@ private:
 	void send_camera_mode_command(CameraMode camera_mode);
 	void send_photo_command();
 	void send_video_command();
+	void reassess_inputs(hrt_abstime now);
 
 	uORB::Publication<manual_control_setpoint_s> _manual_control_setpoint_pub{ORB_ID(manual_control_setpoint)};
+	uORB::Publication<sees_manual_control_data_s> _sees_manual_control_data_pub{ORB_ID(sees_manual_control_data)};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 	int _previous_manual_control_input_instance{-1};
@@ -143,4 +149,11 @@ private:
 
 	unsigned _image_sequence {0};
 	bool _video_recording {false}; // TODO: hopefully there is a command soon to toggle without keeping state
+
+	manual_control_setpoint_s _sees_manual_control_inputs[MAX_MANUAL_INPUT_COUNT] {};
+	bool _mav_control_source_button_prev_state[MAX_MANUAL_INPUT_COUNT] {false};
+	bool _control_source_toggled_rc{false};
+	int _transition_switch_prev_state{};
+	int8_t _rc_in_mode{0};
+	orb_advert_t _mavlink_log_pub{nullptr};
 };

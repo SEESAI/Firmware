@@ -184,5 +184,6 @@ private:
 	void _check_params(const bool force);
 
 	void _update_state();
+
 };
 } // namespace landing_target_estimator

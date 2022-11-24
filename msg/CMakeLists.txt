@@ -64,6 +64,7 @@ set(msg_files
 	cpuload.msg
 	differential_pressure.msg
 	distance_sensor.msg
+	drag_estimator.msg
 	ekf2_timestamps.msg
 	estimator_gps_status.msg
 	esc_report.msg
@@ -106,6 +107,7 @@ set(msg_files
 	logger_status.msg
 	mag_worker_data.msg
 	magnetometer_bias_estimate.msg
+	magnetometer_noise.msg
 	manual_control_setpoint.msg
 	manual_control_switches.msg
 	mavlink_log.msg
@@ -133,12 +135,14 @@ set(msg_files
 	px4io_status.msg
 	radio_status.msg
 	rate_ctrl_status.msg
+	rate_ctrl_status_detail.msg
 	rc_channels.msg
 	rc_parameter_map.msg
 	rpm.msg
 	rtl_time_estimate.msg
 	safety.msg
 	satellite_info.msg
+	sees_manual_control_data.msg
 	sensor_accel.msg
 	sensor_accel_fifo.msg
 	sensor_baro.msg

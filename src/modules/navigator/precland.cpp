@@ -68,6 +68,10 @@ PrecLand::PrecLand(Navigator *navigator) :
 	_handle_param_acceleration_hor = param_find("MPC_ACC_HOR");
 	_handle_param_xy_vel_cruise = param_find("MPC_XY_CRUISE");
 
+	_handle_param_mpc_land_alt1 = param_find("MPC_LAND_ALT1");
+	_handle_param_mpc_land_alt2 = param_find("MPC_LAND_ALT2");
+	_handle_param_mpc_land_alt3 = param_find("MPC_LAND_ALT3");
+
 	updateParams();
 }
 
@@ -116,6 +120,11 @@ PrecLand::on_active()
 
 	if (_target_pose_updated) {
 		_target_pose_valid = true;
+		_target_pose_stale = false;
+	}
+
+	if ((hrt_elapsed_time(&_target_pose.timestamp) / 1e6f) > 1.5f) {
+		_target_pose_stale = true;
 	}
 
 	if ((hrt_elapsed_time(&_target_pose.timestamp) / 1e6f) > _param_pld_btout.get()) {
@@ -152,6 +161,10 @@ PrecLand::on_active()
 		run_state_fallback();
 		break;
 
+	case PrecLandState::HoldFallback:
+		run_state_hold_fallback();
+		break;
+
 	case PrecLandState::Done:
 		// nothing to do
 		break;
@@ -180,6 +193,18 @@ PrecLand::updateParams()
 
 	if (_handle_param_xy_vel_cruise != PARAM_INVALID) {
 		param_get(_handle_param_xy_vel_cruise, &_param_xy_vel_cruise);
+	}
+
+	if (_handle_param_mpc_land_alt1 != PARAM_INVALID) {
+		param_get(_handle_param_mpc_land_alt1, &_param_mpc_land_alt1);
+	}
+
+	if (_handle_param_mpc_land_alt2 != PARAM_INVALID) {
+		param_get(_handle_param_mpc_land_alt2, &_param_mpc_land_alt2);
+	}
+
+	if (_handle_param_mpc_land_alt3 != PARAM_INVALID) {
+		param_get(_handle_param_mpc_land_alt3, &_param_mpc_land_alt3);
 	}
 }
 
@@ -265,7 +290,13 @@ PrecLand::run_state_horizontal_approach()
 	// XXX need to transform to GPS coords because mc_pos_control only looks at that
 	_map_ref.reproject(x, y, pos_sp_triplet->current.lat, pos_sp_triplet->current.lon);
 
-	pos_sp_triplet->current.alt = _approach_alt;
+	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt : _approach_alt;
+
+	if (_param_pld_target_yaw.get() >= 0 && _param_pld_target_yaw.get() < 360)  {
+		pos_sp_triplet->current.yaw = math::radians(_param_pld_target_yaw.get());
+		pos_sp_triplet->current.yaw_valid = true;
+	}
+
 	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
 
 	_navigator->set_position_setpoint_triplet_updated();
@@ -287,7 +318,7 @@ PrecLand::run_state_descend_above_target()
 			pos_sp_triplet->current.alt = _navigator->get_global_position()->alt;
 
 			if (!switch_to_state_start()) {
-				switch_to_state_fallback();
+				switch_to_state_hold_fallback();
 			}
 		}
 
@@ -297,7 +328,36 @@ PrecLand::run_state_descend_above_target()
 	// XXX need to transform to GPS coords because mc_pos_control only looks at that
 	_map_ref.reproject(_target_pose.x_abs, _target_pose.y_abs, pos_sp_triplet->current.lat, pos_sp_triplet->current.lon);
 
-	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
+	float dt_z = 0.25f;
+
+	if (_navigator->get_local_position()->dist_bottom > _param_mpc_land_alt1) {
+		dt_z = 1.0f;
+
+	} else if (_navigator->get_local_position()->dist_bottom > _param_mpc_land_alt2
+		   && _navigator->get_local_position()->dist_bottom <= _param_mpc_land_alt1) {
+		dt_z = 0.75f;
+
+	} else if (_navigator->get_local_position()->dist_bottom > _param_mpc_land_alt3
+		   && _navigator->get_local_position()->dist_bottom <= _param_mpc_land_alt2) {
+		dt_z = 0.5f;
+
+	} else if (_navigator->get_local_position()->dist_bottom > 0.5f
+		   && _navigator->get_local_position()->dist_bottom <= _param_mpc_land_alt3) {
+		dt_z = 0.25f;
+
+	} else if (_navigator->get_local_position()->dist_bottom <= 0.5f) {
+		dt_z = 0.1f;
+	}
+
+	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt :
+				      _navigator->get_global_position()->alt - dt_z;
+
+	if (_param_pld_target_yaw.get() >= 0 && _param_pld_target_yaw.get() < 360)  {
+		pos_sp_triplet->current.yaw = math::radians(_param_pld_target_yaw.get());
+		pos_sp_triplet->current.yaw_valid = true;
+	}
+
+	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
 
 	_navigator->set_position_setpoint_triplet_updated();
 }
@@ -306,6 +366,10 @@ void
 PrecLand::run_state_final_approach()
 {
 	// nothing to do, will land
+	position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_LAND;
+
+	_navigator->set_position_setpoint_triplet_updated();
 }
 
 void
@@ -336,7 +400,7 @@ PrecLand::run_state_search()
 	if (hrt_absolute_time() - _state_start_time > _param_pld_srch_tout.get()*SEC2USEC) {
 		PX4_WARN("Search timed out");
 
-		switch_to_state_fallback();
+		switch_to_state_hold_fallback();
 	}
 }
 
@@ -344,6 +408,12 @@ void
 PrecLand::run_state_fallback()
 {
 	// nothing to do, will land
+}
+
+void
+PrecLand::run_state_hold_fallback()
+{
+	// nothing to do, will hold until pilot intervenes
 }
 
 bool
@@ -398,12 +468,16 @@ PrecLand::switch_to_state_descend_above_target()
 bool
 PrecLand::switch_to_state_final_approach()
 {
+	_fappr_tolerance_enabled = true;
+
 	if (check_state_conditions(PrecLandState::FinalApproach)) {
 		print_state_switch_message("final approach");
 		_state = PrecLandState::FinalApproach;
 		_state_start_time = hrt_absolute_time();
 		return true;
 	}
+
+	_fappr_tolerance_enabled = false;
 
 	return false;
 }
@@ -438,6 +512,23 @@ PrecLand::switch_to_state_fallback()
 	_navigator->set_position_setpoint_triplet_updated();
 
 	_state = PrecLandState::Fallback;
+	_state_start_time = hrt_absolute_time();
+	return true;
+}
+
+bool
+PrecLand::switch_to_state_hold_fallback()
+{
+	print_state_switch_message("hold fallback");
+	PX4_INFO("Climbing to Hold at search altitude.");
+	vehicle_local_position_s *vehicle_local_position = _navigator->get_local_position();
+
+	position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+	pos_sp_triplet->current.alt = vehicle_local_position->ref_alt + _param_pld_srch_alt.get();
+	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+	_navigator->set_position_setpoint_triplet_updated();
+
+	_state = PrecLandState::HoldFallback;
 	_state_start_time = hrt_absolute_time();
 	return true;
 }
@@ -488,7 +579,7 @@ bool PrecLand::check_state_conditions(PrecLandState state)
 		if (_state == PrecLandState::DescendAboveTarget) {
 			// if we're close to the ground, we're more critical of target timeouts so we quickly go into descend
 			if (check_state_conditions(PrecLandState::FinalApproach)) {
-				return hrt_absolute_time() - _target_pose.timestamp < 500000; // 0.5s
+				return hrt_absolute_time() - _target_pose.timestamp > 500000; // 0.5s
 
 			} else {
 				return _target_pose_valid && _target_pose.abs_pos_valid;
@@ -502,8 +593,16 @@ bool PrecLand::check_state_conditions(PrecLandState state)
 		}
 
 	case PrecLandState::FinalApproach:
-		return _target_pose_valid && _target_pose.abs_pos_valid
-		       && (_target_pose.z_abs - vehicle_local_position->z) < _param_pld_fappr_alt.get();
+
+		// allow certain error in tolerance of distance z calculation in final approach (2.5 cm)
+		if (_fappr_tolerance_enabled) {
+			return _target_pose_valid && _target_pose.abs_pos_valid
+			       && (_target_pose.z_abs - vehicle_local_position->z - 0.025f) < _param_pld_fappr_alt.get();
+
+		} else {
+			return _target_pose_valid && _target_pose.abs_pos_valid
+			       && (_target_pose.z_abs - vehicle_local_position->z) < _param_pld_fappr_alt.get();
+		}
 
 	case PrecLandState::Search:
 		return true;

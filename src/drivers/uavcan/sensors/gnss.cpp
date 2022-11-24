@@ -452,7 +452,104 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	report.heading_offset = heading_offset;
 	report.heading_accuracy = heading_accuracy;
 
-	publish(msg.getSrcNodeID().get(), &report);
+	// ---sees.ai---
+	// CAN node IDs are persistent, however uorb instance numbering is not (i.e GPS 124 can initialise as uorb instance 0 or 1).
+	// To solve this, we've added a parameter that allows the user to specify the CAN ID that should be uorb instance 0 (Rover).
+	// No other GPS will initialise until the GPS with the specified CAN ID has initialised.
+	// This ensure Rover is always instance 0 and, subsequently, moving base is always instance 1.
+
+	// Only read the param on boot as it feels unnecessary to continuously read.
+	// Editting the parameter will require reboot.
+	if (_gps_rover_can_id == -1) {
+		param_get(param_find("UAVCAN_ROVER_ID"), &_gps_rover_can_id);
+	}
+
+	if (_set_once == false) {
+		param_set(param_find("UAVCAN_COMPID_1"), &_uavcan_compid_1);
+		param_set(param_find("UAVCAN_COMPID_2"), &_uavcan_compid_2);
+		_set_once = true;
+	}
+
+	// If compid_1 isn't set, then take the first CAN ID
+	if (_uavcan_compid_1 == -1) {
+		_uavcan_compid_1 = msg.getSrcNodeID().get();
+		param_set(param_find("UAVCAN_COMPID_1"), &_uavcan_compid_1);
+	}
+
+	// If compid_1 IS set, and compid_2 is not yet set AND this CAN ID does not match compid_1, then take this other CAN ID
+	if (_uavcan_compid_1 != -1 && _uavcan_compid_2 == -1 && msg.getSrcNodeID().get() != _uavcan_compid_1) {
+		_uavcan_compid_2 = msg.getSrcNodeID().get();
+		param_set(param_find("UAVCAN_COMPID_2"), &_uavcan_compid_2);
+	}
+
+	// Do not publish if sensor_gps instance 0 does not exist and if this gps report is not from the Rover.
+	if (OK != orb_exists(ORB_ID(sensor_gps), 0) && msg.getSrcNodeID().get() != _gps_rover_can_id) {
+		if ((hrt_absolute_time() - _last_warn) > 1'000'000) {
+			PX4_INFO("Selected Rover (CAN ID %i) not available or initialized. Not initializing GPS with ID %i",
+				 int(_gps_rover_can_id),
+				 msg.getSrcNodeID().get());
+			_last_warn = hrt_absolute_time();
+		}
+
+		return;
+	}
+
+	int32_t param_sys_failure_en = 0;
+	param_get(param_find("SYS_FAILURE_EN"), &param_sys_failure_en);
+
+	if (param_sys_failure_en == 1) {
+		checkFailureInjections();
+	}
+
+	if (!_gps_blocked) {
+		publish(msg.getSrcNodeID().get(), &report);
+	}
+}
+
+void UavcanGnssBridge::checkFailureInjections()
+{
+	vehicle_command_s vehicle_command;
+
+	while (_vehicle_command_sub.update(&vehicle_command)) {
+		if (vehicle_command.command != vehicle_command_s::VEHICLE_CMD_INJECT_FAILURE) {
+			continue;
+		}
+
+		bool handled = false;
+		bool supported = false;
+
+		const int failure_unit = static_cast<int>(vehicle_command.param1 + 0.5f);
+		const int failure_type = static_cast<int>(vehicle_command.param2 + 0.5f);
+		// const int instance = static_cast<int>(vehicle_command.param3 + 0.5f);
+
+		if (failure_unit == vehicle_command_s::FAILURE_UNIT_SENSOR_GPS) {
+			handled = true;
+
+			// Currently only implemented for all/none GPS, not individual instances.
+			if (failure_type == vehicle_command_s::FAILURE_TYPE_OFF) {
+				PX4_WARN("CMD_INJECT_FAILURE, GPS off");
+				supported = true;
+				_gps_blocked = true;
+
+			} else if (failure_type == vehicle_command_s::FAILURE_TYPE_OK) {
+				PX4_INFO("CMD_INJECT_FAILURE, GPS ok");
+				supported = true;
+				_gps_blocked = false;
+			}
+
+		}
+
+		if (handled) {
+			vehicle_command_ack_s ack{};
+			ack.command = vehicle_command.command;
+			ack.from_external = false;
+			ack.result = supported ?
+				     vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED :
+				     vehicle_command_ack_s::VEHICLE_RESULT_UNSUPPORTED;
+			ack.timestamp = hrt_absolute_time();
+			_command_ack_pub.publish(ack);
+		}
+	}
 }
 
 void UavcanGnssBridge::update()

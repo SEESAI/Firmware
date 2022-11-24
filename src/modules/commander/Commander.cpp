@@ -772,6 +772,15 @@ transition_result_t Commander::disarm(arm_disarm_reason_t calling_reason, bool f
 
 			return TRANSITION_DENIED;
 		}
+
+	}  else {
+		// ---Sees.ai---
+		// Added a flag to show when BackupGCS has triggered Kill by Forced Disarm (QGC).
+		// Note - this intentionally does not get reset. It only clears on FC reboot.
+		if (calling_reason == arm_disarm_reason_t::command_external) {
+			_forced_disarm_backup_kill = true;
+			mavlink_log_critical(&_mavlink_log_pub, "Kill triggered by BackupGCS - Flight Terminated.");
+		}
 	}
 
 	transition_result_t arming_res = _arm_state_machine.arming_state_transition(_status, _vehicle_control_mode, _safety,
@@ -1006,6 +1015,7 @@ Commander::handle_command(const vehicle_command_s &cmd)
 					    && cmd_from_io && (arming_action == vehicle_command_s::ARMING_ACTION_ARM)) {
 						_status.arming_state = vehicle_status_s::ARMING_STATE_IN_AIR_RESTORE;
 					}
+
 				}
 
 				transition_result_t arming_res = TRANSITION_DENIED;
@@ -3060,6 +3070,7 @@ Commander::run()
 
 			/* publish vehicle_status_flags */
 			_status_flags.timestamp = hrt_absolute_time();
+			_status_flags.forced_disarm_backup_kill = _forced_disarm_backup_kill;
 			_vehicle_status_flags_pub.publish(_status_flags);
 
 			/* publish failure_detector data */
@@ -3085,9 +3096,10 @@ Commander::run()
 			set_tune(tune_control_s::TUNE_ID_ARMING_WARNING);
 			_arm_tune_played = true;
 
-		} else if (!_status_flags.usb_connected &&
-			   (_status.hil_state != vehicle_status_s::HIL_STATE_ON) &&
-			   (_battery_warning == battery_status_s::BATTERY_WARNING_CRITICAL)) {
+		} else if (//!_status_flags.usb_connected &&
+			(_status.hil_state != vehicle_status_s::HIL_STATE_ON) &&
+			((_battery_warning == battery_status_s::BATTERY_WARNING_CRITICAL) ||
+			 (_battery_warning == battery_status_s::BATTERY_WARNING_EMERGENCY))) {
 			/* play tune on battery critical */
 			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);
 
@@ -3098,6 +3110,21 @@ Commander::run()
 
 		} else if (_status.failsafe && _armed.armed) {
 			tune_failsafe(true);
+
+		} else if ((_armed.manual_lockdown && _armed.armed) ||
+			   _forced_disarm_backup_kill) {
+			// ---Sees.ai--- Added for BVLOS Compliance
+			// RC Kill - AWS will stop on release or disarm.
+			// Backup GCS Kill - AWS will not stop until reboot (useful for relocating drone).
+			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);
+
+		} else if ((_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND ||
+			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_PRECLAND ||
+			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_DESCEND) &&
+			   (_armed.armed)) {
+			// ---Sees.ai--- Added for BVLOS Compliance
+			// AWS triggers whilst landing.
+			set_tune(tune_control_s::TUNE_ID_NOTIFY_NEUTRAL);
 
 		} else {
 			set_tune(tune_control_s::TUNE_ID_STOP);
@@ -4340,10 +4367,16 @@ Commander::offboard_control_update()
 	} else if (_offboard_control_mode_sub.get().velocity && !_status_flags.local_velocity_valid) {
 		offboard_available = false;
 
-	} else if (_offboard_control_mode_sub.get().acceleration && !_status_flags.local_velocity_valid) {
-		// OFFBOARD acceleration handled by position controller
-		offboard_available = false;
 	}
+
+	// ---sees.ai--- 13/8/2024
+	// Disabled this check to allow SI2 to keep controlling the drone if GPS is lost.
+	// This change is part of implementing the "position lost" mode in SI2.
+	//
+	// else if (_offboard_control_mode_sub.get().acceleration && !_status_flags.local_velocity_valid) {
+	// 	// OFFBOARD acceleration handled by position controller
+	// 	offboard_available = false;
+	// }
 
 	_offboard_available.set_state_and_update(offboard_available, hrt_absolute_time());
 

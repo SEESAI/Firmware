@@ -80,6 +80,7 @@
 #include "streams/GLOBAL_POSITION_INT.hpp"
 #include "streams/GPS_GLOBAL_ORIGIN.hpp"
 #include "streams/GPS_RAW_INT.hpp"
+#include "streams/GPS_INPUT.hpp"
 #include "streams/GPS_RTCM_DATA.hpp"
 #include "streams/GPS_STATUS.hpp"
 #include "streams/HEARTBEAT.hpp"
@@ -101,6 +102,7 @@
 #include "streams/POSITION_TARGET_GLOBAL_INT.hpp"
 #include "streams/POSITION_TARGET_LOCAL_NED.hpp"
 #include "streams/PROTOCOL_VERSION.hpp"
+#include "streams/RADIO_STATUS.hpp"
 #include "streams/RAW_RPM.hpp"
 #include "streams/RC_CHANNELS.hpp"
 #include "streams/SCALED_IMU.hpp"
@@ -376,6 +378,9 @@ static const StreamListItem streams_list[] = {
 #if defined(GPS_RAW_INT_HPP)
 	create_stream_list_item<MavlinkStreamGPSRawInt>(),
 #endif // GPS_RAW_INT_HPP
+#if defined(GPS_INPUT_HPP)
+	create_stream_list_item<MavlinkStreamGPSInput>(),
+#endif // GPS_INPUT_HPP
 #if defined(GPS2_RAW_HPP)
 	create_stream_list_item<MavlinkStreamGPS2Raw>(),
 #endif // GPS2_RAW_HPP
@@ -559,8 +564,11 @@ static const StreamListItem streams_list[] = {
 	create_stream_list_item<MavlinkStreamEfiStatus>(),
 #endif // EFI_STATUS_HPP
 #if defined(GPS_RTCM_DATA_HPP)
-	create_stream_list_item<MavlinkStreamGPSRTCMData>()
+	create_stream_list_item<MavlinkStreamGPSRTCMData>(),
 #endif // GPS_RTCM_DATA_HPP
+#if defined(RADIO_STATUS_HPP)
+	create_stream_list_item<MavlinkStreamRadioStatus>()
+#endif // RADIO_STATUS_HPP
 };
 
 const char *get_stream_name(const uint16_t msg_id)
