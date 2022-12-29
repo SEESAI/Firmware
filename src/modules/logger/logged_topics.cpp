@@ -30,6 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+// Test
 
 #include "logged_topics.h"
 #include "messages.h"
