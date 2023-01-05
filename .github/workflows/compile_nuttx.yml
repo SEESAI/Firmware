@@ -70,6 +70,7 @@ jobs:
           ]
     steps:
     - uses: actions/checkout@v1
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       with:
         token: ${{secrets.ACCESS_TOKEN}}
 
@@ -125,6 +126,7 @@ jobs:
       run: ccache -s
 
     - name: Upload px4 package
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       uses: actions/upload-artifact@v2
       with:
         name: px4_package_${{matrix.config}}
