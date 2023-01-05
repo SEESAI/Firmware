@@ -101,18 +101,25 @@ jobs:
       run: make all_variants_${{matrix.config}}
       timeout-minutes: 45
     - name: make ${{matrix.config}} bloaty_compileunits
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       run: make ${{matrix.config}} bloaty_compileunits || true
     - name: make ${{matrix.config}} bloaty_inlines
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       run: make ${{matrix.config}} bloaty_inlines || true
     - name: make ${{matrix.config}} bloaty_segments
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       run: make ${{matrix.config}} bloaty_segments || true
     - name: make ${{matrix.config}} bloaty_symbols
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       run: make ${{matrix.config}} bloaty_symbols || true
     - name: make ${{matrix.config}} bloaty_templates
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       run: make ${{matrix.config}} bloaty_templates || true
     - name: make ${{matrix.config}} bloaty_ram
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       run: make ${{matrix.config}} bloaty_ram || true
     - name: make ${{matrix.config}} bloaty_compare_master
+      if: ${{ ! (matrix.config == 'px4_fmu-v5' || matrix.config == 'holybro_kakutef7' || matrix.config == 'cuav_x7pro') }}
       run: make ${{matrix.config}} bloaty_compare_master || true
     - name: ccache post-run
       run: ccache -s
