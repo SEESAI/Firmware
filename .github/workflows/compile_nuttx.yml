@@ -101,7 +101,7 @@ jobs:
           ccache -z
 
     - name: make all_variants_${{matrix.config}
-      if: ${{ ! (matrix.config == 'px4_fmu-v5') }}
+      if: ${{ ! (${{matrix.config}} == 'px4_fmu-v5') }}
       run: make all_variants_${{matrix.config}}
       timeout-minutes: 45
     - name: make ${{matrix.config}} bloaty_compileunits
