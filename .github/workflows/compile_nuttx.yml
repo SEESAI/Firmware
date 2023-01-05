@@ -68,8 +68,8 @@ jobs:
           spracing_h7extreme,
           uvify_core
           ]
-    exclude:
-    - config: px4_fmu-v5
+        exclude:
+        - config: px4_fmu-v5
     steps:
     - uses: actions/checkout@v1
       with:
