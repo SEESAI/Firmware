@@ -9,6 +9,4 @@
 # 	mavlink start -d /dev/ttyS4 -b 57600 -m minimal
 # fi
 
-# Sees.ai - Reverted back to old implementation as we do not use ADS-B and we need ttyS4 for FRSky Telemetry.
-# Start MAVLink on the USB port
-mavlink start -d /dev/ttyACM0
+# Sees.ai - Disabled as we do not use ADS-B and we need ttyS4 for FRSky Telemetry.
