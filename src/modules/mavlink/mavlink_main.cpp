@@ -1685,17 +1685,15 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 	/* fallthrough */
 	case MAVLINK_MODE_CUSTOM:
 		//stream nothing
-		configure_stream_local("ALTITUDE", 0.5f);
+		configure_stream_local("ALTITUDE", 1.5f);
 		configure_stream_local("ATTITUDE", 3.0f);
 		configure_stream_local("BATTERY_STATUS", 0.5f);
 		configure_stream_local("EXTENDED_SYS_STATE", 0.1f);
 		configure_stream_local("GLOBAL_POSITION_INT", 1.5f);
 		configure_stream_local("GPS_RAW_INT", 0.5f);
 		configure_stream_local("HOME_POSITION", 0.1f);
-		configure_stream_local("NAMED_VALUE_FLOAT", 1.0f);
 		configure_stream_local("RC_CHANNELS", 2.0f);
 		configure_stream_local("SYS_STATUS", 0.1f);
-		configure_stream_local("VFR_HUD", 1.0f);
 #if !defined(CONSTRAINED_FLASH)
 		configure_stream_local("LINK_NODE_STATUS", 1.0f);
 #endif // !CONSTRAINED_FLASH
