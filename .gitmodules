@@ -65,5 +65,5 @@
 	url = https://github.com/eProsima/Micro-XRCE-DDS-Client.git
 [submodule "devices"]
 	path = src/drivers/gps/devices
-	url = git@github.com:SEESAI/PX4-GPSDrivers.git
+	url = https://github.com/SEESAI/PX4-GPSDrivers.git
 	branch = 6534b05_dev
