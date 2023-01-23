@@ -274,7 +274,19 @@ void FlightTaskManualAltitude::_respectMaxAltitude()
 void FlightTaskManualAltitude::_respectGroundSlowdown()
 {
 	// limit speed gradually within the altitudes MPC_LAND_ALT1 and MPC_LAND_ALT2
-	if (PX4_ISFINITE(_dist_to_ground)) {
+	// ---Sees.ai Modification---
+	// ---Original Behaviour---
+	// In FlightTask.cpp, if _dist_to_bottom (provided by distance sensor) is valid then _dist_to_ground = _dist_to_bottom.
+	// If _dist_to_bottom is not valid then _dist_to_ground = local position - home alt.
+	// Therefore, if flying below takeoff altitude without valid distance sensor values, _dist_to_ground is negative,
+	// causing z vel to be limited to MPC_LAND_SPEED ~0.4m/s.
+	// ---Sees.ai behaviour---
+	// Added a boolean parameter which enables/disables a check that will only limit z down velocity if the
+	// _dist_to_ground value is being provided by a distance sensor.
+	bool param = _param_zvel_req_dist.get();
+	bool limit_z_vel = param ? PX4_ISFINITE(_dist_to_bottom) : true;
+
+	if (PX4_ISFINITE(_dist_to_ground) && limit_z_vel) {
 		const float limit_down = math::gradual(_dist_to_ground,
 						       _param_mpc_land_alt2.get(), _param_mpc_land_alt1.get(),
 						       _param_mpc_land_speed.get(), _constraints.speed_down);

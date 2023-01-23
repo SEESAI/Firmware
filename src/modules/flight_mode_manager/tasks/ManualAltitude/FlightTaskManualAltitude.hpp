@@ -90,7 +90,8 @@ protected:
 					_param_mpc_land_speed, /**< desired downwards speed when approaching the ground */
 					(ParamFloat<px4::params::MPC_TKO_SPEED>)
 					_param_mpc_tko_speed, /**< desired upwards speed when still close to the ground */
-					(ParamFloat<px4::params::MC_MAN_TILT_TAU>) _param_mc_man_tilt_tau
+					(ParamFloat<px4::params::MC_MAN_TILT_TAU>) _param_mc_man_tilt_tau,
+					(ParamBool<px4::params::ZVEL_REQ_DIST>) _param_zvel_req_dist
 				       )
 private:
 	bool _isYawInput();
