@@ -230,8 +230,9 @@ void sPort_send_VSPD(int uart, float speed)
 	sensor_gps_s gps_raw;
 	s_port_subscription_data->sensor_gps_subs[1].copy(&gps_raw);
 	orb_advert_t	mavlink_log_pub{nullptr};
+	int32_t gps2_fix_type = gps_raw.fix_type;
 	mavlink_log_info(&mavlink_log_pub, "Fix type = %i", gps_raw.fix_type);
-	sPort_send_data(uart, SMARTPORT_ID_VARIO, gps_raw.fix_type);
+	sPort_send_data(uart, SMARTPORT_ID_VARIO, gps2_fix_type);
 
 	/* send data for VARIO vertical speed: int16 cm/sec */
 	// int32_t ispeed = (int)(100 * speed);
