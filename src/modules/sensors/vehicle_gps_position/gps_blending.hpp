@@ -92,6 +92,7 @@ public:
 		}
 	}
 	int getSelectedGps() const { return _selected_gps; }
+	int getWorstFix() const { return _worst_fix; }
 
 private:
 	/*
@@ -127,6 +128,7 @@ private:
 	int _np_gps_suitable_for_blending{0};
 	int _primary_instance{0}; ///< if -1, there is no primary isntance and the best receiver is used // TODO: use device_id
 	bool _fallback_allowed{false};
+	uint8_t _worst_fix{6};
 
 	bool _is_new_output_data_available{false};
 

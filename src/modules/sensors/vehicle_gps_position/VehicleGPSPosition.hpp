@@ -69,6 +69,7 @@ private:
 	void Run() override;
 
 	void ParametersUpdate(bool force = false);
+	// void Publish(const sensor_gps_s &gps, uint8_t selected, uint8_t worst_fix);
 	void Publish(const sensor_gps_s &gps, uint8_t selected);
 
 	// defines used to specify the mask position for use of different accuracy metrics in the GPS blending algorithm
