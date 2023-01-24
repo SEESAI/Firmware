@@ -41,7 +41,6 @@
 #include <lib/matrix/matrix/math.hpp>
 #include <px4_platform_common/defines.h>
 #include <uORB/topics/sensor_gps.h>
-#include <lib/systemlib/mavlink_log.h>
 
 #include <float.h>
 #include <lib/geo/geo.h>
@@ -93,6 +92,7 @@ public:
 		}
 	}
 	int getSelectedGps() const { return _selected_gps; }
+	bool isFallbackAllowed() {return _fallback_allowed;}
 
 private:
 	/*
@@ -145,6 +145,4 @@ private:
 	bool _blend_use_vpos_acc{false};
 
 	float _blending_time_constant{0.f};
-
-	orb_advert_t _mavlink_log_pub{nullptr};
 };

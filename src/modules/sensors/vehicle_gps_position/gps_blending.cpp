@@ -123,10 +123,6 @@ bool GpsBlending::blend_gps_data(uint64_t hrt_now_us)
 
 		} else if ((present_dt >= GPS_TIMEOUT_S) && (_gps_state[i].timestamp > 0)) {
 			// Timed out - kill the stored fix for this receiver and don't track its (stale) gps_dt
-			if (_gps_state[i].timestamp != 0) {
-				mavlink_log_critical(&_mavlink_log_pub, "GPS Sensor [%i] Timeout. Switch to Altitude mode.", i);
-			}
-
 			_gps_state[i].timestamp = 0;
 			_gps_state[i].fix_type = 0;
 			_gps_state[i].satellites_used = 0;
