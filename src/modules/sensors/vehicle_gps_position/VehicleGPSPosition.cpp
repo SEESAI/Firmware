@@ -119,6 +119,7 @@ void VehicleGPSPosition::Run()
 
 			_sensor_gps_sub[i].copy(&gps_data);
 			_gps_blending.setGpsData(gps_data, i);
+
 			if (_gps_blending.isFallbackAllowed()) {
 				mavlink_log_critical(&_mavlink_log_pub, "GPS Sensor Timeout. Switch to Altitude mode.");
 			}
