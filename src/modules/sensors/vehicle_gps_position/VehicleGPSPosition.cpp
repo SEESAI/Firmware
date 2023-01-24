@@ -129,7 +129,6 @@ void VehicleGPSPosition::Run()
 		_gps_blending.update(hrt_absolute_time());
 
 		if (_gps_blending.isNewOutputDataAvailable()) {
-			// Publish(_gps_blending.getOutputGpsData(), _gps_blending.getSelectedGps(), _gps_blending.getWorstFix());
 			Publish(_gps_blending.getOutputGpsData(), _gps_blending.getSelectedGps());
 		}
 	}
@@ -139,7 +138,6 @@ void VehicleGPSPosition::Run()
 	perf_end(_cycle_perf);
 }
 
-//void VehicleGPSPosition::Publish(const sensor_gps_s &gps, uint8_t selected, uint8_t worst_fix)
 void VehicleGPSPosition::Publish(const sensor_gps_s &gps, uint8_t selected)
 {
 	vehicle_gps_position_s gps_output{};
@@ -172,7 +170,6 @@ void VehicleGPSPosition::Publish(const sensor_gps_s &gps, uint8_t selected)
 	gps_output.satellites_used = gps.satellites_used;
 
 	gps_output.selected = selected;
-	//gps_output.fix_type_secondary = worst_fix;
 
 	_vehicle_gps_position_pub.publish(gps_output);
 }

@@ -44,7 +44,6 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
-#include <systemlib/mavlink_log.h>
 
 /* FrSky SmartPort polling IDs captured from X4R */
 #define SMARTPORT_POLL_1    0x1B

@@ -114,6 +114,7 @@ void sPort_update_topics()
 	s_port_subscription_data->vehicle_gps_position_sub.update();
 	s_port_subscription_data->vehicle_local_position_sub.update();
 	s_port_subscription_data->vehicle_status_sub.update();
+
 	for (int i = 0; i < GPS_MAX_RECEIVERS; i++) {
 		s_port_subscription_data->sensor_gps_subs[i].update(&s_port_subscription_data->sensor_gps_data[i]);
 	}
@@ -229,9 +230,7 @@ void sPort_send_VSPD(int uart, float speed)
 	// s_port_subscription_data->sensor_gps_data[1];
 	sensor_gps_s gps_raw;
 	s_port_subscription_data->sensor_gps_subs[1].copy(&gps_raw);
-	orb_advert_t	mavlink_log_pub{nullptr};
 	int32_t gps2_fix_type = (int) 100 * gps_raw.fix_type;
-	mavlink_log_info(&mavlink_log_pub, "Fix type = %i", gps_raw.fix_type);
 	sPort_send_data(uart, SMARTPORT_ID_VARIO, gps2_fix_type);
 
 	/* send data for VARIO vertical speed: int16 cm/sec */
@@ -357,6 +356,6 @@ void sPort_send_GPS_info(int uart)
 {
 	sensor_gps_s gps_raw;
 	s_port_subscription_data->sensor_gps_subs[0].copy(&gps_raw);
-	const vehicle_gps_position_s &gps = s_port_subscription_data->vehicle_gps_position_sub.get();
-	sPort_send_data(uart, FRSKY_ID_TEMP2, gps.satellites_used * 10 + gps_raw.fix_type);
+	// const vehicle_gps_position_s &gps = s_port_subscription_data->vehicle_gps_position_sub.get();
+	sPort_send_data(uart, FRSKY_ID_TEMP2, gps_raw.satellites_used * 10 + gps_raw.fix_type);
 }
