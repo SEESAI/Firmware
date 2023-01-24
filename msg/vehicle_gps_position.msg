@@ -10,7 +10,7 @@ int32 alt_ellipsoid 		# Altitude in 1E-3 meters bove Ellipsoid, (millimetres)
 float32 s_variance_m_s		# GPS speed accuracy estimate, (metres/sec)
 float32 c_variance_rad		# GPS course accuracy estimate, (radians)
 uint8 fix_type # 0-1: no fix, 2: 2D fix, 3: 3D fix, 4: RTCM code differential, 5: Real-Time Kinematic, float, 6: Real-Time Kinematic, fixed, 8: Extrapolated. Some applications will not use the value of this field unless it is at least two, so always correctly fill in the fix.
-// uint8 fix_type_secondary # Secondary GPS fix type (worst fix type)
+# uint8 fix_type_secondary # Secondary GPS fix type (worst fix type)
 
 float32 eph			# GPS horizontal position accuracy (metres)
 float32 epv			# GPS vertical position accuracy (metres)
