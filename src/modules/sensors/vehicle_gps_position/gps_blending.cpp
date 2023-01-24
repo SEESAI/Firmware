@@ -50,16 +50,16 @@ void GpsBlending::update(uint64_t hrt_now_us)
 		// Find the single "best" GPS from the data we have
 		// First, find the GPS(s) with the best fix
 		uint8_t best_fix = 0;
-		uint8_t worst_fix = 6;
+		// uint8_t worst_fix = 6;
 
 		for (uint8_t i = 0; i < GPS_MAX_RECEIVERS_BLEND; i++) {
 			if (_gps_state[i].fix_type > best_fix) {
 				best_fix = _gps_state[i].fix_type;
 			}
-			if (_gps_state[i].fix_type < worst_fix) {
-				worst_fix = _gps_state[i].fix_type;
-				_worst_fix = worst_fix;
-			}
+			// if (_gps_state[i].fix_type < worst_fix) {
+			// 	worst_fix = _gps_state[i].fix_type;
+			// 	_worst_fix = worst_fix;
+			// }
 		}
 
 		// Second, compare GPS's with best fix and take the one with most satellites
