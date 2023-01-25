@@ -162,6 +162,7 @@ bool VehicleMagnetometer::ParametersUpdate(bool force)
 
 				int cutoff_freq_old = _lp_filter1->get_cutoff_freq();
 				int cutoff_freq_new = _param_sens_mag_lp_cut.get();
+
 				if (cutoff_freq_new != cutoff_freq_old) {
 					_lp_filter1[mag].set_cutoff_frequency(cutoff_freq_new);
 					_lp_filter2[mag].set_cutoff_frequency(cutoff_freq_new);
@@ -463,6 +464,7 @@ void VehicleMagnetometer::Run()
 
 					float dt = 0;
 					float sample_freq = 0;
+
 					if (_param_sens_mag_lp_cut.get() > 0) {
 						// Catch backwards timesteps just in case
 						if (report.timestamp_sample > _mag_filtered_timestamp[uorb_index]) {
@@ -472,15 +474,18 @@ void VehicleMagnetometer::Run()
 
 						const float filter_freq = _param_sens_mag_lp_cut.get();
 
-						if (filter_freq > (0.5f * sample_freq) && (hrt_absolute_time() - _sampling_warning_last) > 10'000'000 ) {
-							mavlink_log_warning(&_mavlink_log_pub, "Warning, magnetometer filter freq too high. Sampling Freq = %f, Filter Freq = %f.", double(sample_freq), double(filter_freq));
+						if (filter_freq > (0.5f * sample_freq) && (hrt_absolute_time() - _sampling_warning_last) > 10'000'000) {
+							mavlink_log_warning(&_mavlink_log_pub,
+									    "Warning, magnetometer filter freq too high. Sampling Freq = %f, Filter Freq = %f.", double(sample_freq),
+									    double(filter_freq));
 							_sampling_warning_last = hrt_absolute_time();
 							_sees_filtering[uorb_index] = false;
-						}
-						else {
+
+						} else {
 							_sees_filtering[uorb_index] = true;
 						}
 					}
+
 					if (_sees_filtering[uorb_index]) {
 
 						// Apply filter and save result
@@ -501,6 +506,7 @@ void VehicleMagnetometer::Run()
 						_last_data[uorb_index] = vect;
 
 					}
+
 					updated[uorb_index] = true;
 				}
 			}
@@ -540,10 +546,11 @@ void VehicleMagnetometer::Run()
 			if (updated[instance] && (_data_sum_count[instance] > 0)) {
 
 				hrt_abstime timestamp_sample{};
+
 				if (_sees_filtering[instance]) {
 					timestamp_sample = _mag_filtered_timestamp[instance];
-				}
-				else {
+
+				} else {
 					timestamp_sample = _timestamp_sample_sum[instance] / _data_sum_count[instance];
 				}
 
@@ -577,6 +584,7 @@ void VehicleMagnetometer::Run()
 							mag_noise_filtered_rms.copyTo(mag_noise_out.magnetometer_filtered_rms);
 							mag_raw.copyTo(mag_noise_out.magnetometer_raw);
 							mag_noise_out.timestamp = hrt_absolute_time();
+
 						} else {
 							// PX4 default behaviour - output averaged value
 							magnetometer_data = _data_sum[instance] / _data_sum_count[instance];

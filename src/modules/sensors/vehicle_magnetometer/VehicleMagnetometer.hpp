@@ -117,6 +117,7 @@ private:
 			// The output is the square root of the noise (sanity check for positive)
 			if (noise_average(0) < 0 || noise_average(1) < 0 || noise_average(2) < 0) {
 				_last_value = Vector3f(0.f, 0.f, 0.f);
+
 			} else {
 				_last_value = Vector3f(sqrt(noise_average(0)), sqrt(noise_average(1)), sqrt(noise_average(2)));
 			}
