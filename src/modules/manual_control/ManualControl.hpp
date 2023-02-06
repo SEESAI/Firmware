@@ -51,6 +51,7 @@
 #include <uORB/SubscriptionCallback.hpp>
 #include "ManualControlSelector.hpp"
 #include "MovingDiff.hpp"
+#include <systemlib/mavlink_log.h>
 
 using namespace time_literals;
 
@@ -143,4 +144,10 @@ private:
 
 	unsigned _image_sequence {0};
 	bool _video_recording {false}; // TODO: hopefully there is a command soon to toggle without keeping state
+
+	bool _prev_state[MAX_MANUAL_INPUT_COUNT]{false};
+	int _transition_prev{};
+	bool _toggled_rc{false};
+	orb_advert_t _mavlink_log_pub{nullptr};
+	hrt_abstime _timeout{};
 };

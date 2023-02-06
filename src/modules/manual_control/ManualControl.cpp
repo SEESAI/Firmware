@@ -80,6 +80,17 @@ void ManualControl::Run()
 		_selector.setTimeout(_param_com_rc_loss_t.get() * 1_s);
 	}
 
+	manual_control_switches_s switches;
+	bool switches_updated = _manual_control_switches_sub.update(&switches);
+
+	if (switches_updated) {
+		_toggled_rc = _transition_prev != switches.transition_switch;
+		_transition_prev = switches.transition_switch;
+		if (_toggled_rc) {
+			_selector.toggleControlSource();
+		}
+	}
+
 	const hrt_abstime now = hrt_absolute_time();
 	_selector.updateValidityOfChosenInput(now);
 
@@ -87,12 +98,13 @@ void ManualControl::Run()
 		manual_control_setpoint_s manual_control_input;
 
 		if (_manual_control_setpoint_subs[i].update(&manual_control_input)) {
+			if (_prev_state[i] == 0 && manual_control_input.toggle_control) {
+				_selector.toggleControlSource();
+			}
+			_prev_state[i] = manual_control_input.toggle_control;
 			_selector.updateWithNewInputSample(now, manual_control_input, i);
 		}
 	}
-
-	manual_control_switches_s switches;
-	bool switches_updated = _manual_control_switches_sub.update(&switches);
 
 	if (_selector.setpoint().valid) {
 		_published_invalid_once = false;
