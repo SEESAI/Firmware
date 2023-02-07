@@ -83,9 +83,10 @@ void ManualControl::Run()
 	manual_control_switches_s switches;
 	bool switches_updated = _manual_control_switches_sub.update(&switches);
 
+	// ---Sees.ai--- Here, we hijacked transition switch as it's not used for our quadcopter.
+	// Toggle control source (between Mav and RC) if transition switch changes state.
 	if (switches_updated) {
-		_toggled_rc = _transition_prev != switches.transition_switch;
-		_transition_prev = switches.transition_switch;
+		_toggled_rc = _previous_switches.transition_switch != switches.transition_switch;
 		if (_toggled_rc) {
 			_selector.toggleControlSource();
 		}
@@ -97,6 +98,7 @@ void ManualControl::Run()
 	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
 		manual_control_setpoint_s manual_control_input;
 
+		// ---Sees.ai--- Toggle control source (between Mav and RC) if rising edge (on Mavlink Joystick A button).
 		if (_manual_control_setpoint_subs[i].update(&manual_control_input)) {
 			if (_prev_state[i] == 0 && manual_control_input.toggle_control) {
 				_selector.toggleControlSource();
@@ -127,7 +129,9 @@ void ManualControl::Run()
 
 		if (switches_updated) {
 			// Only use switches if current source is RC as well.
-			if (_selector.setpoint().data_source == manual_control_setpoint_s::SOURCE_RC) {
+			// ---Sees.ai--- Modified to check if COM_RC_MODE_IN is set to enable Sees.ai mods.
+			// If it is, then we allow RC switches (such as kill) to work at all times.
+			if (_selector.setpoint().data_source == manual_control_setpoint_s::SOURCE_RC || _param_com_rc_in_mode.get() == 5) {
 				if (_previous_switches_initialized) {
 					if (switches.mode_slot != _previous_switches.mode_slot) {
 						evaluateModeSlot(switches.mode_slot);
