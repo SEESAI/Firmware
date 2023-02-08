@@ -201,15 +201,18 @@ void sPort_send_CUR(int uart)
 {
 	/* Hijacked to send Data Source type (Mav/RC Control)(David @sees.ai) */
 	uint32_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+
 	// If the input type is RC then set it to 0
 	if (control_source == manual_control_setpoint_s::SOURCE_RC) {
 		control_source = 10 * manual_control_setpoint_s::SEES_SOURCE_RC; // This equates to 0
 	}
+
 	// Else if the input type is Mavlink then set it to 1
 	else if (control_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
-		&& control_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
+		 && control_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
 		control_source = 10 * manual_control_setpoint_s::SEES_SOURCE_MAV; // This equates to 1
 	}
+
 	sPort_send_data(uart, SMARTPORT_ID_CURR, control_source);
 
 	// /* send data */

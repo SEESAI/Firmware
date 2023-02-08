@@ -76,6 +76,7 @@ public:
 
 private:
 	static constexpr int MAX_MANUAL_INPUT_COUNT = 3;
+	static constexpr int SEES_SOURCE_SELECTOR_ENABLED = 5;
 
 	void Run() override;
 	void processStickArming(const manual_control_setpoint_s &input);
@@ -145,9 +146,8 @@ private:
 	unsigned _image_sequence {0};
 	bool _video_recording {false}; // TODO: hopefully there is a command soon to toggle without keeping state
 
-	bool _prev_state[MAX_MANUAL_INPUT_COUNT]{false};
-	int _transition_prev{};
-	bool _toggled_rc{false};
+	bool _mav_control_source_button_prev_state[MAX_MANUAL_INPUT_COUNT] {false};
+	bool _control_source_toggled_rc{false};
 	orb_advert_t _mavlink_log_pub{nullptr};
 	hrt_abstime _timeout{};
 };

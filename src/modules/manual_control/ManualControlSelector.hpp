@@ -48,15 +48,17 @@ public:
 	int instance() const { return _instance; };
 
 	// ---Sees.ai--- Added this member function to facilitate toggling between control source.
-	void toggleControlSource() {
+	void toggleControlSource()
+	{
 		_sees_desired_control = !_sees_desired_control;
+
 		if (_sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_RC) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
-		}
-		else if (_sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_MAV) {
+
+		} else if (_sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_MAV) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to MavJoystick Control");
 		}
-		};
+	};
 
 private:
 	bool isInputValid(const manual_control_setpoint_s &input, uint64_t now) const;
@@ -68,4 +70,5 @@ private:
 	uint8_t _first_valid_source{manual_control_setpoint_s::SOURCE_UNKNOWN};
 	orb_advert_t _mavlink_log_pub{nullptr};
 	bool _sees_desired_control{};
+	const int SEES_CONTROL_SELECTOR_ENABLED = 5;
 };
