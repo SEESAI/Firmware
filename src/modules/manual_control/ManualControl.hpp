@@ -149,5 +149,4 @@ private:
 	bool _mav_control_source_button_prev_state[MAX_MANUAL_INPUT_COUNT] {false};
 	bool _control_source_toggled_rc{false};
 	orb_advert_t _mavlink_log_pub{nullptr};
-	hrt_abstime _timeout{};
 };

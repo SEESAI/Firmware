@@ -59,5 +59,4 @@ private:
 	int _instance{-1};
 	uint8_t _first_valid_source{manual_control_setpoint_s::SOURCE_UNKNOWN};
 	bool _sees_desired_control{};
-	const int SEES_CONTROL_SELECTOR_ENABLED = 5;
 };
