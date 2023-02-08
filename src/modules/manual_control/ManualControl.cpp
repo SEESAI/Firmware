@@ -112,13 +112,16 @@ void ManualControl::Run()
 
 			_mav_control_source_button_prev_state[i] = manual_control_input.toggle_control_source;
 		}
+
 		_selector.updateWithNewInputSample(now, manual_control_input, i);
 	}
 
 	if (control_source_toggled) {
 		int sees_desired_control = _selector.getSeesDesiredControl();
+
 		if (sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_RC) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
+
 		} else if (sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_MAV) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to MavJoystick Control");
 		}
