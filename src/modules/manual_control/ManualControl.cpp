@@ -82,6 +82,7 @@ void ManualControl::Run()
 
 	manual_control_switches_s switches;
 	bool switches_updated = _manual_control_switches_sub.update(&switches);
+	bool control_source_toggled = false;
 
 	// ---Sees.ai--- Here, we hijacked transition switch as it's not used for our quadcopter.
 	// Toggle control source (between Mav and RC) if transition switch changes state.
@@ -90,6 +91,7 @@ void ManualControl::Run()
 
 		if (_control_source_toggled_rc) {
 			_selector.toggleControlSource();
+			control_source_toggled = true;
 		}
 	}
 
@@ -105,10 +107,20 @@ void ManualControl::Run()
 		    && _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
 			if (_mav_control_source_button_prev_state[i] == 0 && manual_control_input.toggle_control_source) {
 				_selector.toggleControlSource();
+				control_source_toggled = true;
 			}
 
 			_mav_control_source_button_prev_state[i] = manual_control_input.toggle_control_source;
-			_selector.updateWithNewInputSample(now, manual_control_input, i);
+		}
+		_selector.updateWithNewInputSample(now, manual_control_input, i);
+	}
+
+	if (control_source_toggled) {
+		int sees_desired_control = _selector.getSeesDesiredControl();
+		if (sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_RC) {
+			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
+		} else if (sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_MAV) {
+			mavlink_log_info(&_mavlink_log_pub, "Switching to MavJoystick Control");
 		}
 	}
 
@@ -136,7 +148,7 @@ void ManualControl::Run()
 			// ---Sees.ai--- Modified to check if COM_RC_MODE_IN parameter is set to enable Sees.ai control selector mods.
 			// If it is, then we allow RC switches (such as kill) to work at all times.
 			if (_selector.setpoint().data_source == manual_control_setpoint_s::SOURCE_RC
-			    || _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED;) {
+			    || _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
 				if (_previous_switches_initialized) {
 					if (switches.mode_slot != _previous_switches.mode_slot) {
 						evaluateModeSlot(switches.mode_slot);
