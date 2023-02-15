@@ -87,12 +87,14 @@ void ManualControl::Run()
 	// ---Sees.ai--- Here, we hijacked transition switch as it's not used for our quadcopter.
 	// Toggle control source (between Mav and RC) if transition switch changes state.
 	if (switches_updated && _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
-		_control_source_toggled_rc = _previous_switches.transition_switch != switches.transition_switch;
+		_control_source_toggled_rc = switches.transition_switch != _transition_switch_prev_state;
 
 		if (_control_source_toggled_rc) {
 			_selector.toggleControlSource();
 			control_source_toggled = true;
 		}
+
+		_transition_switch_prev_state = switches.transition_switch;
 	}
 
 	const hrt_abstime now = hrt_absolute_time();
@@ -103,17 +105,18 @@ void ManualControl::Run()
 
 		// ---Sees.ai--- Toggle control source (between Mav and RC) if rising edge (on Mavlink Joystick A button).
 		// Use parameter value as 'enabled?' check.
-		if (_manual_control_setpoint_subs[i].update(&manual_control_input)
-		    && _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
-			if (_mav_control_source_button_prev_state[i] == 0 && manual_control_input.toggle_control_source) {
-				_selector.toggleControlSource();
-				control_source_toggled = true;
+		if (_manual_control_setpoint_subs[i].update(&manual_control_input)) {
+			if (_param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
+				if (_mav_control_source_button_prev_state[i] == 0 && manual_control_input.toggle_control_source) {
+					_selector.toggleControlSource();
+					control_source_toggled = true;
+				}
+
+				_mav_control_source_button_prev_state[i] = manual_control_input.toggle_control_source;
 			}
 
-			_mav_control_source_button_prev_state[i] = manual_control_input.toggle_control_source;
+			_selector.updateWithNewInputSample(now, manual_control_input, i);
 		}
-
-		_selector.updateWithNewInputSample(now, manual_control_input, i);
 	}
 
 	if (control_source_toggled) {
