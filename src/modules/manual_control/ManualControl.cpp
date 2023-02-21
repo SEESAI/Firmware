@@ -89,7 +89,7 @@ void ManualControl::Run()
 	if (switches_updated && _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
 		_control_source_toggled_rc = switches.transition_switch != _transition_switch_prev_state;
 
-		if (_control_source_toggled_rc) {
+		if (_control_source_toggled_rc && _transition_switch_prev_state != manual_control_switches_s::SWITCH_POS_NONE) {
 			_selector.toggleControlSource();
 			control_source_toggled = true;
 		}
