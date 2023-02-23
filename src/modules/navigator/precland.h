@@ -160,4 +160,6 @@ private:
 	orb_advert_t _mavlink_log_pub{nullptr};
 
 	bool _fappr_tolerance_enabled{false};
+
+	bool _target_pose_stale{false};
 };

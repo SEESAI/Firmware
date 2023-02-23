@@ -120,6 +120,11 @@ PrecLand::on_active()
 
 	if (_target_pose_updated) {
 		_target_pose_valid = true;
+		_target_pose_stale = false;
+	}
+
+	if ((hrt_elapsed_time(&_target_pose.timestamp) / 1e6f) > 1.5f) {
+		_target_pose_stale = true;
 	}
 
 	if ((hrt_elapsed_time(&_target_pose.timestamp) / 1e6f) > _param_pld_btout.get()) {
@@ -286,7 +291,7 @@ PrecLand::run_state_horizontal_approach()
 	// XXX need to transform to GPS coords because mc_pos_control only looks at that
 	_map_ref.reproject(x, y, pos_sp_triplet->current.lat, pos_sp_triplet->current.lon);
 
-	pos_sp_triplet->current.alt = _approach_alt;
+	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt : _approach_alt;
 	pos_sp_triplet->current.yaw = math::radians(_param_pld_target_yaw.get());
 	pos_sp_triplet->current.yaw_valid = true;
 	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
@@ -344,7 +349,7 @@ PrecLand::run_state_descend_above_target()
 		dt_z = 0.1f;
 	}
 
-	pos_sp_triplet->current.alt = _navigator->get_global_position()->alt - dt_z;
+	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt : _navigator->get_global_position()->alt - dt_z;
 	pos_sp_triplet->current.yaw = math::radians(_param_pld_target_yaw.get());
 	pos_sp_triplet->current.yaw_valid = true;
 	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
