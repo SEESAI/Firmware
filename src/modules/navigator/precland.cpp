@@ -156,6 +156,10 @@ PrecLand::on_active()
 		run_state_fallback();
 		break;
 
+	case PrecLandState::HoldFallback:
+		run_state_hold_fallback();
+		break;
+
 	case PrecLandState::Done:
 		// nothing to do
 		break;
@@ -309,7 +313,7 @@ PrecLand::run_state_descend_above_target()
 			if (!switch_to_state_start()) {
 				mavlink_log_info(&_mavlink_log_pub, "Precland: Unable to switch to state start, number of search count: %i",
 						 _search_cnt);
-				switch_to_state_fallback();
+				switch_to_state_hold_fallback();
 			}
 		}
 
@@ -394,6 +398,12 @@ void
 PrecLand::run_state_fallback()
 {
 	// nothing to do, will land
+}
+
+void
+PrecLand::run_state_hold_fallback()
+{
+	// nothing to do, will hold until pilot intervenes
 }
 
 bool
@@ -495,6 +505,24 @@ PrecLand::switch_to_state_fallback()
 	_navigator->set_position_setpoint_triplet_updated();
 
 	_state = PrecLandState::Fallback;
+	_state_start_time = hrt_absolute_time();
+	return true;
+}
+
+bool
+PrecLand::switch_to_state_hold_fallback()
+{
+	print_state_switch_message("hold fallback");
+	PX4_INFO("Climbing to Hold at search altitude.");
+	mavlink_log_info(&_mavlink_log_pub, "Climbing to Hold at search altitude");
+	vehicle_local_position_s *vehicle_local_position = _navigator->get_local_position();
+
+	position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+	pos_sp_triplet->current.alt = vehicle_local_position->ref_alt + _param_pld_srch_alt.get();
+	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+	_navigator->set_position_setpoint_triplet_updated();
+
+	_state = PrecLandState::HoldFallback;
 	_state_start_time = hrt_absolute_time();
 	return true;
 }
