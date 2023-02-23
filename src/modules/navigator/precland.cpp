@@ -390,7 +390,7 @@ PrecLand::run_state_search()
 	if (hrt_absolute_time() - _state_start_time > _param_pld_srch_tout.get()*SEC2USEC) {
 		PX4_WARN("Search timed out");
 		mavlink_log_info(&_mavlink_log_pub, "Search timed out");
-		switch_to_state_fallback();
+		switch_to_state_hold_fallback();
 	}
 }
 
