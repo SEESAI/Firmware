@@ -349,7 +349,8 @@ PrecLand::run_state_descend_above_target()
 		dt_z = 0.1f;
 	}
 
-	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt : _navigator->get_global_position()->alt - dt_z;
+	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt :
+				      _navigator->get_global_position()->alt - dt_z;
 	pos_sp_triplet->current.yaw = math::radians(_param_pld_target_yaw.get());
 	pos_sp_triplet->current.yaw_valid = true;
 	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
