@@ -45,6 +45,7 @@
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/sees_yaw_flag.h>
 #include <lib/geo/geo.h>
 #include <lib/mathlib/math/filter/AlphaFilter.hpp>
 #include <lib/motion_planning/PositionSmoothing.hpp>
@@ -134,6 +135,7 @@ protected:
 
 	uORB::SubscriptionData<home_position_s>			_sub_home_position{ORB_ID(home_position)};
 	uORB::SubscriptionData<vehicle_status_s>		_sub_vehicle_status{ORB_ID(vehicle_status)};
+	uORB::Publication<sees_yaw_flag_s>			_pub_sees_yaw_flag{ORB_ID(sees_yaw_flag)};
 
 	State _current_state{State::none};
 	float _target_acceptance_radius{0.0f}; /**< Acceptances radius of the target */
@@ -210,6 +212,7 @@ private:
 
 	WeatherVane *_ext_yaw_handler{nullptr};	/**< external weathervane library, used to implement a yaw control law that turns the vehicle nose into the wind */
 
+	int _yaw_flag{0};
 
 	void _limitYawRate(); /**< Limits the rate of change of the yaw setpoint. */
 	bool _evaluateTriplets(); /**< Checks and sets triplets. */

@@ -159,6 +159,7 @@ set(msg_files
 	sensors_status_imu.msg
 	sensors_status.msg
 	system_power.msg
+	sees_yaw_flag.msg
 	takeoff_status.msg
 	task_stack_info.msg
 	tecs_status.msg

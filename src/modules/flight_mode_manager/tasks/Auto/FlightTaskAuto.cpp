@@ -202,11 +202,13 @@ bool FlightTaskAuto::update()
 
 	_unsmoothed_velocity_setpoint = smoothed_setpoints.unsmoothed_velocity;
 	_want_takeoff = smoothed_setpoints.unsmoothed_velocity(2) < -0.3f;
+	_yaw_flag = 0;
 
 	if (!PX4_ISFINITE(_yaw_setpoint) && !PX4_ISFINITE(_yawspeed_setpoint)) {
 		// no valid heading -> generate heading in this flight task
 		// Generate heading along trajectory if possible, otherwise hold the previous yaw setpoint
 		if (!_generateHeadingAlongTraj()) {
+			_yaw_flag += 2;
 			_yaw_setpoint = PX4_ISFINITE(_yaw_sp_prev) ? _yaw_sp_prev : _yaw;
 		}
 	}
@@ -219,6 +221,11 @@ bool FlightTaskAuto::update()
 	_limitYawRate();
 
 	_constraints.want_takeoff = _checkTakeoff();
+
+	sees_yaw_flag_s sees_yaw_flag{};
+	sees_yaw_flag.yawflag = _yaw_flag;
+	sees_yaw_flag.timestamp = hrt_absolute_time();
+	_pub_sees_yaw_flag.publish(sees_yaw_flag);
 
 	return ret;
 }
@@ -788,6 +795,7 @@ bool FlightTaskAuto::_generateHeadingAlongTraj()
 		// Generate heading from velocity vector, only if it is long enough
 		// and if the drone is far enough from the target
 		_compute_heading_from_2D_vector(_yaw_setpoint, vel_sp_xy);
+		_yaw_flag = 1;
 		res = true;
 	}
 
