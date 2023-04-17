@@ -606,22 +606,22 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 			// ---Sees.ai---
 			// Disabled vanilla DIY streams
 			// case SMARTPORT_POLL_8:
-				// /* report nav_state as DIY_NAVSTATE 2Hz */
-				// if (now_ms - lastNAV_STATE_ms > 500) {
-				// 	lastNAV_STATE_ms = now_ms;
-				// 	/* send T1 */
-				// 	sPort_send_NAV_STATE(uart);
-				// 	sentPackets++;
-				// }
+			// /* report nav_state as DIY_NAVSTATE 2Hz */
+			// if (now_ms - lastNAV_STATE_ms > 500) {
+			// 	lastNAV_STATE_ms = now_ms;
+			// 	/* send T1 */
+			// 	sPort_send_NAV_STATE(uart);
+			// 	sentPackets++;
+			// }
 
-				// /* report satcount and fix as DIY_GPSFIX at 2Hz */
-				// else if (now_ms - lastGPS_FIX_ms > 500) {
-				// 	lastGPS_FIX_ms = now_ms;
-				// 	/* send T2 */
-				// 	sPort_send_GPS_FIX(uart);
-				// 	sentPackets++;
-				// }
-				// break;
+			// /* report satcount and fix as DIY_GPSFIX at 2Hz */
+			// else if (now_ms - lastGPS_FIX_ms > 500) {
+			// 	lastGPS_FIX_ms = now_ms;
+			// 	/* send T2 */
+			// 	sPort_send_GPS_FIX(uart);
+			// 	sentPackets++;
+			// }
+			// break;
 
 			case SMARTPORT_POLL_8:
 				if (now_ms - lastDIY_rov_ms > 200) {
@@ -630,6 +630,7 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 					sPort_send_DIY_gps_rov(uart);
 					sentPackets++;
 				}
+
 				break;
 
 			case SMARTPORT_POLL_9:
@@ -639,6 +640,7 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 					sPort_send_DIY_gps_mb(uart);
 					sentPackets++;
 				}
+
 				break;
 
 			case SMARTPORT_POLL_10:
@@ -648,6 +650,7 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 					sPort_send_DIY_rcmav(uart);
 					sentPackets++;
 				}
+
 				break;
 
 			case SMARTPORT_POLL_11:
@@ -657,6 +660,7 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 					sPort_send_DIY_flgt_mode(uart);
 					sentPackets++;
 				}
+
 				break;
 
 			case SMARTPORT_SENSOR_ID_SP2UR: {

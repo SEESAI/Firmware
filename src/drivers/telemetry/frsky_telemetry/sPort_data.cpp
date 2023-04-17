@@ -413,15 +413,18 @@ void sPort_send_DIY_rcmav(int uart)
 {
 	// OBManual Control Mode
 	uint32_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+
 	// If the input type is RC then set it to 0
 	if (control_source == manual_control_setpoint_s::SOURCE_RC) {
 		control_source = manual_control_setpoint_s::SEES_SOURCE_RC; // This equates to 0
 	}
+
 	// Else if the input type is Mavlink then set it to 1
 	else if (control_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
 		 && control_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
 		control_source = manual_control_setpoint_s::SEES_SOURCE_MAV; // This equates to 1
 	}
+
 	sPort_send_data(uart, SMARTPORT_ID_RCMAV, control_source);
 }
 
@@ -429,5 +432,6 @@ void sPort_send_DIY_flgt_mode(int uart)
 {
 	// Flight Mode
 	int16_t telem_flight_mode = get_telemetry_flight_mode(s_port_subscription_data->vehicle_status_sub.get().nav_state);
-	sPort_send_data(uart, SMARTPORT_ID_FLGT_MODE, telem_flight_mode); // send flight mode as TEMP1. This matches with OpenTX & APM
+	sPort_send_data(uart, SMARTPORT_ID_FLGT_MODE,
+			telem_flight_mode); // send flight mode as TEMP1. This matches with OpenTX & APM
 }
