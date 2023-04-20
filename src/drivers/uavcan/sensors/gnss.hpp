@@ -56,6 +56,8 @@
 #include <ardupilot/gnss/MovingBaselineData.hpp>
 #include <uavcan/equipment/gnss/RTCMStream.hpp>
 
+#include <lib/systemlib/mavlink_log.h>
+
 #include <lib/perf/perf_counter.h>
 
 #include "sensor_bridge.hpp"
@@ -93,6 +95,8 @@ private:
 	void handleInjectDataTopic();
 	bool PublishRTCMStream(const uint8_t *data, size_t data_len);
 	bool PublishMovingBaselineData(const uint8_t *data, size_t data_len);
+
+	orb_advert_t		_mavlink_log_pub{nullptr};
 
 	typedef uavcan::MethodBinder < UavcanGnssBridge *,
 		void (UavcanGnssBridge::*)(const uavcan::ReceivedDataStructure<uavcan::equipment::gnss::Auxiliary> &) >

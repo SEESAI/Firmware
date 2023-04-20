@@ -451,8 +451,12 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	report.heading = heading;
 	report.heading_offset = heading_offset;
 	report.heading_accuracy = heading_accuracy;
+	mavlink_log_warning(&_mavlink_log_pub, "NodeID = %i", msg.getSrcNodeID().get())
 
 	publish(msg.getSrcNodeID().get(), &report);
+	// if (msg.getSrcNodeID().get() == 124) {
+	// 	publish(msg.getSrcNodeID().get(), &report);
+	// }
 }
 
 void UavcanGnssBridge::update()
