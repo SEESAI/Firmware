@@ -554,7 +554,8 @@ bool ICM20602::FIFORead(const hrt_abstime &timestamp_sample, uint8_t samples)
 	if ((fifo_count_bytes >= FIFO::SIZE) || (fifo_count_samples > FIFO_MAX_SAMPLES)) {
 		perf_count(_fifo_overflow_perf);
 		FIFOReset();
-		PX4_INFO("Accel error: FIFO overflow 2");
+
+		PX4_INFO("Accel error: FIFO overflow 2: size %i/%i, count %i/%i",  int(fifo_count_bytes), int(FIFO::SIZE), int(fifo_count_samples), int(FIFO_MAX_SAMPLES));
 		return false;
 
 	} else if (fifo_count_samples == 0) {
