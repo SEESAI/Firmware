@@ -454,10 +454,9 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 
 	// Sees.ai - Definitely still differentiates NodeIDs 124 and 125 here (else wouldn't be able to publish 2 instances of GPS, but sanity checked with print to be safe)
 	// Now need to determine where the 125/124 gets lost and why.
-	publish(msg.getSrcNodeID().get(), &report);
-	// if (msg.getSrcNodeID().get() == 124) {
-	// 	publish(msg.getSrcNodeID().get(), &report);
-	// }
+	if (msg.getSrcNodeID().get() == 125) {
+		publish(msg.getSrcNodeID().get(), &report);
+	}
 }
 
 void UavcanGnssBridge::update()
