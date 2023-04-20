@@ -263,11 +263,11 @@ void ICM20602::RunImpl()
 				if (fifo_count >= FIFO::SIZE) {
 					FIFOReset();
 					perf_count(_fifo_overflow_perf);
-					PX4_INFO("Accel error: FIFO overflow");
+					PX4_INFO("Accel error: FIFO overflow 1");
 
 				} else if (fifo_count == 0) {
 					perf_count(_fifo_empty_perf);
-					PX4_INFO("Accel error: FIFO empty");
+					PX4_INFO("Accel error: FIFO empty 1");
 
 				} else {
 					// FIFO count (size in bytes) should be a multiple of the FIFO::DATA structure
@@ -554,12 +554,12 @@ bool ICM20602::FIFORead(const hrt_abstime &timestamp_sample, uint8_t samples)
 	if ((fifo_count_bytes >= FIFO::SIZE) || (fifo_count_samples > FIFO_MAX_SAMPLES)) {
 		perf_count(_fifo_overflow_perf);
 		FIFOReset();
-		PX4_INFO("Accel error: FIFO overflow");
+		PX4_INFO("Accel error: FIFO overflow 2");
 		return false;
 
 	} else if (fifo_count_samples == 0) {
 		perf_count(_fifo_empty_perf);
-		PX4_INFO("Accel error: FIFO empty");
+		PX4_INFO("Accel error: FIFO empty 2");
 		return false;
 	}
 
