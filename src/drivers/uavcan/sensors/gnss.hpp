@@ -94,7 +94,6 @@ private:
 	bool PublishRTCMStream(const uint8_t *data, size_t data_len);
 	bool PublishMovingBaselineData(const uint8_t *data, size_t data_len);
 
-
 	typedef uavcan::MethodBinder < UavcanGnssBridge *,
 		void (UavcanGnssBridge::*)(const uavcan::ReceivedDataStructure<uavcan::equipment::gnss::Auxiliary> &) >
 		AuxiliaryCbBinder;
