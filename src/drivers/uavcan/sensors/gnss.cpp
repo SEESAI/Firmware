@@ -451,6 +451,11 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	report.heading = heading;
 	report.heading_offset = heading_offset;
 	report.heading_accuracy = heading_accuracy;
+	
+	if (OK != orb_exists(ORB_ID(sensor_gps), 0) && msg.getSrcNodeID().get() == 125) {
+		PX4_INFO("Sensor gps instance 0 not available, not initializing node ID 125");
+		return;
+	}
 
 	// Sees.ai - Definitely still differentiates NodeIDs 124 and 125 here (else wouldn't be able to publish 2 instances of GPS, but sanity checked with print to be safe)
 	// Now need to determine where the 125/124 gets lost and why.
