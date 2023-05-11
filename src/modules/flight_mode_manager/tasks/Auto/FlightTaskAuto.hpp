@@ -46,6 +46,7 @@
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/sees_yaw_flag.h>
+#include <uORB/Publication.hpp>
 #include <lib/geo/geo.h>
 #include <lib/mathlib/math/filter/AlphaFilter.hpp>
 #include <lib/motion_planning/PositionSmoothing.hpp>
