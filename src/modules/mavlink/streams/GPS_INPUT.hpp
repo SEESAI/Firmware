@@ -67,7 +67,7 @@ private:
 			if (_sensor_gps_subs[i].update(&gps)) {
 				mavlink_gps_input_t msg{};
 				
-				msg.time_usec = gps.timestamp;
+				msg.time_usec = gps.time_utc_usec;
 				msg.gps_id = i;
 				msg.fix_type = gps.fix_type;
 				msg.lat = gps.lat;
