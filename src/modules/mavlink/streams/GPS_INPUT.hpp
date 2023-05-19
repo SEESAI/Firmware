@@ -30,20 +30,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
- 
+
 #ifndef GPS_INPUT_HPP
 #define GPS_INPUT_HPP
- 
+
 #include <uORB/topics/sensor_gps.h>
- 
+
 class MavlinkStreamGPSInput : public MavlinkStream
 {
 public:
 	static MavlinkStream *new_instance(Mavlink *mavlink) { return new MavlinkStreamGPSInput(mavlink); }
- 	
+
 	static constexpr const char *get_name_static() { return "GPS_INPUT"; }
 	static constexpr uint16_t get_id_static() { return MAVLINK_MSG_ID_GPS_INPUT; }
- 	
+
 	const char *get_name() const override { return get_name_static(); }
 	uint16_t get_id() override { return get_id_static(); }
 
@@ -54,20 +54,20 @@ public:
 
 private:
 	explicit MavlinkStreamGPSInput(Mavlink *mavlink) : MavlinkStream(mavlink) {}
-	
+
 	uORB::SubscriptionMultiArray<sensor_gps_s> _sensor_gps_subs{ORB_ID::sensor_gps};
-	
+
 	bool send() override
 	{
 		bool updated = false;
-		
+
 		for (int i = 0; i < _sensor_gps_subs.size(); i++) {
 			sensor_gps_s gps;
-			
+
 			if (_sensor_gps_subs[i].update(&gps)) {
 				mavlink_gps_input_t msg{};
-				
-				msg.time_usec = gps.time_utc_usec;
+
+				msg.time_usec = gps.timestamp;
 				msg.gps_id = i;
 				msg.fix_type = gps.fix_type;
 				msg.lat = gps.lat;
@@ -78,29 +78,29 @@ private:
 				msg.vn = gps.vel_n_m_s;
 				msg.ve = gps.vel_e_m_s;
 				msg.vd = gps.vel_d_m_s;
-				
+
 				if (PX4_ISFINITE(gps.heading)) {
 					if (fabsf(gps.heading) < FLT_EPSILON) {
 						msg.yaw = 36000; // Use 36000 for north.
-					
+
 					} else {
 						msg.yaw = math::degrees(matrix::wrap_2pi(gps.heading)) * 100.0f; // centidegrees
 					}
 				}
-				
+
 				mavlink_msg_gps_input_send_struct(_mavlink->get_channel(), &msg);
-				
+
 				updated = true;
 			}
 		}
-		
+
 		return updated;
 	}
 };
 
 #endif // GPS_INPUT
-				
-	
- 
- 
- 	
+
+
+
+
+
