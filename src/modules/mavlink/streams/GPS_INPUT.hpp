@@ -68,6 +68,7 @@ private:
 				mavlink_gps_input_t msg{};
 
 				msg.time_usec = gps.timestamp;
+				msg.time_utc_usec = gps.time_utc_usec;
 				msg.gps_id = i;
 				msg.fix_type = gps.fix_type;
 				msg.lat = gps.lat;
@@ -78,6 +79,8 @@ private:
 				msg.vn = gps.vel_n_m_s;
 				msg.ve = gps.vel_e_m_s;
 				msg.vd = gps.vel_d_m_s;
+				msg.horiz_accuracy = gps.eph;
+				msg.vert_accuracy = gps.epv;
 
 				if (PX4_ISFINITE(gps.heading)) {
 					if (fabsf(gps.heading) < FLT_EPSILON) {
