@@ -291,10 +291,12 @@ PrecLand::run_state_horizontal_approach()
 	_map_ref.reproject(x, y, pos_sp_triplet->current.lat, pos_sp_triplet->current.lon);
 
 	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt : _approach_alt;
+
 	if (_param_pld_target_yaw.get() >= 0 && _param_pld_target_yaw.get() < 360)  {
 		pos_sp_triplet->current.yaw = math::radians(_param_pld_target_yaw.get());
 		pos_sp_triplet->current.yaw_valid = true;
 	}
+
 	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
 
 	_navigator->set_position_setpoint_triplet_updated();
@@ -349,10 +351,12 @@ PrecLand::run_state_descend_above_target()
 
 	pos_sp_triplet->current.alt = _target_pose_stale ? _navigator->get_global_position()->alt :
 				      _navigator->get_global_position()->alt - dt_z;
+
 	if (_param_pld_target_yaw.get() >= 0 && _param_pld_target_yaw.get() < 360)  {
 		pos_sp_triplet->current.yaw = math::radians(_param_pld_target_yaw.get());
 		pos_sp_triplet->current.yaw_valid = true;
 	}
+
 	pos_sp_triplet->current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
 
 	_navigator->set_position_setpoint_triplet_updated();
