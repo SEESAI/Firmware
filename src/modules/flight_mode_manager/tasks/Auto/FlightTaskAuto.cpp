@@ -573,6 +573,7 @@ void FlightTaskAuto::_set_heading_from_mode()
 		// This prevents excessive yawing.
 		if (_type == WaypointType::takeoff && _target_acceptance_radius < 0.5f) {
 			_target_acceptance_radius = 1.0;
+			PX4_INFO("Acceptance Radius corrected to 1.0m");
 		}
 
 		if (v.longerThan(_target_acceptance_radius)) {
