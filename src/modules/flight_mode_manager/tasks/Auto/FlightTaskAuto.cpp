@@ -313,6 +313,7 @@ void FlightTaskAuto::_limitYawRate()
 
 		if (!PX4_ISFINITE(_yawspeed_setpoint) && (_deltatime > FLT_EPSILON)) {
 			// Create a feedforward using the filtered derivative
+			_yaw_flag = + 4;
 			_yawspeed_filter.setParameters(_deltatime, .2f);
 			_yawspeed_filter.update(dyaw);
 			_yawspeed_setpoint = _yawspeed_filter.getState() / _deltatime;
@@ -536,6 +537,7 @@ void FlightTaskAuto::_set_heading_from_mode()
 {
 
 	Vector2f v; // Vector that points towards desired location
+	_yaw_flag += 8;
 
 	switch (_param_mpc_yaw_mode.get()) {
 
@@ -569,6 +571,10 @@ void FlightTaskAuto::_set_heading_from_mode()
 		// We only adjust yaw if vehicle is outside of acceptance radius. Once we enter acceptance
 		// radius, lock yaw to current yaw.
 		// This prevents excessive yawing.
+		if (_type == WaypointType::takeoff && _target_acceptance_radius < 0.5f) {
+			_target_acceptance_radius = 1.0;
+		}
+
 		if (v.longerThan(_target_acceptance_radius)) {
 			if (_compute_heading_from_2D_vector(_yaw_setpoint, v)) {
 				_yaw_lock = true;
