@@ -313,7 +313,7 @@ void FlightTaskAuto::_limitYawRate()
 
 		if (!PX4_ISFINITE(_yawspeed_setpoint) && (_deltatime > FLT_EPSILON)) {
 			// Create a feedforward using the filtered derivative
-			_yaw_flag = + 4;
+			_yaw_flag += 4;
 			_yawspeed_filter.setParameters(_deltatime, .2f);
 			_yawspeed_filter.update(dyaw);
 			_yawspeed_setpoint = _yawspeed_filter.getState() / _deltatime;
@@ -802,7 +802,7 @@ bool FlightTaskAuto::_generateHeadingAlongTraj()
 		// Generate heading from velocity vector, only if it is long enough
 		// and if the drone is far enough from the target
 		_compute_heading_from_2D_vector(_yaw_setpoint, vel_sp_xy);
-		_yaw_flag = 1;
+		_yaw_flag += 1;
 		res = true;
 	}
 
