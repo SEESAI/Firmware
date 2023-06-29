@@ -201,9 +201,14 @@ void sPort_send_CUR(int uart)
 {
 	/* Hijacked to send Data Source type (Mav/RC Control)(David @sees.ai) */
 	uint32_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
 
 	// If the input type is RC then set it to 0
-	if (control_source == manual_control_setpoint_s::SOURCE_RC) {
+	if (hrt_absolute_time() - control_source_timestamp > 1'000'000) {
+		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE;
+	}
+
+	else if (control_source == manual_control_setpoint_s::SOURCE_RC) {
 		control_source = 10 * manual_control_setpoint_s::SEES_SOURCE_RC; // This equates to 0
 	}
 
