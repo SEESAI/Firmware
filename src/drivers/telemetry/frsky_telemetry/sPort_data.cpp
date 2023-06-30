@@ -203,7 +203,7 @@ void sPort_send_CUR(int uart)
 	int16_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
 	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
 
-	if (hrt_absolute_time() - control_source_timestamp > 1'000'000) {
+	if (hrt_absolute_time() - control_source_timestamp > 500'000) {
 		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE;
 	}
 
@@ -420,7 +420,7 @@ void sPort_send_DIY_rcmav(int uart)
 	int16_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
 	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
 
-	if (hrt_absolute_time() - control_source_timestamp > 1'000'000) {
+	if (hrt_absolute_time() - control_source_timestamp > 500'000) {
 		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE;
 	}
 
