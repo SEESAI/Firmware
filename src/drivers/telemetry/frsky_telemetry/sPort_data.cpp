@@ -200,10 +200,10 @@ void sPort_send_BATV(int uart)
 void sPort_send_CUR(int uart)
 {
 	/* Hijacked to send Data Source type (Mav/RC Control)(David @sees.ai) */
-	int control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
-	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
+	int16_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
 
-	if (!control_source_valid) {
+	if (hrt_absolute_time() - control_source_timestamp > 1'000'000) {
 		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE;
 	}
 
@@ -417,10 +417,10 @@ void sPort_send_DIY_gps_mb(int uart)
 void sPort_send_DIY_rcmav(int uart)
 {
 	// OBManual Control Mode
-	int control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
-	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
+	int16_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
 
-	if (!control_source_valid) {
+	if (hrt_absolute_time() - control_source_timestamp > 1'000'000) {
 		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE;
 	}
 
@@ -435,7 +435,6 @@ void sPort_send_DIY_rcmav(int uart)
 		control_source = manual_control_setpoint_s::SEES_SOURCE_MAV; // This equates to 2
 	}
 
-	PX4_INFO("value = %i", control_source);
 	sPort_send_data(uart, SMARTPORT_ID_RCMAV, control_source);
 }
 
