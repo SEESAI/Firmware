@@ -200,7 +200,7 @@ void sPort_send_BATV(int uart)
 void sPort_send_CUR(int uart)
 {
 	/* Hijacked to send Data Source type (Mav/RC Control)(David @sees.ai) */
-	int32_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+	int control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
 	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
 
 	if (!control_source_valid) {
@@ -417,7 +417,7 @@ void sPort_send_DIY_gps_mb(int uart)
 void sPort_send_DIY_rcmav(int uart)
 {
 	// OBManual Control Mode
-	int32_t control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
+	int control_source = s_port_subscription_data->manual_control_setpoint_sub.get().data_source;
 	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
 
 	if (!control_source_valid) {
