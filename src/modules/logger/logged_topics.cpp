@@ -98,9 +98,9 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic("tecs_status", 200);
 	add_topic("trajectory_setpoint", 200);
 	add_topic("transponder_report");
-	add_topic("vehicle_acceleration", 20);
+	add_topic("vehicle_acceleration", 50);
 	add_topic("vehicle_air_data", 200);
-	add_topic("vehicle_angular_velocity", 50);
+	add_topic("vehicle_angular_velocity", 20);
 	add_topic("vehicle_attitude", 50);
 	add_topic("vehicle_attitude_setpoint", 50);
 	add_topic("vehicle_command");
@@ -142,16 +142,15 @@ void LoggedTopics::add_default_topics()
 
 	// always add the first instance
 	add_topic("estimator_baro_bias", 500);
-	add_topic("estimator_event_flags", 0);				// Sees.ai - Reduced rate to minimise logging load
+	add_topic("estimator_event_flags", 0);
 	add_topic("estimator_gps_status", 1000);
 	add_topic("estimator_innovation_test_ratios", 500);
 	add_topic("estimator_innovation_variances", 500);
 	add_topic("estimator_innovations", 500);
 	add_topic("estimator_optical_flow_vel", 200);
-	add_topic("estimator_sensor_bias", 0);				// Sees.ai - Reduced rate to minimise logging load
-	add_topic("estimator_states", 1000);
+	add_topic("estimator_sensor_bias", 0);
 	add_topic("estimator_status", 200);
-	add_topic("estimator_status_flags", 0);				// Sees.ai - Reduced rate to minimise logging load
+	add_topic("estimator_status_flags", 0);
 	add_topic("estimator_visual_odometry_aligned", 200);
 	add_topic("yaw_estimator_status", 1000);
 
@@ -249,7 +248,7 @@ void LoggedTopics::add_high_rate_topics()
 	add_topic("actuator_outputs");
 	add_topic("manual_control_setpoint");
 	add_topic("rate_ctrl_status", 20);
-	add_topic("rate_ctrl_status_detail");
+	add_topic("rate_ctrl_status_detail");				// Sees.ai - Added topic for rate loop tuning
 	add_topic("sensor_combined");
 	add_topic("vehicle_angular_acceleration");
 	add_topic("vehicle_angular_velocity");
