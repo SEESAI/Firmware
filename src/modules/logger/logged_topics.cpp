@@ -149,6 +149,7 @@ void LoggedTopics::add_default_topics()
 	add_topic("estimator_innovations", 500);
 	add_topic("estimator_optical_flow_vel", 200);
 	add_topic("estimator_sensor_bias", 0);
+	add_topic("estimator_states", 1000);
 	add_topic("estimator_status", 200);
 	add_topic("estimator_status_flags", 0);
 	add_topic("estimator_visual_odometry_aligned", 200);
