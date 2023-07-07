@@ -204,8 +204,9 @@ void sPort_send_CUR(int uart)
 	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
 	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
 
+	// If the input has been invalid for >0.5s, then set it to 0
 	if ((!control_source_valid) && (hrt_absolute_time() - control_source_timestamp > 500'000)) {
-		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE;
+		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE; // This equates to 0
 	}
 
 	// If the input type is RC then set it to 1
@@ -422,8 +423,9 @@ void sPort_send_DIY_rcmav(int uart)
 	hrt_abstime control_source_timestamp = s_port_subscription_data->manual_control_setpoint_sub.get().timestamp;
 	bool control_source_valid = s_port_subscription_data->manual_control_setpoint_sub.get().valid;
 
+	// If the input has been invalid for >0.5s, then set it to 0
 	if ((!control_source_valid) && (hrt_absolute_time() - control_source_timestamp > 500'000)) {
-		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE;
+		control_source = manual_control_setpoint_s::SEES_SOURCE_NONE; // This equates to 0
 	}
 
 	// If the input type is RC then set it to 1

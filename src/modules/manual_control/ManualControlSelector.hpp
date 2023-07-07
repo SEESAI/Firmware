@@ -48,8 +48,11 @@ public:
 
 	// ---Sees.ai--- Added this member function to facilitate toggling between control source.
 	//void toggleControlSource() {_sees_desired_control = !_sees_desired_control; };
-	void toggleControlSource() {_sees_desired_control = _sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_MAV ?
-					manual_control_setpoint_s::SEES_SOURCE_RC : manual_control_setpoint_s::SEES_SOURCE_MAV;}
+	void toggleControlSource()
+	{
+		_sees_desired_control = _sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_MAV ?
+					manual_control_setpoint_s::SEES_SOURCE_RC : manual_control_setpoint_s::SEES_SOURCE_MAV;
+	}
 	void setControlSourceRC() {_sees_desired_control = manual_control_setpoint_s::SEES_SOURCE_RC;} ;
 	bool getSeesDesiredControl() {return _sees_desired_control;};
 
