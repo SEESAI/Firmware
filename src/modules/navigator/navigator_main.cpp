@@ -982,7 +982,14 @@ void Navigator::publish_position_setpoint_triplet()
 
 float Navigator::get_default_acceptance_radius()
 {
-	return _param_nav_acc_rad.get();
+	float acceptance_radius = _param_nav_acc_rad.get();
+
+	if (acceptance_radius < 0.4f || acceptance_radius > 1.f) {
+		acceptance_radius = 1.0;
+		PX4_INFO("Acceptance radius corrected to 1.0");
+	}
+
+	return acceptance_radius;
 }
 
 float Navigator::get_default_altitude_acceptance_radius()
