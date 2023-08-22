@@ -571,13 +571,14 @@ void FlightTaskAuto::_set_heading_from_mode()
 		// We only adjust yaw if vehicle is outside of acceptance radius. Once we enter acceptance
 		// radius, lock yaw to current yaw.
 		// This prevents excessive yawing.
-		if (_type == WaypointType::takeoff && _target_acceptance_radius < 0.5f) {
-			_target_acceptance_radius = 0.9;
-			PX4_INFO("Acceptance Radius corrected to 0.9m");
-		}
+		// if (_type == WaypointType::takeoff && _target_acceptance_radius < 0.5f) {
+		// 	_target_acceptance_radius = 0.9;
+		// 	PX4_INFO("Acceptance Radius corrected to 0.9m");
+		// }
 
 		if (v.longerThan(_target_acceptance_radius)) {
 			if (_compute_heading_from_2D_vector(_yaw_setpoint, v)) {
+				PX4_INFO("Here 1, acc rad = %f", double(_target_acceptance_radius));
 				_yaw_lock = true;
 			}
 		}
@@ -802,6 +803,7 @@ bool FlightTaskAuto::_generateHeadingAlongTraj()
 		// Generate heading from velocity vector, only if it is long enough
 		// and if the drone is far enough from the target
 		_compute_heading_from_2D_vector(_yaw_setpoint, vel_sp_xy);
+		PX4_INFO("Here 2");
 		_yaw_flag += 1;
 		res = true;
 	}

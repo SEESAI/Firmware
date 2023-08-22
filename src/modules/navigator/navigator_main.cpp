@@ -984,9 +984,11 @@ float Navigator::get_default_acceptance_radius()
 {
 	float acceptance_radius = _param_nav_acc_rad.get();
 
-	if (acceptance_radius < 0.4f || acceptance_radius > 1.f) {
+	if (acceptance_radius < 0.2f || acceptance_radius > 2.5f) {
+		PX4_INFO("Acceptance radius corrected from %f to 1.0", double(acceptance_radius));
+		float temp = 1.0;
+		param_set(param_find("NAV_ACC_RAD"), &temp);
 		acceptance_radius = 1.0;
-		PX4_INFO("Acceptance radius corrected to 1.0");
 	}
 
 	return acceptance_radius;
