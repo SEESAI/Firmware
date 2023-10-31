@@ -119,6 +119,7 @@ protected:
 		param_t v_load_drop;
 		param_t r_internal;
 		param_t low_thr;
+		param_t crit_v;
 		param_t crit_thr;
 		param_t emergen_thr;
 		param_t source;
@@ -133,6 +134,7 @@ protected:
 		float v_load_drop;
 		float r_internal;
 		float low_thr;
+		float crit_v;
 		float crit_thr;
 		float emergen_thr;
 		int32_t source;
