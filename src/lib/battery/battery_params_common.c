@@ -61,7 +61,7 @@ PARAM_DEFINE_FLOAT(BAT_LOW_THR, 0.15f);
  * This triggers a pilot warning only.
  *
  * @group Battery Calibration
- * @unit norm
+ * @unit V
  * @min 0.05
  * @max 4.00
  * @decimal 3
