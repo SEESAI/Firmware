@@ -149,9 +149,10 @@ private:
 	bool _video_recording {false}; // TODO: hopefully there is a command soon to toggle without keeping state
 
 	sees_manual_control_data_s _sees_manual_control_data{};
+	manual_control_setpoint_s _sees_manual_control_inputs[MAX_MANUAL_INPUT_COUNT] {};
 	bool _mav_control_source_button_prev_state[MAX_MANUAL_INPUT_COUNT] {false};
-	bool _mav_control_sources_valid[MAX_MANUAL_INPUT_COUNT] {false};
-	bool _rc_control_sources_valid[MAX_MANUAL_INPUT_COUNT] {false};
+	// bool _mav_control_sources_valid[MAX_MANUAL_INPUT_COUNT] {false};
+	// bool _rc_control_sources_valid[MAX_MANUAL_INPUT_COUNT] {false};
 	bool _control_source_toggled_rc{false};
 	int _transition_switch_prev_state{};
 	orb_advert_t _mavlink_log_pub{nullptr};

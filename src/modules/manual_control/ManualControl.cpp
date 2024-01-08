@@ -109,6 +109,8 @@ void ManualControl::Run()
 		// ---Sees.ai--- Toggle control source (between Mav and RC) if rising edge (on Mavlink Joystick A button).
 		// Use parameter value as 'enabled?' check.
 		if (_manual_control_setpoint_subs[i].update(&manual_control_input)) {
+			_sees_manual_control_inputs[i] = manual_control_input;
+
 			if (_param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
 				if (_mav_control_source_button_prev_state[i] == 0 && manual_control_input.toggle_control_source) {
 					_selector.toggleControlSource();
@@ -118,30 +120,30 @@ void ManualControl::Run()
 				_mav_control_source_button_prev_state[i] = manual_control_input.toggle_control_source;
 			}
 
-			if (_selector.isInputUpdating(manual_control_input, now)
-			    && manual_control_input.data_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
-			    && manual_control_input.data_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
-				// valid_mavlink_setpoint_count += 1;
-				_mav_control_sources_valid[i] = true;
-
-			} else if (_selector.isInputUpdating(manual_control_input, now)
-				   && manual_control_input.data_source >= manual_control_setpoint_s::SOURCE_RC) {
-				// valid_rc_setpoint_count += 1;
-				_rc_control_sources_valid[i] = true;
-
-			} else {
-				_mav_control_sources_valid[i] = false;
-				_rc_control_sources_valid[i] = false;
-			}
-
 			// mavlink_count += _selector.isInputUpdatingAndMavlink(manual_control_input, now);
 			_selector.updateWithNewInputSample(now, manual_control_input, i);
 		}
 	}
 
 	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
-		valid_mavlink_setpoint_count += _mav_control_sources_valid[i];
-		valid_rc_setpoint_count += _rc_control_sources_valid[i];
+		if (_selector.isInputUpdating(_sees_manual_control_inputs[i], now)
+		    && _sees_manual_control_inputs[i].data_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
+		    && _sees_manual_control_inputs[i].data_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
+			valid_mavlink_setpoint_count += 1;
+			// _mav_control_sources_valid[i] = true;
+
+		} else if (_selector.isInputUpdating(_sees_manual_control_inputs[i], now)
+			   && _sees_manual_control_inputs[i].data_source >= manual_control_setpoint_s::SOURCE_RC) {
+			valid_rc_setpoint_count += 1;
+			// _rc_control_sources_valid[i] = true;
+
+		} // else {
+
+		// 	_mav_control_sources_valid[i] = false;
+		// 	_rc_control_sources_valid[i] = false;
+		// }
+		// valid_mavlink_setpoint_count += _mav_control_sources_valid[i];
+		// valid_rc_setpoint_count += _rc_control_sources_valid[i];
 	}
 
 	if (control_source_toggled) {
