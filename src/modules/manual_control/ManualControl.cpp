@@ -121,16 +121,27 @@ void ManualControl::Run()
 			if (_selector.isInputUpdating(manual_control_input, now)
 			    && manual_control_input.data_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
 			    && manual_control_input.data_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
-				valid_mavlink_setpoint_count += 1;
+				// valid_mavlink_setpoint_count += 1;
+				_mav_control_sources_valid[i] = true;
 
 			} else if (_selector.isInputUpdating(manual_control_input, now)
 				   && manual_control_input.data_source >= manual_control_setpoint_s::SOURCE_RC) {
-				valid_rc_setpoint_count += 1;
+				// valid_rc_setpoint_count += 1;
+				_rc_control_sources_valid[i] = true;
+
+			} else {
+				_mav_control_sources_valid[i] = false;
+				_rc_control_sources_valid[i] = false;
 			}
 
 			// mavlink_count += _selector.isInputUpdatingAndMavlink(manual_control_input, now);
 			_selector.updateWithNewInputSample(now, manual_control_input, i);
 		}
+	}
+
+	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
+		valid_mavlink_setpoint_count += _mav_control_sources_valid[i];
+		valid_rc_setpoint_count += _rc_control_sources_valid[i];
 	}
 
 	if (control_source_toggled) {
