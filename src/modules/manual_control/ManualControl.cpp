@@ -152,6 +152,12 @@ void ManualControl::Run()
 		}
 	}
 
+	// ---Sees.ai--- The RC Switch execution has been moved to a method.
+	// Here, switches work whenever there is a valid rc setpoint and we have Sees behaviour enabled.
+	if (_param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED && valid_rc_setpoint_count > 0) {
+		rc_switches_execute(switches_updated, switches, now);
+	}
+
 	if (_selector.setpoint().valid) {
 		_published_invalid_once = false;
 
@@ -171,125 +177,10 @@ void ManualControl::Run()
 
 		_selector.setpoint().sticks_moving = rpy_moving || throttle_moving;
 
-		if (switches_updated) {
-			// Only use switches if current source is RC as well.
-			// ---Sees.ai--- Modified to check if COM_RC_MODE_IN parameter is set to enable Sees.ai control selector mods.
-			// If it is, then we allow RC switches (such as kill) to work at all times.
-			if (_selector.setpoint().data_source == manual_control_setpoint_s::SOURCE_RC
-			    || _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
-				if (_previous_switches_initialized) {
-					if (switches.mode_slot != _previous_switches.mode_slot) {
-						evaluateModeSlot(switches.mode_slot);
-						// ---Sees.ai--- If the RC Flight Mode switch changes, revert to RC control.
-						// i.e if safety pilot switches to Position Control, then give them control.
-						_selector.setControlSourceRC();
-					}
-
-					if (_param_com_arm_swisbtn.get()) {
-						// Arming button
-						const bool previous_button_hysteresis = _button_hysteresis.get_state();
-						_button_hysteresis.set_state_and_update(switches.arm_switch == manual_control_switches_s::SWITCH_POS_ON, now);
-
-						if (!previous_button_hysteresis && _button_hysteresis.get_state()) {
-							sendActionRequest(action_request_s::ACTION_TOGGLE_ARMING, action_request_s::SOURCE_RC_BUTTON);
-						}
-
-					} else {
-						// Arming switch
-						if (switches.arm_switch != _previous_switches.arm_switch) {
-							if (switches.arm_switch == manual_control_switches_s::SWITCH_POS_ON) {
-								sendActionRequest(action_request_s::ACTION_ARM, action_request_s::SOURCE_RC_SWITCH);
-
-							} else if (switches.arm_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-								sendActionRequest(action_request_s::ACTION_DISARM, action_request_s::SOURCE_RC_SWITCH);
-							}
-						}
-					}
-
-					if (switches.return_switch != _previous_switches.return_switch) {
-						if (switches.return_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							sendActionRequest(action_request_s::ACTION_SWITCH_MODE, action_request_s::SOURCE_RC_SWITCH,
-									  commander_state_s::MAIN_STATE_AUTO_RTL);
-
-						} else if (switches.return_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-							evaluateModeSlot(switches.mode_slot);
-						}
-					}
-
-					if (switches.loiter_switch != _previous_switches.loiter_switch) {
-						if (switches.loiter_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							sendActionRequest(action_request_s::ACTION_SWITCH_MODE, action_request_s::SOURCE_RC_SWITCH,
-									  commander_state_s::MAIN_STATE_AUTO_LOITER);
-
-						} else if (switches.loiter_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-							evaluateModeSlot(switches.mode_slot);
-						}
-					}
-
-					if (switches.offboard_switch != _previous_switches.offboard_switch) {
-						if (switches.offboard_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							sendActionRequest(action_request_s::ACTION_SWITCH_MODE, action_request_s::SOURCE_RC_SWITCH,
-									  commander_state_s::MAIN_STATE_OFFBOARD);
-
-						} else if (switches.offboard_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-							evaluateModeSlot(switches.mode_slot);
-						}
-					}
-
-					if (switches.kill_switch != _previous_switches.kill_switch) {
-						if (switches.kill_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							sendActionRequest(action_request_s::ACTION_KILL, action_request_s::SOURCE_RC_SWITCH);
-
-						} else if (switches.kill_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-							sendActionRequest(action_request_s::ACTION_UNKILL, action_request_s::SOURCE_RC_SWITCH);
-						}
-					}
-
-					if (switches.gear_switch != _previous_switches.gear_switch
-					    && _previous_switches.gear_switch != manual_control_switches_s::SWITCH_POS_NONE) {
-
-						if (switches.gear_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							publishLandingGear(landing_gear_s::GEAR_UP);
-
-						} else if (switches.gear_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-							publishLandingGear(landing_gear_s::GEAR_DOWN);
-						}
-					}
-
-					if (switches.transition_switch != _previous_switches.transition_switch) {
-						if (switches.transition_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							sendActionRequest(action_request_s::ACTION_VTOL_TRANSITION_TO_FIXEDWING, action_request_s::SOURCE_RC_SWITCH);
-
-						} else if (switches.transition_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-							sendActionRequest(action_request_s::ACTION_VTOL_TRANSITION_TO_MULTICOPTER, action_request_s::SOURCE_RC_SWITCH);
-						}
-					}
-
-					if (switches.photo_switch != _previous_switches.photo_switch) {
-						if (switches.photo_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							send_camera_mode_command(CameraMode::Image);
-							send_photo_command();
-						}
-					}
-
-					if (switches.video_switch != _previous_switches.video_switch) {
-						if (switches.video_switch == manual_control_switches_s::SWITCH_POS_ON) {
-							send_camera_mode_command(CameraMode::Video);
-							send_video_command();
-						}
-					}
-
-				} else {
-					// Send an initial request to switch to the mode requested by RC
-					evaluateModeSlot(switches.mode_slot);
-				}
-
-				_previous_switches_initialized = true;
-				_previous_switches = switches;
-
-			} else {
-				_previous_switches_initialized = false;
-			}
+		// ---Sees.ai--- The RC Switch execution has been moved to a method.
+		// Here, switches work with vanilla behaviour provided SEES_SOURCE_SELECTOR_ENABLED is not set in the relevant param.
+		if (switches_updated && _param_com_rc_in_mode.get() != SEES_SOURCE_SELECTOR_ENABLED) {
+			rc_switches_execute(switches_updated, switches, now);
 		}
 
 		_selector.setpoint().timestamp = now;
@@ -341,6 +232,131 @@ void ManualControl::Run()
 	ScheduleDelayed(200_ms);
 
 	perf_end(_loop_perf);
+}
+
+void ManualControl::rc_switches_execute(bool switches_updated, const manual_control_switches_s &switches,
+					hrt_abstime now)
+{
+	if (switches_updated) {
+		// Only use switches if current source is RC as well.
+		// ---Sees.ai--- Modified to check if COM_RC_MODE_IN parameter is set to enable Sees.ai control selector mods.
+		// If it is, then we allow RC switches (such as kill) to work at all times.
+		if (_selector.setpoint().data_source == manual_control_setpoint_s::SOURCE_RC
+		    || _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
+			if (_previous_switches_initialized) {
+				if (switches.mode_slot != _previous_switches.mode_slot) {
+					evaluateModeSlot(switches.mode_slot);
+					// ---Sees.ai--- If the RC Flight Mode switch changes, revert to RC control.
+					// i.e if safety pilot switches to Position Control, then give them control.
+					_selector.setControlSourceRC();
+				}
+
+				if (_param_com_arm_swisbtn.get()) {
+					// Arming button
+					const bool previous_button_hysteresis = _button_hysteresis.get_state();
+					_button_hysteresis.set_state_and_update(switches.arm_switch == manual_control_switches_s::SWITCH_POS_ON, now);
+
+					if (!previous_button_hysteresis && _button_hysteresis.get_state()) {
+						sendActionRequest(action_request_s::ACTION_TOGGLE_ARMING, action_request_s::SOURCE_RC_BUTTON);
+					}
+
+				} else {
+					// Arming switch
+					if (switches.arm_switch != _previous_switches.arm_switch) {
+						if (switches.arm_switch == manual_control_switches_s::SWITCH_POS_ON) {
+							sendActionRequest(action_request_s::ACTION_ARM, action_request_s::SOURCE_RC_SWITCH);
+
+						} else if (switches.arm_switch == manual_control_switches_s::SWITCH_POS_OFF) {
+							sendActionRequest(action_request_s::ACTION_DISARM, action_request_s::SOURCE_RC_SWITCH);
+						}
+					}
+				}
+
+				if (switches.return_switch != _previous_switches.return_switch) {
+					if (switches.return_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						sendActionRequest(action_request_s::ACTION_SWITCH_MODE, action_request_s::SOURCE_RC_SWITCH,
+								  commander_state_s::MAIN_STATE_AUTO_RTL);
+
+					} else if (switches.return_switch == manual_control_switches_s::SWITCH_POS_OFF) {
+						evaluateModeSlot(switches.mode_slot);
+					}
+				}
+
+				if (switches.loiter_switch != _previous_switches.loiter_switch) {
+					if (switches.loiter_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						sendActionRequest(action_request_s::ACTION_SWITCH_MODE, action_request_s::SOURCE_RC_SWITCH,
+								  commander_state_s::MAIN_STATE_AUTO_LOITER);
+
+					} else if (switches.loiter_switch == manual_control_switches_s::SWITCH_POS_OFF) {
+						evaluateModeSlot(switches.mode_slot);
+					}
+				}
+
+				if (switches.offboard_switch != _previous_switches.offboard_switch) {
+					if (switches.offboard_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						sendActionRequest(action_request_s::ACTION_SWITCH_MODE, action_request_s::SOURCE_RC_SWITCH,
+								  commander_state_s::MAIN_STATE_OFFBOARD);
+
+					} else if (switches.offboard_switch == manual_control_switches_s::SWITCH_POS_OFF) {
+						evaluateModeSlot(switches.mode_slot);
+					}
+				}
+
+				if (switches.kill_switch != _previous_switches.kill_switch) {
+					if (switches.kill_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						sendActionRequest(action_request_s::ACTION_KILL, action_request_s::SOURCE_RC_SWITCH);
+
+					} else if (switches.kill_switch == manual_control_switches_s::SWITCH_POS_OFF) {
+						sendActionRequest(action_request_s::ACTION_UNKILL, action_request_s::SOURCE_RC_SWITCH);
+					}
+				}
+
+				if (switches.gear_switch != _previous_switches.gear_switch
+				    && _previous_switches.gear_switch != manual_control_switches_s::SWITCH_POS_NONE) {
+
+					if (switches.gear_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						publishLandingGear(landing_gear_s::GEAR_UP);
+
+					} else if (switches.gear_switch == manual_control_switches_s::SWITCH_POS_OFF) {
+						publishLandingGear(landing_gear_s::GEAR_DOWN);
+					}
+				}
+
+				if (switches.transition_switch != _previous_switches.transition_switch) {
+					if (switches.transition_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						sendActionRequest(action_request_s::ACTION_VTOL_TRANSITION_TO_FIXEDWING, action_request_s::SOURCE_RC_SWITCH);
+
+					} else if (switches.transition_switch == manual_control_switches_s::SWITCH_POS_OFF) {
+						sendActionRequest(action_request_s::ACTION_VTOL_TRANSITION_TO_MULTICOPTER, action_request_s::SOURCE_RC_SWITCH);
+					}
+				}
+
+				if (switches.photo_switch != _previous_switches.photo_switch) {
+					if (switches.photo_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						send_camera_mode_command(CameraMode::Image);
+						send_photo_command();
+					}
+				}
+
+				if (switches.video_switch != _previous_switches.video_switch) {
+					if (switches.video_switch == manual_control_switches_s::SWITCH_POS_ON) {
+						send_camera_mode_command(CameraMode::Video);
+						send_video_command();
+					}
+				}
+
+			} else {
+				// Send an initial request to switch to the mode requested by RC
+				evaluateModeSlot(switches.mode_slot);
+			}
+
+			_previous_switches_initialized = true;
+			_previous_switches = switches;
+
+		} else {
+			_previous_switches_initialized = false;
+		}
+	}
 }
 
 void ManualControl::processStickArming(const manual_control_setpoint_s &input)

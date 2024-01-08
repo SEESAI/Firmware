@@ -85,6 +85,7 @@ private:
 	void evaluateModeSlot(uint8_t mode_slot);
 	void sendActionRequest(int8_t action, int8_t source, int8_t mode = 0);
 	void publishLandingGear(int8_t action);
+	void rc_switches_execute(bool switches_updated, const manual_control_switches_s &switches, hrt_abstime now);
 
 	uORB::Publication<action_request_s> _action_request_pub{ORB_ID(action_request)};
 	uORB::Publication<landing_gear_s> _landing_gear_pub{ORB_ID(landing_gear)};
