@@ -43,20 +43,18 @@ public:
 	void setTimeout(uint64_t timeout) { _timeout = timeout; }
 	void updateValidityOfChosenInput(uint64_t now);
 	void updateWithNewInputSample(uint64_t now, const manual_control_setpoint_s &input, int instance);
-	// bool isInputUpdatingAndMavlink(const manual_control_setpoint_s &input, uint64_t now) const;
 	bool isInputUpdating(const manual_control_setpoint_s &input, uint64_t now) const;
 	manual_control_setpoint_s &setpoint();
 	int instance() const { return _instance; };
 
 	// ---Sees.ai--- Added this member function to facilitate toggling between control source.
-	// void toggleControlSource() {_sees_desired_control = !_sees_desired_control; };
 	void toggleControlSource()
 	{
 		_sees_desired_control = _sees_desired_control == manual_control_setpoint_s::SOURCE_MAVLINK_0 ?
 					manual_control_setpoint_s::SOURCE_RC : manual_control_setpoint_s::SOURCE_MAVLINK_0;
 	}
 	void setControlSourceRC() {_sees_desired_control = manual_control_setpoint_s::SOURCE_RC;} ;
-	bool getSeesDesiredControl() {return _sees_desired_control;};
+	int getSeesDesiredControl() {return _sees_desired_control;};
 
 private:
 	bool isInputValid(const manual_control_setpoint_s &input, uint64_t now) const;

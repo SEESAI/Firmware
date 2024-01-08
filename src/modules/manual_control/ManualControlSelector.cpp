@@ -101,8 +101,6 @@ bool ManualControlSelector::isInputUpdating(const manual_control_setpoint_s &inp
 	// Check for timeout
 	const bool sample_from_the_past = now >= input.timestamp_sample;
 	const bool sample_newer_than_timeout = now - input.timestamp_sample < _timeout;
-	// bool is_updating = false;
-
 
 	return sample_from_the_past && sample_newer_than_timeout;
 }

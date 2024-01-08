@@ -100,15 +100,14 @@ void ManualControl::Run()
 	const hrt_abstime now = hrt_absolute_time();
 	_selector.updateValidityOfChosenInput(now);
 
-	int valid_mavlink_setpoint_count = 0;
-	int valid_rc_setpoint_count = 0;
-
 	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
 		manual_control_setpoint_s manual_control_input;
 
 		// ---Sees.ai--- Toggle control source (between Mav and RC) if rising edge (on Mavlink Joystick A button).
 		// Use parameter value as 'enabled?' check.
 		if (_manual_control_setpoint_subs[i].update(&manual_control_input)) {
+			// We make a separate array with copies of these inputs to later check which are still updating.
+			// We do this check outside of this for-loop as this loop relies on new data from manual_control_input which isn't always the case.
 			_sees_manual_control_inputs[i] = manual_control_input;
 
 			if (_param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
@@ -120,30 +119,26 @@ void ManualControl::Run()
 				_mav_control_source_button_prev_state[i] = manual_control_input.toggle_control_source;
 			}
 
-			// mavlink_count += _selector.isInputUpdatingAndMavlink(manual_control_input, now);
 			_selector.updateWithNewInputSample(now, manual_control_input, i);
 		}
 	}
 
+	int valid_mavlink_setpoint_count = 0;
+	int valid_rc_setpoint_count = 0;
+
+	// ---Sees.ai--- Check all of the inputs to see which ones are updating and increment the Mav/RC counters accordingly.
+	// This is only used for monitoring in SeesInterface.
 	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
 		if (_selector.isInputUpdating(_sees_manual_control_inputs[i], now)
 		    && _sees_manual_control_inputs[i].data_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
 		    && _sees_manual_control_inputs[i].data_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
 			valid_mavlink_setpoint_count += 1;
-			// _mav_control_sources_valid[i] = true;
 
 		} else if (_selector.isInputUpdating(_sees_manual_control_inputs[i], now)
 			   && _sees_manual_control_inputs[i].data_source >= manual_control_setpoint_s::SOURCE_RC) {
 			valid_rc_setpoint_count += 1;
-			// _rc_control_sources_valid[i] = true;
 
-		} // else {
-
-		// 	_mav_control_sources_valid[i] = false;
-		// 	_rc_control_sources_valid[i] = false;
-		// }
-		// valid_mavlink_setpoint_count += _mav_control_sources_valid[i];
-		// valid_rc_setpoint_count += _rc_control_sources_valid[i];
+		}
 	}
 
 	if (control_source_toggled) {
