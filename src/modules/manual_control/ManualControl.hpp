@@ -46,6 +46,7 @@
 #include <uORB/topics/manual_control_switches.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/parameter_update.h>
+#include <uORB/topics/sees_manual_control_data.h>
 #include <uORB/Publication.hpp>
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/SubscriptionCallback.hpp>
@@ -97,6 +98,7 @@ private:
 	void send_video_command();
 
 	uORB::Publication<manual_control_setpoint_s> _manual_control_setpoint_pub{ORB_ID(manual_control_setpoint)};
+	uORB::Publication<sees_manual_control_data_s> _sees_manual_control_data_pub{ORB_ID(sees_manual_control_data)};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 	int _previous_manual_control_input_instance{-1};
@@ -146,6 +148,7 @@ private:
 	unsigned _image_sequence {0};
 	bool _video_recording {false}; // TODO: hopefully there is a command soon to toggle without keeping state
 
+	sees_manual_control_data_s _sees_manual_control_data{};
 	bool _mav_control_source_button_prev_state[MAX_MANUAL_INPUT_COUNT] {false};
 	bool _control_source_toggled_rc{false};
 	int _transition_switch_prev_state{};

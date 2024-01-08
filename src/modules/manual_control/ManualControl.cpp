@@ -100,6 +100,9 @@ void ManualControl::Run()
 	const hrt_abstime now = hrt_absolute_time();
 	_selector.updateValidityOfChosenInput(now);
 
+	int valid_mavlink_setpoint_count = 0;
+	int valid_rc_setpoint_count = 0;
+
 	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
 		manual_control_setpoint_s manual_control_input;
 
@@ -115,6 +118,17 @@ void ManualControl::Run()
 				_mav_control_source_button_prev_state[i] = manual_control_input.toggle_control_source;
 			}
 
+			if (_selector.isInputUpdating(manual_control_input, now)
+			    && manual_control_input.data_source >= manual_control_setpoint_s::SOURCE_MAVLINK_0
+			    && manual_control_input.data_source <= manual_control_setpoint_s::SOURCE_MAVLINK_5) {
+				valid_mavlink_setpoint_count += 1;
+
+			} else if (_selector.isInputUpdating(manual_control_input, now)
+				   && manual_control_input.data_source >= manual_control_setpoint_s::SOURCE_RC) {
+				valid_rc_setpoint_count += 1;
+			}
+
+			// mavlink_count += _selector.isInputUpdatingAndMavlink(manual_control_input, now);
 			_selector.updateWithNewInputSample(now, manual_control_input, i);
 		}
 	}
@@ -122,10 +136,10 @@ void ManualControl::Run()
 	if (control_source_toggled) {
 		int sees_desired_control = _selector.getSeesDesiredControl();
 
-		if (sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_RC) {
+		if (sees_desired_control == manual_control_setpoint_s::SOURCE_RC) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
 
-		} else if (sees_desired_control == manual_control_setpoint_s::SEES_SOURCE_MAV) {
+		} else if (sees_desired_control == manual_control_setpoint_s::SOURCE_MAVLINK_0) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to MavJoystick Control");
 		}
 	}
@@ -306,6 +320,12 @@ void ManualControl::Run()
 		_stick_disarm_hysteresis.set_state_and_update(false, now);
 		_button_hysteresis.set_state_and_update(false, now);
 	}
+
+	_sees_manual_control_data.timestamp = now;
+	_sees_manual_control_data.valid_mavlink_setpoint_count = valid_mavlink_setpoint_count;
+	_sees_manual_control_data.valid_rc_setpoint_count = valid_rc_setpoint_count;
+	_sees_manual_control_data.sees_desired_control_source = _selector.getSeesDesiredControl();
+	_sees_manual_control_data_pub.publish(_sees_manual_control_data);
 
 	_last_time = now;
 
