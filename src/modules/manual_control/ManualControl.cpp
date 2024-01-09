@@ -246,7 +246,7 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 	if (switches_updated) {
 		// Only use switches if current source is RC as well.
 		// ---Sees.ai--- Modified to check if COM_RC_MODE_IN parameter is set to enable Sees.ai control selector mods.
-		// If it is, then we allow RC switches (such as kill) to work at all times.
+		// If it is, we allow RC switches (such as kill) to work at all times.
 		if (_selector.setpoint().data_source == manual_control_setpoint_s::SOURCE_RC
 		    || _rc_in_mode == SEES_SOURCE_SELECTOR_ENABLED) {
 			if (_previous_switches_initialized) {
