@@ -19,6 +19,7 @@ jobs:
           #tests, # includes px4_sitl
           ]
         exclude:
+        - config: px4_fmu-v5_default
         - config: px4_sitl
     steps:
     - uses: actions/checkout@v1
