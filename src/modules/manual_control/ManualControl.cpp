@@ -84,7 +84,7 @@ void ManualControl::Run()
 	bool switches_updated = _manual_control_switches_sub.update(&switches);
 	bool control_source_toggled = false;
 
-	// ---Sees.ai--- Here, we hijacked transition switch as it's not used for our quadcopter.
+	// ---Sees.ai--- Here, we hijacked transition switch as it's not used for our octocopter.
 	// Toggle control source (between Mav and RC) if transition switch changes state.
 	if (switches_updated && _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
 		_control_source_toggled_rc = switches.transition_switch != _transition_switch_prev_state;
@@ -103,13 +103,14 @@ void ManualControl::Run()
 	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
 		manual_control_setpoint_s manual_control_input;
 
-		// ---Sees.ai--- Toggle control source (between Mav and RC) if rising edge (on Mavlink Joystick A button).
-		// Use parameter value as 'enabled?' check.
 		if (_manual_control_setpoint_subs[i].update(&manual_control_input)) {
-			// We make a separate array with copies of these inputs to later check which are still updating.
-			// We do this check outside of this for-loop as this loop relies on new data from manual_control_input which isn't always the case.
+			// ---Sees.ai--- We make a separate array with copies of these inputs to later check which are still updating.
+			// We can't do this check in this for-loop as the manual_control_input topic is asynchronous with this module.
+			// i.e instances of manual_control_input may not have new data on each iteration, and therefore will not be copied.
 			_sees_manual_control_inputs[i] = manual_control_input;
 
+			// ---Sees.ai--- Toggle control source (between Mav and RC) if rising edge (on Mavlink Joystick A button).
+			// Use parameter value as 'enabled?' check.
 			if (_param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
 				if (_mav_control_source_button_prev_state[i] == 0 && manual_control_input.toggle_control_source) {
 					_selector.toggleControlSource();
@@ -141,6 +142,7 @@ void ManualControl::Run()
 		}
 	}
 
+	// ---Sees.ai--- Flag a Mavlink Info message to indicate switching state (visible in QGC and ulog).
 	if (control_source_toggled) {
 		int sees_desired_control = _selector.getSeesDesiredControl();
 
