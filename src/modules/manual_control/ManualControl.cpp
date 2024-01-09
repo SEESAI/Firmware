@@ -80,13 +80,14 @@ void ManualControl::Run()
 		_selector.setTimeout(_param_com_rc_loss_t.get() * 1_s);
 	}
 
+	_rc_in_mode = _selector.getRcInMode();
 	manual_control_switches_s switches;
 	bool switches_updated = _manual_control_switches_sub.update(&switches);
 	bool control_source_toggled = false;
 
 	// ---Sees.ai--- Here, we hijacked transition switch as it's not used for our octocopter.
 	// Toggle control source (between Mav and RC) if transition switch changes state.
-	if (switches_updated && _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
+	if (switches_updated && _rc_in_mode == SEES_SOURCE_SELECTOR_ENABLED) {
 		_control_source_toggled_rc = switches.transition_switch != _transition_switch_prev_state;
 
 		if (_control_source_toggled_rc && _transition_switch_prev_state != manual_control_switches_s::SWITCH_POS_NONE) {
@@ -111,7 +112,7 @@ void ManualControl::Run()
 
 			// ---Sees.ai--- Toggle control source (between Mav and RC) if rising edge (on Mavlink Joystick A button).
 			// Use parameter value as 'enabled?' check.
-			if (_param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
+			if (_rc_in_mode == SEES_SOURCE_SELECTOR_ENABLED) {
 				if (_mav_control_source_button_prev_state[i] == 0 && manual_control_input.toggle_control_source) {
 					_selector.toggleControlSource();
 					control_source_toggled = true;
@@ -156,7 +157,7 @@ void ManualControl::Run()
 
 	// ---Sees.ai--- The RC Switch execution has been moved to a method.
 	// Here, switches work whenever there is a valid rc setpoint and we have Sees behaviour enabled.
-	if (_param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED && valid_rc_setpoint_count > 0) {
+	if (_rc_in_mode == SEES_SOURCE_SELECTOR_ENABLED && valid_rc_setpoint_count > 0) {
 		rc_switches_execute(switches_updated, switches, now);
 	}
 
@@ -181,7 +182,7 @@ void ManualControl::Run()
 
 		// ---Sees.ai--- The RC Switch execution has been moved to a method.
 		// Here, switches work with vanilla behaviour provided SEES_SOURCE_SELECTOR_ENABLED is not set in the relevant param.
-		if (switches_updated && _param_com_rc_in_mode.get() != SEES_SOURCE_SELECTOR_ENABLED) {
+		if (switches_updated && _rc_in_mode != SEES_SOURCE_SELECTOR_ENABLED) {
 			rc_switches_execute(switches_updated, switches, now);
 		}
 
@@ -222,11 +223,14 @@ void ManualControl::Run()
 		_button_hysteresis.set_state_and_update(false, now);
 	}
 
-	_sees_manual_control_data.timestamp = now;
-	_sees_manual_control_data.valid_mavlink_setpoint_count = valid_mavlink_setpoint_count;
-	_sees_manual_control_data.valid_rc_setpoint_count = valid_rc_setpoint_count;
-	_sees_manual_control_data.sees_desired_control_source = _selector.getSeesDesiredControl();
-	_sees_manual_control_data_pub.publish(_sees_manual_control_data);
+	if (_rc_in_mode == SEES_SOURCE_SELECTOR_ENABLED) {
+		sees_manual_control_data_s sees_manual_control_data{};
+		sees_manual_control_data.timestamp = now;
+		sees_manual_control_data.valid_mavlink_setpoint_count = valid_mavlink_setpoint_count;
+		sees_manual_control_data.valid_rc_setpoint_count = valid_rc_setpoint_count;
+		sees_manual_control_data.sees_desired_control_source = _selector.getSeesDesiredControl();
+		_sees_manual_control_data_pub.publish(sees_manual_control_data);
+	}
 
 	_last_time = now;
 
@@ -244,7 +248,7 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 		// ---Sees.ai--- Modified to check if COM_RC_MODE_IN parameter is set to enable Sees.ai control selector mods.
 		// If it is, then we allow RC switches (such as kill) to work at all times.
 		if (_selector.setpoint().data_source == manual_control_setpoint_s::SOURCE_RC
-		    || _param_com_rc_in_mode.get() == SEES_SOURCE_SELECTOR_ENABLED) {
+		    || _rc_in_mode == SEES_SOURCE_SELECTOR_ENABLED) {
 			if (_previous_switches_initialized) {
 				if (switches.mode_slot != _previous_switches.mode_slot) {
 					evaluateModeSlot(switches.mode_slot);
@@ -314,6 +318,13 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 
 					} else if (switches.kill_switch == manual_control_switches_s::SWITCH_POS_OFF) {
 						sendActionRequest(action_request_s::ACTION_UNKILL, action_request_s::SOURCE_RC_SWITCH);
+					}
+
+					// ---Sees.ai--- If the RC Flight Mode switch changes, revert to RC control.
+					// i.e if safety pilot switches to Position Control, then give them control.
+					if (_selector.getSeesDesiredControl() != manual_control_setpoint_s::SOURCE_RC) {
+						_selector.setControlSourceRC();
+						mavlink_log_info(&_mavlink_log_pub, "Kill Switch triggered by RC. Switching to RC Control.");
 					}
 				}
 

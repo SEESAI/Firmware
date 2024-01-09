@@ -145,7 +145,7 @@ private:
 				sees_manual_control_data.valid_mavlink_setpoint_count;    // Number of Mavlink connections providing setpoints (implying joystick connected). Should be < 2.
 			msg.errors_count3 = rc_channels.signal_lost;           // No messages from RC Tx received
 			msg.errors_count4 =
-				sees_manual_control_data.sees_desired_control_source;       // Desired type of manual control source, RC (1) or Mav (2)
+				sees_manual_control_data.sees_desired_control_source;       // Desired type of manual control source, RC (1) or Mavlink (2)
 
 			mavlink_msg_sys_status_send_struct(_mavlink->get_channel(), &msg);
 			return true;

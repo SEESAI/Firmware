@@ -54,8 +54,6 @@ float32 aux6
 bool sticks_moving
 
 bool toggle_control_source		 # request to toggle between Mavlink and RC control source
-bool is_updating			 # simple check that timestamp is valid and not stale
 uint8 sees_desired_control_source	 # desired type of manual control source, RC (1) or Mav (2)
-uint64 mavlink_count			 # number of Mavlink connections providing setpoints (implying joystick connected). Should be < 2.
 
 # TOPICS manual_control_setpoint manual_control_input
