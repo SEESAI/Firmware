@@ -248,9 +248,13 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 			if (_previous_switches_initialized) {
 				if (switches.mode_slot != _previous_switches.mode_slot) {
 					evaluateModeSlot(switches.mode_slot);
+
 					// ---Sees.ai--- If the RC Flight Mode switch changes, revert to RC control.
 					// i.e if safety pilot switches to Position Control, then give them control.
-					_selector.setControlSourceRC();
+					if (_selector.getSeesDesiredControl() != manual_control_setpoint_s::SOURCE_RC) {
+						_selector.setControlSourceRC();
+						mavlink_log_info(&_mavlink_log_pub, "Flight Mode changed by RC. Switching to RC Control.");
+					}
 				}
 
 				if (_param_com_arm_swisbtn.get()) {
