@@ -69,7 +69,6 @@ jobs:
           uvify_core
           ]
         exclude:
-        # ---Sees.ai--- We don't use these builds, refer to https://docs.px4.io/main/en/flight_controller/ for the relevant FCs.
         - config: cuav_x7pro
         - config: holybro_kakutef7
         - config: px4_fmu-v5
