@@ -3086,9 +3086,10 @@ Commander::run()
 			set_tune(tune_control_s::TUNE_ID_ARMING_WARNING);
 			_arm_tune_played = true;
 
-		} else if (!_status_flags.usb_connected &&
-			   (_status.hil_state != vehicle_status_s::HIL_STATE_ON) &&
-			   (_battery_warning == battery_status_s::BATTERY_WARNING_CRITICAL)) {
+		} else if (//!_status_flags.usb_connected &&
+			(_status.hil_state != vehicle_status_s::HIL_STATE_ON) &&
+			((_battery_warning == battery_status_s::BATTERY_WARNING_CRITICAL) ||
+			 (_battery_warning == battery_status_s::BATTERY_WARNING_EMERGENCY))) {
 			/* play tune on battery critical */
 			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);
 
