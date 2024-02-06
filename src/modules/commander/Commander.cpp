@@ -1760,7 +1760,8 @@ void Commander::executeActionRequest(const action_request_s &action_request)
 		if (arm_disarm_reason == arm_disarm_reason_t::rc_switch && !_armed.manual_lockdown) {
 			const char kill_switch_string[] = "Kill-switch engaged\t";
 			events::LogLevels log_levels{events::Log::Info};
-			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);  // Edu added for BVLOS compliance
+
+			// set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);  // Edu added for BVLOS compliance
 
 			if (_vehicle_land_detected.landed) {
 				mavlink_log_info(&_mavlink_log_pub, kill_switch_string);
@@ -3100,6 +3101,17 @@ Commander::run()
 
 		} else if (_status.failsafe && _armed.armed) {
 			tune_failsafe(true);
+
+		} else if (_armed.manual_lockdown && _armed.armed) {		// We need something to catch 'forced disarm' from backup GCS...
+			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);
+			// _status.nav_state == vehicle_status::NAVIGATION_STATE_TERMINATION // TODO: Try this
+
+		} else if ((_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND ||
+			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_PRECLAND ||
+			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_DESCEND) &&
+			   (!_armed.armed)) {
+
+			set_tune(tune_control_s::TUNE_ID_NOTIFY_NEUTRAL);
 
 		} else {
 			set_tune(tune_control_s::TUNE_ID_STOP);
