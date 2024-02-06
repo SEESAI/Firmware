@@ -153,6 +153,6 @@ private:
 	bool _mav_control_source_button_prev_state[MAX_MANUAL_INPUT_COUNT] {false};
 	bool _control_source_toggled_rc{false};
 	int _transition_switch_prev_state{};
-	int32_t _rc_in_mode{0};
+	int8_t _rc_in_mode{0};
 	orb_advert_t _mavlink_log_pub{nullptr};
 };
