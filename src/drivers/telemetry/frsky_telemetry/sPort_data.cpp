@@ -210,6 +210,7 @@ void sPort_send_CUR(int uart)
 	}
 
 	// If the input type is RC then set it to 1
+	// Note - *10 is required
 	else if (control_source == manual_control_setpoint_s::SOURCE_RC) {
 		control_source = 10 * manual_control_setpoint_s::SOURCE_RC; // This equates to 1
 	}
