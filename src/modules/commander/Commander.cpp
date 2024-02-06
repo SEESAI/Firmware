@@ -3109,7 +3109,7 @@ Commander::run()
 		} else if ((_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND ||
 			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_PRECLAND ||
 			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_DESCEND) &&
-			   (!_armed.armed)) {
+			   (_armed.armed)) {
 
 			set_tune(tune_control_s::TUNE_ID_NOTIFY_NEUTRAL);
 
