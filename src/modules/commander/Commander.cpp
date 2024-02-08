@@ -1006,6 +1006,13 @@ Commander::handle_command(const vehicle_command_s &cmd)
 					    && cmd_from_io && (arming_action == vehicle_command_s::ARMING_ACTION_ARM)) {
 						_status.arming_state = vehicle_status_s::ARMING_STATE_IN_AIR_RESTORE;
 					}
+
+				} else {
+					// ---Sees.ai---
+					// Added a flag to show when BackupGCS has triggered Kill by Forced Disarm (QGC).
+					// Note - this intentionally does not get reset. It only clears on FC reboot.
+					_forced_disarm_backup_kill = true;
+					mavlink_log_critical(&_mavlink_log_pub, "Kill triggered by BackupGCS - Flight Terminated.")
 				}
 
 				transition_result_t arming_res = TRANSITION_DENIED;
@@ -3062,6 +3069,7 @@ Commander::run()
 
 			/* publish vehicle_status_flags */
 			_status_flags.timestamp = hrt_absolute_time();
+			_status_flags.forced_disarm_backup_kill = _forced_disarm_backup_kill;
 			_vehicle_status_flags_pub.publish(_status_flags);
 
 			/* publish failure_detector data */
@@ -3102,9 +3110,9 @@ Commander::run()
 		} else if (_status.failsafe && _armed.armed) {
 			tune_failsafe(true);
 
-		} else if (_armed.manual_lockdown && _armed.armed) {		// We need something to catch 'forced disarm' from backup GCS...
+		} else if ((_armed.manual_lockdown && _armed.armed) ||		// RC Kill - will stop on release or disarm.
+			   _forced_disarm_backup_kill) {			// Backup GCS Kill - will not stop until reboot (useful for relocating drone).
 			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);
-			// _status.nav_state == vehicle_status::NAVIGATION_STATE_TERMINATION // TODO: Try this
 
 		} else if ((_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND ||
 			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_PRECLAND ||
