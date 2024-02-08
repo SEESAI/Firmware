@@ -3108,12 +3108,12 @@ Commander::run()
 		} else if (_status.failsafe && _armed.armed) {
 			tune_failsafe(true);
 
-		} else if ((_armed.manual_lockdown && _armed.armed) ||		// RC Kill - will stop on release or disarm.
-			   _forced_disarm_backup_kill) {			// Backup GCS Kill - will not stop until reboot (useful for relocating drone).
-			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);
+		} else if ((_armed.manual_lockdown && _armed.armed) ||		// ---Sees.ai--- AWS Added for BVLOS Compliance
+			   _forced_disarm_backup_kill) {			// RC Kill - will stop on release or disarm.
+			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST); // Backup GCS Kill - will not stop until reboot (useful for relocating drone).
 
-		} else if ((_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND ||
-			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_PRECLAND ||
+		} else if ((_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND ||	// ---Sees.ai--- AWS Added for BVLOS Compliance
+			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_PRECLAND ||	// Trigger whilst Landing.
 			    _status.nav_state == vehicle_status_s::NAVIGATION_STATE_DESCEND) &&
 			   (_armed.armed)) {
 
