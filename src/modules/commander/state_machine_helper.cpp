@@ -633,17 +633,26 @@ bool set_nav_state(vehicle_status_s &status, actuator_armed_s &armed, commander_
 				set_offboard_loss_nav_state(status, armed, status_flags, offb_loss_act);
 
 			} else {
+				// --- sees.ai Edited 15/2/24 ----
+				//  We want PARAM_COM_RCL_EXCEPT to include RCL_EXCEPT_OFFBOARD as this ignores
+				//  loss of manual control if offboard.  Hence we override its use here to force the "with RC" response.
+
 				// Offboard is lost, RC is ok
-				if (param_com_rcl_except & RCLossExceptionBits::RCL_EXCEPT_OFFBOARD) {
-					enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_offboard);
-					set_offboard_loss_nav_state(status, armed, status_flags, offb_loss_act);
+				enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_offboard);
+				set_offboard_loss_rc_nav_state(status, armed, status_flags, offb_loss_rc_act);
 
-				} else {
-					enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_offboard);
-					set_offboard_loss_rc_nav_state(status, armed, status_flags, offb_loss_rc_act);
+				// PX4 1.13 Default:
+				// -----
+				// if (param_com_rcl_except & RCLossExceptionBits::RCL_EXCEPT_OFFBOARD) {
+				// 	enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_offboard);
+				// 	set_offboard_loss_nav_state(status, armed, status_flags, offb_loss_act);
 
-				}
+				// } else {
+				// 	enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_offboard);
+				// 	set_offboard_loss_rc_nav_state(status, armed, status_flags, offb_loss_rc_act);
 
+				// }
+				// -----
 			}
 
 		} else if (status.rc_signal_lost && !(param_com_rcl_except & RCLossExceptionBits::RCL_EXCEPT_OFFBOARD)) {
@@ -924,13 +933,25 @@ void set_offboard_loss_rc_nav_state(vehicle_status_s &status, actuator_armed_s &
 		}
 
 	// FALLTHROUGH
-	case offboard_loss_rc_actions_t::AUTO_LOITER:
-		if (status_flags.global_position_valid) {
-			status.nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER;
-			return;
+	case offboard_loss_rc_actions_t::AUTO_LOITER: {
+			// --- sees.ai EDITED 15/2/24 ----
+			// We don't want to change the order of this switch statement,
+			// hence we try Altitude & Manual after Loiter using an if statement.
+
+			if (status_flags.global_position_valid) {
+				status.nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER;
+				return;
+
+			} else if (status_flags.local_altitude_valid) {
+				status.nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
+				return;
+
+			} else {
+				status.nav_state = vehicle_status_s::NAVIGATION_STATE_MANUAL;
+				return;
+			}
 		}
 
-	// FALLTHROUGH
 	case offboard_loss_rc_actions_t::AUTO_LAND:
 		if (status_flags.global_position_valid) {
 			status.nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LAND;
