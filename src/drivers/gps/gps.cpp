@@ -64,8 +64,6 @@
 #include <uORB/topics/gps_inject_data.h>
 #include <uORB/topics/sensor_gps.h>
 #include <uORB/topics/sensor_gnss_relative.h>
-#include <uORB/topics/vehicle_command.h>
-#include <uORB/topics/vehicle_command_ack.h>
 
 #ifndef CONSTRAINED_FLASH
 # include "devices/src/ashtech.h"
@@ -194,12 +192,8 @@ private:
 	unsigned			_num_bytes_read{0}; 				///< counter for number of read bytes from the UART (within update interval)
 	unsigned			_rate_reading{0}; 				///< reading rate in B/s
 
-	bool 				_gps_blocked{false};
-
 	const Instance 			_instance;
 
-	uORB::Subscription		     _vehicle_command_sub{ORB_ID(vehicle_command)};
-	uORB::Publication<vehicle_command_ack_s>	_command_ack_pub{ORB_ID(vehicle_command_ack)};
 	uORB::Subscription		     _orb_inject_data_sub{ORB_ID(gps_inject_data)};
 	uORB::Publication<gps_inject_data_s> _gps_inject_data_pub{ORB_ID(gps_inject_data)};
 	uORB::Publication<gps_dump_s>	     _dump_communication_pub{ORB_ID(gps_dump)};
@@ -213,8 +207,6 @@ private:
 	static px4::atomic<GPS *> _secondary_instance;
 
 	px4::atomic<int> _scheduled_reset{(int)GPSRestartType::None};
-
-	void 				checkFailureInjections();
 
 	/**
 	 * Publish the gps struct
@@ -1148,63 +1140,9 @@ GPS::reset_if_scheduled()
 }
 
 void
-GPS::checkFailureInjections()
-{
-	vehicle_command_s vehicle_command;
-
-	while (_vehicle_command_sub.update(&vehicle_command)) {
-		if (vehicle_command.command != vehicle_command_s::VEHICLE_CMD_INJECT_FAILURE) {
-			continue;
-		}
-
-		bool handled = false;
-		bool supported = false;
-
-		const int failure_unit = static_cast<int>(vehicle_command.param1 + 0.5f);
-		const int failure_type = static_cast<int>(vehicle_command.param2 + 0.5f);
-		// const int instance = static_cast<int>(vehicle_command.param3 + 0.5f);
-
-		if (failure_unit == vehicle_command_s::FAILURE_UNIT_SENSOR_GPS) {
-			handled = true;
-
-			// Currently only implemented for all/none GPS, not individual instances.
-			if (failure_type == vehicle_command_s::FAILURE_TYPE_OFF) {
-				PX4_WARN("CMD_INJECT_FAILURE, GPS off");
-				supported = true;
-				_gps_blocked = true;
-
-			} else if (failure_type == vehicle_command_s::FAILURE_TYPE_OK) {
-				PX4_INFO("CMD_INJECT_FAILURE, GPS ok");
-				supported = true;
-				_gps_blocked = false;
-			}
-
-		}
-
-		if (handled) {
-			vehicle_command_ack_s ack{};
-			ack.command = vehicle_command.command;
-			ack.from_external = false;
-			ack.result = supported ?
-				     vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED :
-				     vehicle_command_ack_s::VEHICLE_RESULT_UNSUPPORTED;
-			ack.timestamp = hrt_absolute_time();
-			_command_ack_pub.publish(ack);
-		}
-	}
-}
-
-void
 GPS::publish()
 {
-	int32_t param_sys_failure_en = 0;
-	param_get(param_find("SYS_FAILURE_EN"), &param_sys_failure_en);
-
-	if (param_sys_failure_en == 1) {
-		checkFailureInjections();
-	}
-
-	if ((_instance == Instance::Main || _is_gps_main_advertised.load()) && !_gps_blocked) {
+	if (_instance == Instance::Main || _is_gps_main_advertised.load()) {
 		_report_gps_pos.device_id = get_device_id();
 
 		_report_gps_pos_pub.publish(_report_gps_pos);
