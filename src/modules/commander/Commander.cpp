@@ -777,8 +777,10 @@ transition_result_t Commander::disarm(arm_disarm_reason_t calling_reason, bool f
 		// ---Sees.ai---
 		// Added a flag to show when BackupGCS has triggered Kill by Forced Disarm (QGC).
 		// Note - this intentionally does not get reset. It only clears on FC reboot.
-		_forced_disarm_backup_kill = true;
-		mavlink_log_critical(&_mavlink_log_pub, "Kill triggered by BackupGCS - Flight Terminated.")
+		if (calling_reason == arm_disarm_reason_t::command_external) {
+			_forced_disarm_backup_kill = true;
+			mavlink_log_critical(&_mavlink_log_pub, "Kill triggered by BackupGCS - Flight Terminated.");
+		}
 	}
 
 	transition_result_t arming_res = _arm_state_machine.arming_state_transition(_status, _vehicle_control_mode, _safety,
