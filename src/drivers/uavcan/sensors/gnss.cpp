@@ -467,8 +467,11 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	}
 
 	if (OK != orb_exists(ORB_ID(sensor_gps), 0) && msg.getSrcNodeID().get() != _gps_rover_can_id) {
-		PX4_INFO("Selected Rover (CAN ID %i) not available or initialized. Not initializing GPS with ID %i", int(_gps_rover_can_id),
+		if ((hrt_abstime() - _last_warn) > 1'000'000){
+			PX4_INFO("Selected Rover (CAN ID %i) not available or initialized. Not initializing GPS with ID %i", int(_gps_rover_can_id),
 			 msg.getSrcNodeID().get());
+			 _last_warn = hrt_abstime();
+		}
 		return;
 	}
 
