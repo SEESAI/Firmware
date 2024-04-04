@@ -1275,7 +1275,7 @@ void Navigator::check_traffic()
 		// (end_alt - horizontal_separation < alt) condition. If this system should
 		// ever be used in normal airspace this implementation would anyway be
 		// inappropriate as it should be replaced with a TCAS compliant solution.
-		mavlink_log_info(get_mavlink_log_pub(), "Vertical diff %f", fabsf(alt_uav - transponder.altitude));
+		mavlink_log_info(get_mavlink_log_pub(), "Vertical diff %f", (double)fabsf(alt_uav - transponder.altitude));
 
 		if ((fabsf(alt_uav - transponder.altitude) < vertical_separation) || (fabsf(alt_uav - aircraft_end_alt) < vertical_separation)) {
 
