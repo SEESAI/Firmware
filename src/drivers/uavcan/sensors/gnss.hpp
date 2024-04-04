@@ -136,6 +136,6 @@ private:
 	perf_counter_t _rtcm_stream_pub_perf{nullptr};
 	perf_counter_t _moving_baseline_data_pub_perf{nullptr};
 
-	int32_t _gps_rover_can_id = 126;
+	int32_t _gps_rover_can_id = 126;	// Initialised as 126 as the IDs are limited between 0-125
 	hrt_abstime _last_warn = 0;
 };
