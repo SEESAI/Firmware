@@ -231,3 +231,16 @@ PARAM_DEFINE_INT32(GPS_1_GNSS, 0);
  * @group GPS
  */
 PARAM_DEFINE_INT32(GPS_2_GNSS, 0);
+
+/**
+ * Specified Rover CAN ID for Dual ARK RTK GPS system.
+ *
+ * Does not affect non-CAN systems.
+ *
+ * @min 0
+ * @max 125
+ *
+ * @reboot_required true
+ * @group GPS
+ */
+PARAM_DEFINE_INT32(GPS_ROVER_CAN_ID, 125);
