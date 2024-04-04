@@ -461,11 +461,13 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	// int gps_rover_can_id = 125;
 	// param_get(_param_handle_gps_rover_can_id, &gps_rover_can_id);
 
-	int32_t gps_rover_can_id = 125;
-	param_get(param_find("GPS_ROVER_CAN_ID"), &gps_rover_can_id);
 
-	if (OK != orb_exists(ORB_ID(sensor_gps), 0) && msg.getSrcNodeID().get() != gps_rover_can_id) {
-		PX4_INFO("Sensor gps instance 0 (Rover) not available, not initializing Moving Base with node ID %i",
+	if (_gps_rover_can_id == 126) {
+		param_get(param_find("GPS_ROVER_CAN_ID"), &_gps_rover_can_id);
+	}
+
+	if (OK != orb_exists(ORB_ID(sensor_gps), 0) && msg.getSrcNodeID().get() != _gps_rover_can_id) {
+		PX4_INFO("Selected Rover (CAN ID %i) not available or initialized. Not initializing GPS with ID %i", int(_gps_rover_can_id),
 			 msg.getSrcNodeID().get());
 		return;
 	}

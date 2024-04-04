@@ -135,4 +135,6 @@ private:
 
 	perf_counter_t _rtcm_stream_pub_perf{nullptr};
 	perf_counter_t _moving_baseline_data_pub_perf{nullptr};
+
+	int32_t _gps_rover_can_id = 126;
 };
