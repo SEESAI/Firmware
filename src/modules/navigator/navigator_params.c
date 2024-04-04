@@ -141,7 +141,7 @@ PARAM_DEFINE_INT32(NAV_TRAFF_AVOID, 1);
 PARAM_DEFINE_FLOAT(NAV_TRAFF_A_RADM, 500);
 
 /**
- * Set NAV TRAFFIC AVOID RADIUS
+ * Set NAV TRAFFIC AVOID RADIUS UNMANNED
  *
  * Defines the Radius where NAV TRAFFIC AVOID is Called
  * For Unmanned Aviation
@@ -153,6 +153,33 @@ PARAM_DEFINE_FLOAT(NAV_TRAFF_A_RADM, 500);
  * @group Mission
  */
 PARAM_DEFINE_FLOAT(NAV_TRAFF_A_RADU, 10);
+
+/**
+ * Set NAV TRAFFIC AVOID VERTICAL DISTANCE MANNED
+ *
+ * Defines the vertical distance where NAV TRAFFIC AVOID is Called
+ * For Manned Aviation
+ *
+ * @unit m
+ * @min 500
+ *
+ * @group Mission
+ */
+PARAM_DEFINE_FLOAT(NAV_TRAFF_A_VERM, 500);
+
+/**
+ * Set NAV TRAFFIC AVOID VERTICAL DISTANCE UNMANNED
+ *
+ * Defines the vertical distance where NAV TRAFFIC AVOID is Called
+ * For Unmanned Aviation
+ *
+ * @unit m
+ * @min 10
+ * @max 500
+ *
+ * @group Mission
+ */
+PARAM_DEFINE_FLOAT(NAV_TRAFF_A_VERU, 10);
 
 /**
  * Airfield home Lat
