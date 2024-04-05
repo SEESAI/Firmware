@@ -454,18 +454,17 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 
 	// ---sees.ai---
 	// CAN node IDs are persistent, however uorb instance numbering is not (i.e GPS 124 can initialise as uorb instance 0 or 1).
-	// To solve this, we ensure that GPS on CAN node ID 124 does not initialise until the other GPS (125) has first.
+	// To solve this, we've added a parameter that allows the user to specify the CAN ID that should be uorb instance 0 (Rover).
+	// No other GPS will initialise until the GPS with the specified CAN ID has initialised.
 	// This ensure Rover is always instance 0 and, subsequently, moving base is always instance 1.
 
-	// const param_t _param_handle_gps_rover_can_id = param_find("GPS_ROVER_CAN_ID");
-	// int gps_rover_can_id = 125;
-	// param_get(_param_handle_gps_rover_can_id, &gps_rover_can_id);
-
-
+	// Only read the param on boot as it feels unnecessary to continuously read.
+	// Editting the parameter will require reboot.
 	if (_gps_rover_can_id == 126) {
 		param_get(param_find("GPS_ROVER_CAN_ID"), &_gps_rover_can_id);
 	}
 
+	// Do not publish if sensor_gps instance 0 does not exist and if this gps report is not from the Rover.
 	if (OK != orb_exists(ORB_ID(sensor_gps), 0) && msg.getSrcNodeID().get() != _gps_rover_can_id) {
 		if ((hrt_absolute_time() - _last_warn) > 1'000'000) {
 			PX4_INFO("Selected Rover (CAN ID %i) not available or initialized. Not initializing GPS with ID %i",
