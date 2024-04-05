@@ -461,7 +461,7 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	// Only read the param on boot as it feels unnecessary to continuously read.
 	// Editting the parameter will require reboot.
 	if (_gps_rover_can_id == 126) {
-		param_get(param_find("GPS_ROVER_CAN_ID"), &_gps_rover_can_id);
+		param_get(param_find("UAVCAN_ROVER_ID"), &_gps_rover_can_id);
 	}
 
 	// Do not publish if sensor_gps instance 0 does not exist and if this gps report is not from the Rover.
