@@ -379,6 +379,6 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_BTN, 0);
  * @max 125
  *
  * @reboot_required true
- * @group GPS
+ * @group UAVCAN
  */
 PARAM_DEFINE_INT32(UAVCAN_ROVER_ID, 125);
