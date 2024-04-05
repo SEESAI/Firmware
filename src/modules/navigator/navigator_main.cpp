@@ -1218,11 +1218,9 @@ void Navigator::check_traffic()
 	float NAVTrafficAvoidManned_V = _param_nav_traff_a_verm.get();
 	float horizontal_separation = NAVTrafficAvoidManned_H;
 	float vertical_separation = NAVTrafficAvoidManned_V;
-
-	mavlink_log_info(get_mavlink_log_pub(), "horizontal sep %f, vertical sep %f", (double)horizontal_separation, (double)vertical_separation);
+	float NAVTrafficAvoidTimeToWarn = _param_nav_traff_a_twarn.get();
 
 	while (changed) {
-
 		//vehicle_status_s vs{};
 		transponder_report_s transponder{};
 		_traffic_sub.copy(&transponder);
@@ -1257,12 +1255,9 @@ void Navigator::check_traffic()
 		get_distance_to_point_global_wgs84(lat_uav, lon_uav, alt_uav,
 						   transponder.lat, transponder.lon, transponder.altitude, &d_hor, &d_vert);
 
-
 		// predict final altitude of detected aircraft (positive is up) in the time it would take it to reach the UAV
 		// (Edu: Worst case I think, as heading is not taken into account)
 		float aircraft_end_alt = transponder.altitude + (d_hor / transponder.hor_velocity) * transponder.ver_velocity;
-
-
 
 		// Predict until the vehicle would have passed this PX4 system at its current speed
 		float prediction_distance = d_hor + 1000.0f;  // Edu: Assume 1000 is considered a good margin
@@ -1275,12 +1270,19 @@ void Navigator::check_traffic()
 		// (end_alt - horizontal_separation < alt) condition. If this system should
 		// ever be used in normal airspace this implementation would anyway be
 		// inappropriate as it should be replaced with a TCAS compliant solution.
-		mavlink_log_info(get_mavlink_log_pub(), "Vertical diff %f", (double)fabsf(alt_uav - transponder.altitude));
 
-		if ((fabsf(alt_uav - transponder.altitude) < vertical_separation) || (fabsf(alt_uav - aircraft_end_alt) < vertical_separation)) {
+		// Edu: This system is moronic, regardless of far the aircraft is it will trigger an alarm if at some point in the future
+		// it goes closer than the set thresholds to the UAV. ie so if it's pointing in our direction it will trigger alarm regardless
+		// of the distance it's at.
 
+		// Adding a check that the time for aircraft to fly past is less than a threshold before warning
+		float dist_uav_aircraft = get_distance_to_next_waypoint(lat_uav,lon_uav, transponder.lat,transponder.lon);
+		float time_to_flyby = dist_uav_aircraft/transponder.hor_velocity; // This is the worst case if aircraft suddenly changed direction towareds uav
+
+		if (((fabsf(alt_uav - transponder.altitude) < vertical_separation) || (fabsf(alt_uav - aircraft_end_alt) < vertical_separation))
+			&& (time_to_flyby < NAVTrafficAvoidTimeToWarn)) {
 			double aircraft_end_lat, aircraft_end_lon;
-			// Calculate where the aircraft is going to end if continuing fligth for prediction distance
+			// Calculate where the aircraft is going to end if continuing flight for prediction distance
 			waypoint_from_heading_and_distance(transponder.lat, transponder.lon, transponder.heading, prediction_distance, \
 								&aircraft_end_lat, &aircraft_end_lon);
 
@@ -1288,15 +1290,16 @@ void Navigator::check_traffic()
 
 			// get_distance_to_line returns 0 (False) when calculations are correct other codes if error
 			if (!get_distance_to_line(&cr, lat_uav, lon_uav, transponder.lat, transponder.lon, aircraft_end_lat, aircraft_end_lon)) {
-				// Edu. As aircraft_end is 1000m beyond current uav position I don't see how cr.past_end could ever be true.
+			// Edu. As aircraft_end is 1000m beyond current uav position I don't see how cr.past_end could ever be true.
 				if (!cr.past_end && (fabsf(cr.distance) < horizontal_separation)) {
-
-					bool action_needed = buffer_air_traffic(transponder.icao_address);
+					bool action_needed = buffer_air_traffic(transponder.icao_address);  // This avoids sending message repeatedly (checks enouth time has passed since last)
 
 					if (action_needed) {
 						// direction of traffic in human-readable 0..360 degree in earth frame
 						int traffic_direction = math::degrees(transponder.heading) + 180;
 						int traffic_separation = (int)fabsf(cr.distance);
+						mavlink_log_info(get_mavlink_log_pub(),"Warning close aircraft ID %s Distance to line %d, Distance to uav %d", \
+					 	transponder.callsign, traffic_separation, (int)dist_uav_aircraft);
 
 						switch (_param_nav_traff_avoid.get()) {
 
@@ -1311,17 +1314,20 @@ void Navigator::check_traffic()
 
 						case 1: {
 								/* Warn only */
-								mavlink_log_critical(&_mavlink_log_pub, "Warning TRAFFIC %s! dst %d, hdg %d\t",
-										     transponder.flags & transponder_report_s::PX4_ADSB_FLAGS_VALID_CALLSIGN ? transponder.callsign : uas_id,
+								// Edu: Not sure why this doesn't come through
+								mavlink_log_info(get_mavlink_log_pub(), "Warning TRAFFIC %s! dst %d, hdg %d\t",
+										     transponder.callsign,
 										     traffic_separation,
 										     traffic_direction);
+								// Edu ID is always zero. Ideally we would send the callsign, but events function
+								// does not allow, and haven't looked at modifying it.
 								/* EVENT
 								 * @description
 								 * - ID: {1}
 								 * - Distance: {2m}
 								 * - Direction: {3} degrees
 								 */
-								events::send<uint64_t, int32_t, int16_t>(events::ID("navigator_traffic"), events::Log::Critical, "Traffic alert",
+								events::send<uint64_t, int32_t, int16_t>(events::ID("navigator_traffic"), events::Log::Warning, "Traffic alert",
 										uas_id_int, traffic_separation, traffic_direction);
 								break;
 							}
@@ -1412,6 +1418,11 @@ void Navigator::check_traffic()
 bool Navigator::buffer_air_traffic(uint32_t icao_address)
 {
 	bool action_needed = true;
+
+	// Edu. Checks the timestamp of the last message stored in the buffer (it's a crap buffer, only has 1 entry!)
+	// It doens't work properly as if you have two aircraft close by you will get spammed continously as the icao_address
+	// in the buffer will be from previous aircraft so won't match and action_needed will stay true.
+	// Created a real buffer and sorted it out, but had to revert as PX4 doesn't have std::vector or std::list.
 
 	if (_traffic_buffer.icao_address == icao_address) {
 

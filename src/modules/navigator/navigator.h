@@ -447,6 +447,7 @@ private:
 		(ParamFloat<px4::params::NAV_TRAFF_A_RADM>) _param_nav_traff_a_radm,	/**< avoidance Hor Distance Manned*/
 		(ParamFloat<px4::params::NAV_TRAFF_A_VERU>) _param_nav_traff_a_veru,	/**< avoidance Ver Distance Unmanned*/
 		(ParamFloat<px4::params::NAV_TRAFF_A_VERM>) _param_nav_traff_a_verm,	/**< avoidance Ver Distance Manned*/
+		(ParamFloat<px4::params::NAV_TRAFF_A_TIME>) _param_nav_traff_a_twarn,	/**< avoidance Time Warning Threshold*/
 
 		// non-navigator parameters
 		// Mission (MIS_*)

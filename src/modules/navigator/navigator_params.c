@@ -182,6 +182,20 @@ PARAM_DEFINE_FLOAT(NAV_TRAFF_A_VERM, 500);
 PARAM_DEFINE_FLOAT(NAV_TRAFF_A_VERU, 10);
 
 /**
+ * Set NAV TRAFFIC AVOID TIME TO WARN
+ *
+ * Defines the warning threshold for the time it would take an aircraft to reach the UAV if changed course and flew straight
+ * to it. Aircraft a further distance away will be ignored
+ *
+ * @unit s
+ * @min 10
+ * @max 500
+ *
+ * @group Mission
+ */
+PARAM_DEFINE_FLOAT(NAV_TRAFF_A_TIME, 120);
+
+/**
  * Airfield home Lat
  *
  * Latitude of airfield home waypoint
