@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
+// Nonsense
 #include "ManualControl.hpp"
 #include <uORB/topics/commander_state.h>
 #include <uORB/topics/vehicle_command.h>
