@@ -163,6 +163,7 @@ void ManualControl::Run()
 
 	if (_selector.setpoint().valid) {
 		_published_invalid_once = false;
+		_skipped_invalid_publish_once = false;
 
 		processStickArming(_selector.setpoint());
 
@@ -207,6 +208,9 @@ void ManualControl::Run()
 		}
 
 		_manual_control_switches_sub.registerCallback();
+
+	} else if (!_skipped_invalid_publish_once) {
+		_skipped_invalid_publish_once = true;
 
 	} else {
 		if (!_published_invalid_once) {
