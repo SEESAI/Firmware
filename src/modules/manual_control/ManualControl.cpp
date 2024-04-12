@@ -210,6 +210,9 @@ void ManualControl::Run()
 		_manual_control_switches_sub.registerCallback();
 
 	} else if ((hrt_absolute_time() - _transition_time) < TRANSITION_PERIOD_ALLOWANCE) {
+		// ---Sees.ai--- If transitioning betwee RC and Mav, allow up to 0.1s with no publishing to gracefully handover.
+		// Otherwise, the old setpoint is published in its Invalid state in cycle n (which triggers Manual Control Lost)
+		// before the new desired setpoint is selected and published in cycle n+1.
 	} else {
 		if (!_published_invalid_once) {
 			_published_invalid_once = true;
