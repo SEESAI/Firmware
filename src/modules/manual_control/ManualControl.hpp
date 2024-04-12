@@ -152,8 +152,10 @@ private:
 	manual_control_setpoint_s _sees_manual_control_inputs[MAX_MANUAL_INPUT_COUNT] {};
 	bool _mav_control_source_button_prev_state[MAX_MANUAL_INPUT_COUNT] {false};
 	bool _control_source_toggled_rc{false};
-	bool _skipped_invalid_publish_once{false};
 	int _transition_switch_prev_state{};
 	int8_t _rc_in_mode{0};
 	orb_advert_t _mavlink_log_pub{nullptr};
+	hrt_abstime _transition_time{0};
+	// Time allowed for toggling between RC and Mav. Prevents premature Manual Control Lost flag.
+	static constexpr hrt_abstime TRANSITION_PERIOD_ALLOWANCE = 100'000;
 };

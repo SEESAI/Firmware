@@ -146,6 +146,7 @@ void ManualControl::Run()
 	// ---Sees.ai--- Flag a Mavlink Info message to indicate switching state (visible in QGC and ulog).
 	if (control_source_toggled) {
 		int sees_desired_control = _selector.getSeesDesiredControl();
+		_transition_time = hrt_absolute_time();
 
 		if (sees_desired_control == manual_control_setpoint_s::SOURCE_RC) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
@@ -163,7 +164,6 @@ void ManualControl::Run()
 
 	if (_selector.setpoint().valid) {
 		_published_invalid_once = false;
-		_skipped_invalid_publish_once = false;
 
 		processStickArming(_selector.setpoint());
 
@@ -209,9 +209,7 @@ void ManualControl::Run()
 
 		_manual_control_switches_sub.registerCallback();
 
-	} else if (!_skipped_invalid_publish_once) {
-		_skipped_invalid_publish_once = true;
-
+	} else if ((hrt_absolute_time() - _transition_time) < TRANSITION_PERIOD_ALLOWANCE) {
 	} else {
 		if (!_published_invalid_once) {
 			_published_invalid_once = true;
