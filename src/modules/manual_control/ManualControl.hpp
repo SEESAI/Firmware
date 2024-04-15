@@ -155,7 +155,4 @@ private:
 	int _transition_switch_prev_state{};
 	int8_t _rc_in_mode{0};
 	orb_advert_t _mavlink_log_pub{nullptr};
-	hrt_abstime _transition_time{0};
-	// Time allowed for toggling between RC and Mav. Prevents premature Manual Control Lost flag.
-	static constexpr hrt_abstime TRANSITION_PERIOD_ALLOWANCE = 100'000;
 };
