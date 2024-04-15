@@ -146,7 +146,17 @@ void ManualControl::Run()
 	// ---Sees.ai--- Flag a Mavlink Info message to indicate switching state (visible in QGC and ulog).
 	if (control_source_toggled) {
 		int sees_desired_control = _selector.getSeesDesiredControl();
-		_transition_time = hrt_absolute_time();
+
+		// If transitioning between RC and Mav, reassess all inputs to check for new valid input.
+		// This is to prevent publishing the old setpoint in its Invalid state (triggering Manual Control Lost prematurely)
+		// before the new one has been selected.
+		for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
+			manual_control_setpoint_s manual_control_input;
+
+			if (_manual_control_setpoint_subs[i].copy(&manual_control_input)) {
+				_selector.updateWithNewInputSample(now, manual_control_input, i);
+			}
+		}
 
 		if (sees_desired_control == manual_control_setpoint_s::SOURCE_RC) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
@@ -209,10 +219,6 @@ void ManualControl::Run()
 
 		_manual_control_switches_sub.registerCallback();
 
-	} else if ((hrt_absolute_time() - _transition_time) < TRANSITION_PERIOD_ALLOWANCE) {
-		// ---Sees.ai--- If transitioning betwee RC and Mav, allow up to 0.1s with no publishing to gracefully handover.
-		// Otherwise, the old setpoint is published in its Invalid state in cycle n (which triggers Manual Control Lost)
-		// before the new desired setpoint is selected and published in cycle n+1.
 	} else {
 		if (!_published_invalid_once) {
 			_published_invalid_once = true;
