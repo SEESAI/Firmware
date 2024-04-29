@@ -82,6 +82,7 @@ private:
 				msg.horiz_accuracy = gps.eph;
 				msg.vert_accuracy = gps.epv;
 				msg.speed_accuracy = gps.s_variance_m_s;
+				msg.course_accuracy = gps.c_variance_rad;
 
 				if (PX4_ISFINITE(gps.heading)) {
 					if (fabsf(gps.heading) < FLT_EPSILON) {
