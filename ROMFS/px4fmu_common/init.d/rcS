@@ -452,7 +452,7 @@ else
 	fi
 
 	sercon
-	sleep 5s
+	echo "Starting MAVLink on /dev/ttyACM0"
 	mavlink start -d /dev/ttyACM0
 
 	# PPS capture driver (before pwm_out)

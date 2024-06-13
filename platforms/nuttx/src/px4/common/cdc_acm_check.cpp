@@ -134,6 +134,11 @@ static void mavlink_usb_check(void *arg)
 					int bytes_available = 0;
 					int retval = ::ioctl(ttyacm_fd, FIONREAD, &bytes_available);
 
+					bool launch_mavlink = true;
+					bool launch_nshterm = false;
+					bool launch_passthru = false;
+					struct termios uart_config;
+
 					if ((retval == OK) && (bytes_available >= 3)) {
 						char buffer[80];
 
@@ -199,11 +204,6 @@ static void mavlink_usb_check(void *arg)
 								}
 							}
 
-
-							bool launch_mavlink = false;
-							bool launch_nshterm = false;
-							bool launch_passthru = false;
-							struct termios uart_config;
 							static constexpr int MAVLINK_HEARTBEAT_MIN_LENGTH = 9;
 
 							if (nread >= MAVLINK_HEARTBEAT_MIN_LENGTH) {
