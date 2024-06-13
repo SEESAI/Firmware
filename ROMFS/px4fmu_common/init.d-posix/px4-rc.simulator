@@ -2,10 +2,15 @@
 # shellcheck disable=SC2154
 
 simulator_tcp_port=$((4560+px4_instance))
+simulator_udp_port=$((14560+px4_instance))
 
 # Check if PX4_SIM_HOSTNAME environment variable is empty
 # If empty check if PX4_SIM_HOST_ADDR environment variable is empty
 # If both are empty use localhost for simulator
+
+if [ "$PX4_USE_TCP" = 1 ]; then
+echo "Using TCP connection to ${simulator_tcp_port}"
+
 if [ -z "${PX4_SIM_HOSTNAME}" ]; then
   if [ -z "${PX4_SIM_HOST_ADDR}" ]; then
     echo "PX4 SIM HOST: localhost"
@@ -17,4 +22,9 @@ if [ -z "${PX4_SIM_HOSTNAME}" ]; then
 else
   echo "PX4 SIM HOST: $PX4_SIM_HOSTNAME"
   simulator start -h $PX4_SIM_HOSTNAME $simulator_tcp_port
+fi
+
+else
+  echo "Using UDP connection to ${simulator_udp_port}"
+  simulator start -s -u $simulator_udp_port
 fi

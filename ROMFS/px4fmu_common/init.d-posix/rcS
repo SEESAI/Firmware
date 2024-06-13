@@ -8,6 +8,15 @@
 #search path for sourcing px4-rc.*
 PATH="$PATH:${R}etc/init.d-posix"
 
+PX4_ESTIMATOR="ekf2"
+PX4_DISABLE_FAILSAFE=1
+PX4_USE_EXTERNAL_POSE=0
+export PX4_USE_TCP=0
+
+echo "PX4_SIM_MODEL: $PX4_SIM_MODEL"
+echo "PX4_ESTIMATOR: $PX4_ESTIMATOR"
+
+
 #
 # Main SITL startup script
 #
@@ -105,6 +114,25 @@ fi
 # multi-instance setup
 # shellcheck disable=SC2154
 param set MAV_SYS_ID $((px4_instance+1))
+
+# Use environment variable PX4_USE_EXTERNAL_POSE to set external odometry
+if [ "$PX4_USE_EXTERNAL_POSE" = 1 ]; then
+	echo "Using external position source, set EKF2_AID_MASK 8"
+	param set EKF2_AID_MASK 8
+else
+	param set EKF2_AID_MASK 1
+	echo "Not using External Position"
+fi
+
+if [ "$PX4_DISABLE_FAILSAFE" = 1 ]; then
+	echo "Disable Failsafe check"
+	param set NAV_DLL_ACT 0
+	param set NAV_RCL_ACT 0
+	param set NAV_TRAFF_AVOID 0
+else
+	echo "Not disabling failsafe check"
+fi
+
 
 if [ $AUTOCNF = yes ]
 then
