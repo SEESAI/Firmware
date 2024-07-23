@@ -246,8 +246,18 @@ void LoggedTopics::add_default_topics()
 void LoggedTopics::add_high_rate_topics()
 {
 	// maximum rate to analyze fast maneuvers (e.g. for racing)
-	add_topic("actuator_controls_0");
-	add_topic("actuator_outputs");
+	int32_t sys_ctrl_alloc = 0;
+	param_get(param_find("SYS_CTRL_ALLOC"), &sys_ctrl_alloc);
+
+	if (sys_ctrl_alloc >= 1) {
+		add_topic("vehicle_torque_setpoint");			// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Added topic for Actuator Control FFTs
+
+	} else {
+		add_topic("actuator_outputs");				// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Possibly not needed for Actuator Control FFTs
+	}
+
 	add_topic("manual_control_setpoint");
 	add_topic("rate_ctrl_status", 20);
 	add_topic("rate_ctrl_status_detail");				// Sees.ai - Added topic for rate loop tuning
