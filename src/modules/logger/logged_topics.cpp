@@ -250,17 +250,14 @@ void LoggedTopics::add_high_rate_topics()
 	param_get(param_find("SYS_CTRL_ALLOC"), &sys_ctrl_alloc);
 
 	if (sys_ctrl_alloc >= 1) {
-		// @ToDo (Richard, David) - figure out whether all these needed for CA
-		add_topic("actuator_motors");
-		add_topic("vehicle_torque_setpoint");
-		add_topic("vehicle_thrust_setpoint");
-		add_topic("actuator_outputs");
-		add_topic("actuator_controls_0");
+		add_topic("vehicle_torque_setpoint");			// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Added topic for Actuator Control FFTs
+
+	} else {
+		add_topic("actuator_outputs");				// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Possibly not needed for Actuator Control FFTs
 	}
-	else {
-		add_topic("actuator_outputs");
-		add_topic("actuator_controls_0");
-	}
+
 	add_topic("manual_control_setpoint");
 	add_topic("rate_ctrl_status", 20);
 	add_topic("rate_ctrl_status_detail");				// Sees.ai - Added topic for rate loop tuning
