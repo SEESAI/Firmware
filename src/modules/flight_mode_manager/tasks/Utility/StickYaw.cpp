@@ -41,7 +41,9 @@
 
 StickYaw::StickYaw()
 {
-	_yawspeed_slew_rate.setSlewRate(2.f * M_PI_F);
+	param_get(param_find("MC_YAW_ACC_MAX"), &_yaw_acc_max_deg);
+	_yaw_acc_max_rad = float(_yaw_acc_max_deg) * M_DEG_TO_RAD_F;
+	_yawspeed_slew_rate.setSlewRate(_yaw_acc_max_rad * M_PI_F);
 }
 
 void StickYaw::generateYawSetpoint(float &yawspeed_setpoint, float &yaw_setpoint, const float desired_yawspeed,

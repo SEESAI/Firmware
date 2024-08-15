@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2021 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,41 +32,14 @@
  ****************************************************************************/
 
 /**
- * @file StickYaw.hpp
- * @brief Generate yaw and angular yawspeed setpoints from stick input
- * @author Matthias Grob <maetugr@gmail.com>
+ * Maximum yaw acceleration from stick input.
+ *
+ * In deg/s^2 (default 360)
+ * Added by sees.ai
+ *
+ * @reboot_required true
+ * @group Multicopter Attitude Control
+ * @unit deg/s
+ * @max 360
  */
-
-#pragma once
-
-#include "SlewRate.hpp"
-#include <parameters/param.h>
-
-class StickYaw
-{
-public:
-	StickYaw();
-	~StickYaw() = default;
-
-	void generateYawSetpoint(float &yawspeed_setpoint, float &yaw_setpoint, float desired_yawspeed, float yaw,
-				 bool is_yaw_good_for_control, float deltatime);
-
-private:
-	SlewRate<float> _yawspeed_slew_rate;
-
-	/**
-	 * Lock yaw when not currently turning
-	 * When applying a yawspeed the vehicle is turning, when the speed is
-	 * set to zero the vehicle needs to slow down and then lock at the yaw
-	 * it stops at to not drift over time.
-	 * @param yawspeed current yaw rotational rate state
-	 * @param yaw current yaw rotational rate state
-	 * @param yawspeed_setpoint rotation rate at which to turn around yaw axis
-	 * @param yaw current yaw setpoint which then will be overwritten by the return value
-	 * @return yaw setpoint to execute to have a yaw lock at the correct moment in time
-	 */
-	static float updateYawLock(float yaw, float yawspeed_setpoint, float yaw_setpoint, bool is_yaw_good_for_control);
-
-	int32_t _yaw_acc_max_deg = 360;
-	float _yaw_acc_max_rad = 2 * M_PI_2_F;
-};
+PARAM_DEFINE_INT32(MC_YAW_ACC_MAX, 360);
