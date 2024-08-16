@@ -4368,6 +4368,7 @@ Commander::offboard_control_update()
 		offboard_available = false;
 
 	}
+
 	// else if (_offboard_control_mode_sub.get().acceleration && !_status_flags.local_velocity_valid) {
 	// 	// OFFBOARD acceleration handled by position controller
 	// 	offboard_available = false;
