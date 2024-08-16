@@ -4369,6 +4369,10 @@ Commander::offboard_control_update()
 
 	}
 
+	// ---sees.ai--- 13/8/2024
+	// Disabled this check to allow SI2 to keep controlling the drone if GPS is lost.
+	// This change is part of implementing the "position lost" mode in SI2.
+	//
 	// else if (_offboard_control_mode_sub.get().acceleration && !_status_flags.local_velocity_valid) {
 	// 	// OFFBOARD acceleration handled by position controller
 	// 	offboard_available = false;
