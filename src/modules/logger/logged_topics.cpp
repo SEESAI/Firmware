@@ -70,8 +70,8 @@ void LoggedTopics::add_default_topics()
 	add_topic("hover_thrust_estimate", 100);
 	add_topic("input_rc", 500);
 	add_optional_topic("internal_combustion_engine_status", 10);
-	add_optional_topic("irlock_report", 1000);
-	add_optional_topic("landing_target_pose", 1000);
+	add_topic("irlock_report", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
+	add_topic("landing_target_pose", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
 	add_optional_topic("magnetometer_bias_estimate", 200);
 	add_topic("magnetometer_noise", 200);				// Sees.ai - Added topic for monitoring mag disturbance/filter performance
 	add_topic("manual_control_setpoint", 200);
@@ -246,8 +246,18 @@ void LoggedTopics::add_default_topics()
 void LoggedTopics::add_high_rate_topics()
 {
 	// maximum rate to analyze fast maneuvers (e.g. for racing)
-	add_topic("actuator_controls_0");
-	add_topic("actuator_outputs");
+	int32_t sys_ctrl_alloc = 0;
+	param_get(param_find("SYS_CTRL_ALLOC"), &sys_ctrl_alloc);
+
+	if (sys_ctrl_alloc >= 1) {
+		add_topic("vehicle_torque_setpoint");			// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Added topic for Actuator Control FFTs
+
+	} else {
+		add_topic("actuator_outputs");				// Sees.ai - Added topic for Actuator Control FFTs
+		add_topic("actuator_controls_0");			// Sees.ai - Possibly not needed for Actuator Control FFTs
+	}
+
 	add_topic("manual_control_setpoint");
 	add_topic("rate_ctrl_status", 20);
 	add_topic("rate_ctrl_status_detail");				// Sees.ai - Added topic for rate loop tuning
