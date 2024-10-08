@@ -66,7 +66,4 @@ private:
 	 * @return yaw setpoint to execute to have a yaw lock at the correct moment in time
 	 */
 	static float updateYawLock(float yaw, float yawspeed_setpoint, float yaw_setpoint, bool is_yaw_good_for_control);
-
-	int32_t _yaw_acc_max_deg = 360;
-	float _yaw_acc_max_rad = 2 * M_PI_2_F;
 };
