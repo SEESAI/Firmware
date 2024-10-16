@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2021 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,43 +32,14 @@
  ****************************************************************************/
 
 /**
- * @file StickYaw.cpp
+ * Maximum yaw acceleration from stick input.
+ *
+ * In deg/s^2 (default 360)
+ * Added by sees.ai
+ *
+ * @reboot_required true
+ * @group Multicopter Attitude Control
+ * @unit deg/s
+ * @max 360
  */
-
-#include "StickYaw.hpp"
-
-#include <px4_platform_common/defines.h>
-
-StickYaw::StickYaw()
-{
-	int32_t yaw_acc_max_deg = 360;
-	param_get(param_find("MC_YAW_ACC_MAX"), &yaw_acc_max_deg);
-	float yaw_acc_max_rad = float(yaw_acc_max_deg) * M_DEG_TO_RAD_F;
-	_yawspeed_slew_rate.setSlewRate(yaw_acc_max_rad);
-}
-
-void StickYaw::generateYawSetpoint(float &yawspeed_setpoint, float &yaw_setpoint, const float desired_yawspeed,
-				   const float yaw, const bool is_yaw_good_for_control, const float deltatime)
-{
-	yawspeed_setpoint = _yawspeed_slew_rate.update(desired_yawspeed, deltatime);
-	yaw_setpoint = updateYawLock(yaw, yawspeed_setpoint, yaw_setpoint, is_yaw_good_for_control);
-}
-
-float StickYaw::updateYawLock(const float yaw, const float yawspeed_setpoint, const float yaw_setpoint,
-			      const bool is_yaw_good_for_control)
-{
-	// Yaw-lock depends on desired yawspeed input. If not locked, yaw_sp is set to NAN.
-	if ((fabsf(yawspeed_setpoint) > FLT_EPSILON) || !is_yaw_good_for_control) {
-		// no fixed heading when rotating around yaw by stick
-		return NAN;
-
-	} else {
-		// break down and hold the current heading when no more rotation commanded
-		if (!PX4_ISFINITE(yaw_setpoint)) {
-			return yaw;
-
-		} else {
-			return yaw_setpoint;
-		}
-	}
-}
+PARAM_DEFINE_INT32(MC_YAW_ACC_MAX, 360);
