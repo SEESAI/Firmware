@@ -10,8 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    strategy:
+    runs-on: ubuntu-22.04
       fail-fast: false
       matrix:
         config:
