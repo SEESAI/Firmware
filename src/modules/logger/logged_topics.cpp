@@ -267,7 +267,7 @@ void LoggedTopics::add_high_rate_topics()
 	add_topic("vehicle_attitude");
 	add_topic("vehicle_attitude_setpoint");
 	add_topic("vehicle_rates_setpoint");
-	add_topic_multi("sensor_accel", 20, 3)				// Sees.ai - Override default rate as used in SeesAnalytics plots
+	add_topic_multi("sensor_accel", 20, 3);				// Sees.ai - Override default rate as used in SeesAnalytics plots
 }
 
 void LoggedTopics::add_debug_topics()
