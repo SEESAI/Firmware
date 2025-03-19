@@ -97,9 +97,9 @@ jobs:
       if: always()
       run: ./Tools/ecl_ekf/process_logdata_ekf.py ~/.ros/log/*/*.ulg || true
 
-    - name: Upload logs to flight review
-      if: always()
-      run: ./Tools/upload_log.py -q --description "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID}" --feedback "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID} ${GITHUB_REPOSITORY} ${GITHUB_REF}" --source CI ~/.ros/log/*/*.ulg
+    # - name: Upload logs to flight review
+    #   if: always()
+    #   run: ./Tools/upload_log.py -q --description "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID}" --feedback "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID} ${GITHUB_REPOSITORY} ${GITHUB_REF}" --source CI ~/.ros/log/*/*.ulg
 
     # - name: Upload px4 binary
     #   if: failure()
