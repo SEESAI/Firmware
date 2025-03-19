@@ -29,28 +29,28 @@ jobs:
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
 
-    - name: Prepare ccache timestamp
-      id: ccache_cache_timestamp
-      shell: cmake -P {0}
-      run: |
-        string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
-        message("::set-output name=timestamp::${current_date}")
-    - name: ccache cache files
-      uses: actions/cache@v2
-      with:
-        path: ~/.ccache
-        key: sitl_tests-${{matrix.config.build_type}}-ccache-${{steps.ccache_cache_timestamp.outputs.timestamp}}
-        restore-keys: sitl_tests-${{matrix.config.build_type}}-ccache-
-    - name: setup ccache
-      run: |
-          mkdir -p ~/.ccache
-          echo "base_dir = ${GITHUB_WORKSPACE}" > ~/.ccache/ccache.conf
-          echo "compression = true" >> ~/.ccache/ccache.conf
-          echo "compression_level = 6" >> ~/.ccache/ccache.conf
-          echo "max_size = 100M" >> ~/.ccache/ccache.conf
-          echo "hash_dir = false" >> ~/.ccache/ccache.conf
-          ccache -s
-          ccache -z
+    # - name: Prepare ccache timestamp
+    #   id: ccache_cache_timestamp
+    #   shell: cmake -P {0}
+    #   run: |
+    #     string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+    #     message("::set-output name=timestamp::${current_date}")
+    # - name: ccache cache files
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: ~/.ccache
+    #     key: sitl_tests-${{matrix.config.build_type}}-ccache-${{steps.ccache_cache_timestamp.outputs.timestamp}}
+    #     restore-keys: sitl_tests-${{matrix.config.build_type}}-ccache-
+    # - name: setup ccache
+    #   run: |
+    #       mkdir -p ~/.ccache
+    #       echo "base_dir = ${GITHUB_WORKSPACE}" > ~/.ccache/ccache.conf
+    #       echo "compression = true" >> ~/.ccache/ccache.conf
+    #       echo "compression_level = 6" >> ~/.ccache/ccache.conf
+    #       echo "max_size = 100M" >> ~/.ccache/ccache.conf
+    #       echo "hash_dir = false" >> ~/.ccache/ccache.conf
+    #       ccache -s
+    #       ccache -z
 
     - name: check environment
       run: |
@@ -78,44 +78,44 @@ jobs:
         ./test/rostest_px4_run.sh ${{matrix.config.test_file}} vehicle:=${{matrix.config.vehicle}}
       timeout-minutes: 45
 
-    - name: Look at core files
-      if: failure()
-      run: gdb build/px4_sitl_default/bin/px4 px4.core -ex "thread apply all bt" -ex "quit"
-    - name: Upload px4 coredump
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: coredump
-        path: px4.core
+    # - name: Look at core files
+    #   if: failure()
+    #   run: gdb build/px4_sitl_default/bin/px4 px4.core -ex "thread apply all bt" -ex "quit"
+    # - name: Upload px4 coredump
+    #   if: failure()
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: coredump
+    #     path: px4.core
 
-    - name: ecl EKF analysis
-      if: always()
-      run: ./Tools/ecl_ekf/process_logdata_ekf.py ~/.ros/log/*/*.ulg || true
+    # - name: ecl EKF analysis
+    #   if: always()
+    #   run: ./Tools/ecl_ekf/process_logdata_ekf.py ~/.ros/log/*/*.ulg || true
 
-    - name: Upload logs to flight review
-      if: always()
-      run: ./Tools/upload_log.py -q --description "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID}" --feedback "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID} ${GITHUB_REPOSITORY} ${GITHUB_REF}" --source CI ~/.ros/log/*/*.ulg
+    # - name: Upload logs to flight review
+    #   if: always()
+    #   run: ./Tools/upload_log.py -q --description "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID}" --feedback "${GITHUB_WORKFLOW} ${GITHUB_RUN_ID} ${GITHUB_REPOSITORY} ${GITHUB_REF}" --source CI ~/.ros/log/*/*.ulg
 
-    - name: Upload px4 binary
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: binary
-        path: build/px4_sitl_default/bin/px4
+    # - name: Upload px4 binary
+    #   if: failure()
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: binary
+    #     path: build/px4_sitl_default/bin/px4
 
-    - name: Store PX4 log
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: px4_log
-        path: ~/.ros/log/*/*.ulg
+    # - name: Store PX4 log
+    #   if: failure()
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: px4_log
+    #     path: ~/.ros/log/*/*.ulg
 
-    - name: Store ROS log
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: ros_log
-        path: ~/.ros/**/rostest-*.log
+    # - name: Store ROS log
+    #   if: failure()
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: ros_log
+    #     path: ~/.ros/**/rostest-*.log
 
     # Report test coverage
     - name: Upload coverage
