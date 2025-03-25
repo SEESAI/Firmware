@@ -849,14 +849,12 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 
 		if (_geofence.getPredict()) {
 			fence_violation_test_point = _gf_breach_avoidance.getFenceViolationTestPoint();
-			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning),
-				 "Approaching on geofence, test point dist = %lf", double(test_point_distance));
+			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning), "Approaching on geofence");
 
 		} else {
 			fence_violation_test_point = matrix::Vector2d(_global_pos.lat, _global_pos.lon);
 			vertical_test_point_distance = 0;
-			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning), "Geofence exceeded, test point dist = %lf",
-				 double(test_point_distance));
+			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning), "Geofence exceeded");
 		}
 
 		gf_violation_type.flags.dist_to_home_exceeded = !_geofence.isCloserThanMaxDistToHome(fence_violation_test_point(0),
