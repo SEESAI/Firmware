@@ -849,12 +849,14 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 
 		if (_geofence.getPredict()) {
 			fence_violation_test_point = _gf_breach_avoidance.getFenceViolationTestPoint();
-			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning), "Approaching on geofence");
+			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning),
+				 "Approaching on geofence, test point dist = %lf", double(test_point_distance));
 
 		} else {
 			fence_violation_test_point = matrix::Vector2d(_global_pos.lat, _global_pos.lon);
 			vertical_test_point_distance = 0;
-			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning), "Geofence exceeded");
+			snprintf(geofence_violation_warning, sizeof(geofence_violation_warning), "Geofence exceeded, test point dist = %lf",
+				 double(test_point_distance));
 		}
 
 		gf_violation_type.flags.dist_to_home_exceeded = !_geofence.isCloserThanMaxDistToHome(fence_violation_test_point(0),
@@ -894,36 +896,40 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 					matrix::Vector2<double> current_pos_lat_lon(_global_pos.lat, _global_pos.lon);
 					float loiter_altitude_amsl = _global_pos.alt;
 
+					// --- Sees.ai ---
+					// If we have the Sees stop param enabled, then skip the default PX4 behaviour of setting a specific setpoint location.
+					// Without a specific setpoint, when the drone switches to Loiter (Hold) it will brake and Hold at the stopping point.
+					if (!_geofence.getSeesStop()) {
+						if (_vstatus.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
+							// the computation of the braking distance does not match the actual braking distance. Until we have a better model
+							// we set the loiter point to the current position, that will make sure that the vehicle will loiter inside the fence
+							loiter_center_lat_lon =  _gf_breach_avoidance.generateLoiterPointForMultirotor(gf_violation_type,
+										 &_geofence);
 
-					if (_vstatus.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
-						// the computation of the braking distance does not match the actual braking distance. Until we have a better model
-						// we set the loiter point to the current position, that will make sure that the vehicle will loiter inside the fence
-						loiter_center_lat_lon =  _gf_breach_avoidance.generateLoiterPointForMultirotor(gf_violation_type,
-									 &_geofence);
+							loiter_altitude_amsl = _gf_breach_avoidance.generateLoiterAltitudeForMulticopter(gf_violation_type);
 
-						loiter_altitude_amsl = _gf_breach_avoidance.generateLoiterAltitudeForMulticopter(gf_violation_type);
+						} else {
 
-					} else {
+							loiter_center_lat_lon = _gf_breach_avoidance.generateLoiterPointForFixedWing(gf_violation_type, &_geofence);
+							loiter_altitude_amsl = _gf_breach_avoidance.generateLoiterAltitudeForFixedWing(gf_violation_type);
+						}
 
-						loiter_center_lat_lon = _gf_breach_avoidance.generateLoiterPointForFixedWing(gf_violation_type, &_geofence);
-						loiter_altitude_amsl = _gf_breach_avoidance.generateLoiterAltitudeForFixedWing(gf_violation_type);
+
+						rep->current.timestamp = hrt_absolute_time();
+						rep->current.yaw = get_local_position()->heading;
+						rep->current.yaw_valid = true;
+						rep->current.lat = loiter_center_lat_lon(0);
+						rep->current.lon = loiter_center_lat_lon(1);
+						rep->current.alt = loiter_altitude_amsl;
+						rep->current.valid = true;
+						rep->current.loiter_radius = get_loiter_radius();
+						rep->current.alt_valid = true;
+						rep->current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
+						rep->current.loiter_direction = 1;
+						rep->current.cruising_throttle = get_cruising_throttle();
+						rep->current.acceptance_radius = get_acceptance_radius();
+						rep->current.cruising_speed = get_cruising_speed();
 					}
-
-					rep->current.timestamp = hrt_absolute_time();
-					rep->current.yaw = get_local_position()->heading;
-					rep->current.yaw_valid = true;
-					rep->current.lat = loiter_center_lat_lon(0);
-					rep->current.lon = loiter_center_lat_lon(1);
-					rep->current.alt = loiter_altitude_amsl;
-					rep->current.valid = true;
-					rep->current.loiter_radius = get_loiter_radius();
-					rep->current.alt_valid = true;
-					rep->current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
-					rep->current.loiter_direction = 1;
-					rep->current.cruising_throttle = get_cruising_throttle();
-					rep->current.acceptance_radius = get_acceptance_radius();
-					rep->current.cruising_speed = get_cruising_speed();
-
 				}
 
 				_geofence_violation_warning_sent = true;
