@@ -141,3 +141,16 @@ PARAM_DEFINE_FLOAT(GF_MAX_VER_DIST, 0);
  * @group Geofence
  */
 PARAM_DEFINE_INT32(GF_PREDICT, 1);
+
+/**
+ * Brake and Hold upon geofence triggering (Sees)
+ *
+ * If set to True:
+ * When the Geofence is triggered, if the failsafe is set to Loiter (Hold) then brake and hold position at the stopping point.
+ * If set to False:
+ * Do PX4 default behaviour - set Loiter point based on GF_PREDICT param (either return to inside Geofence or trigger early and stop on Geofence)
+ *
+ * @boolean
+ * @group Geofence
+ */
+PARAM_DEFINE_INT32(GF_SEES_STOP, 0);
