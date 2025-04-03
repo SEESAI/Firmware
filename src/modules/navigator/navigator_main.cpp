@@ -897,6 +897,8 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 					// --- Sees.ai ---
 					// If we have the Sees stop param enabled, then skip the default PX4 behaviour of setting a specific setpoint location.
 					// Without a specific setpoint, when the drone switches to Loiter (Hold) it will brake and Hold at the stopping point.
+					// This is because if the setpoint .valid isn't set to true, then Loiter will set a waypoint at the location + braking distance.
+					// See loiter.cpp
 					if (!_geofence.getSeesStop()) {
 						if (_vstatus.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
 							// the computation of the braking distance does not match the actual braking distance. Until we have a better model
