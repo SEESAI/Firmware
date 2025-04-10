@@ -460,8 +460,26 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 
 	// Only read the param on boot as it feels unnecessary to continuously read.
 	// Editting the parameter will require reboot.
-	if (_gps_rover_can_id == 126) {
+	if (_gps_rover_can_id == -1) {
 		param_get(param_find("UAVCAN_ROVER_ID"), &_gps_rover_can_id);
+	}
+
+	if (_set_once == false) {
+		param_set(param_find("UAVCAN_COMPID_1"), &_uavcan_compid_1);
+		param_set(param_find("UAVCAN_COMPID_2"), &_uavcan_compid_2);
+		_set_once = true;
+	}
+
+	// If compid_1 isn't set, then take the first CAN ID
+	if (_uavcan_compid_1 == -1){
+		_uavcan_compid_1 = msg.getSrcNodeID().get();
+		param_set(param_find("UAVCAN_COMPID_1"), &_uavcan_compid_1);
+	}
+
+	// If compid_1 IS set, and compid_2 is not yet set AND this CAN ID does not match compid_1, then take this other CAN ID
+	if (_uavcan_compid_1 != -1 && _uavcan_compid_2 == -1 && msg.getSrcNodeID().get() != _uavcan_compid_1){
+		_uavcan_compid_2 = msg.getSrcNodeID().get();
+		param_set(param_find("UAVCAN_COMPID_2"), &_uavcan_compid_2);
 	}
 
 	// Do not publish if sensor_gps instance 0 does not exist and if this gps report is not from the Rover.
