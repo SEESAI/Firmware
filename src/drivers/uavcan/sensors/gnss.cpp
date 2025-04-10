@@ -471,13 +471,13 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	}
 
 	// If compid_1 isn't set, then take the first CAN ID
-	if (_uavcan_compid_1 == -1){
+	if (_uavcan_compid_1 == -1) {
 		_uavcan_compid_1 = msg.getSrcNodeID().get();
 		param_set(param_find("UAVCAN_COMPID_1"), &_uavcan_compid_1);
 	}
 
 	// If compid_1 IS set, and compid_2 is not yet set AND this CAN ID does not match compid_1, then take this other CAN ID
-	if (_uavcan_compid_1 != -1 && _uavcan_compid_2 == -1 && msg.getSrcNodeID().get() != _uavcan_compid_1){
+	if (_uavcan_compid_1 != -1 && _uavcan_compid_2 == -1 && msg.getSrcNodeID().get() != _uavcan_compid_1) {
 		_uavcan_compid_2 = msg.getSrcNodeID().get();
 		param_set(param_find("UAVCAN_COMPID_2"), &_uavcan_compid_2);
 	}

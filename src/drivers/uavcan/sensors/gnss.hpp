@@ -144,7 +144,7 @@ private:
 	perf_counter_t _rtcm_stream_pub_perf{nullptr};
 	perf_counter_t _moving_baseline_data_pub_perf{nullptr};
 
-					// Sees.ai params for CAN and Param management
+	// Sees.ai params for CAN and Param management
 	int32_t _gps_rover_can_id = -1;	// Initialised as -1 as the IDs are limited between 0-125
 	int32_t _uavcan_compid_1 = -1;	// Initialised as -1 as the IDs are limited between 0-125
 	int32_t _uavcan_compid_2 = -1;	// Initialised as -1 as the IDs are limited between 0-125
