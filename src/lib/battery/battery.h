@@ -142,9 +142,55 @@ protected:
 	} _params{};
 
 	const int _index;
+	const uint8_t _source;
 
 	bool _first_parameter_update{true};
 	void updateParams() override;
+
+	/**
+	 * Self-contained simple lookup class for SOC given a voltage
+	 *
+	 * NB
+	 *   - currently const (not reading from params) just to get going quickly
+	 *   - Please ensure _lookup_size is correctly set otherwise will seg_fault
+	 *   - Please ensure _lookup is monotonic decreasing in voltage and SOC
+	 *   - We couldn't find a nuttx table which has a .size() method!  Suggestions welcome
+	 */
+	class SeesSOC
+	{
+
+	public:
+		SeesSOC(const decltype(_params) &params) : _soc_params(params) {}
+
+		// return soc [0, 1] given open circuit cell voltage
+		float ChemistryLookup(float voltage);
+		float GetSOC(float chemistry_soc);
+
+	private:
+		const decltype(_params) &_soc_params;
+		struct Lookup {
+			float _oc_voltage{0.f};
+			float _soc{0.f};
+		};
+		/// size of lookup table - NB MUST be correct or risk of seg_fault / bad lookup
+		const int _lookup_size = 12;
+		/// lookup table - NB MUST be monontonic descending
+		const Lookup _lookup[12] {
+			// Tattu 25Ah High Voltage packs; nominal 4.35V max
+			{4.350f, 1.0f},
+			{4.203f, 0.88f},
+			{4.095f, 0.78f},
+			{4.002f, 0.68f},
+			{3.902f, 0.58f},
+			{3.838f, 0.48f},
+			{3.795f, 0.38f},
+			{3.757f, 0.27f},
+			{3.722f, 0.18f},
+			{3.678f, 0.08f},
+			{3.554f, 0.03f},
+			{3.300f, 0.00f}
+		};
+	} _sees_soc;
 
 private:
 	void sumDischarged(const hrt_abstime &timestamp, float current_a);
@@ -158,7 +204,6 @@ private:
 	uORB::PublicationMulti<battery_status_s> _battery_status_pub{ORB_ID(battery_status)};
 
 	bool _connected{false};
-	const uint8_t _source;
 	uint8_t _priority{0};
 	bool _battery_initialized{false};
 	float _voltage_v{0.f};
@@ -181,43 +226,4 @@ private:
 	float _discharged_mah_initial{0}; /// discharged mah at last low-current time (initialisation point for column counting)
 	hrt_abstime _sees_warning_last{0}; /// Time we last warned about cell voltage - used to limit warning frequency
 	orb_advert_t _mavlink_log_pub{nullptr}; /// pointer to the mavlink publisher for the warning
-
-	/**
-	 * Self-contained simple lookup class for SOC given a voltage
-	 *
-	 * NB
-	 *   - currently const (not reading from params) just to get going quickly
-	 *   - Please ensure _lookup_size is correctly set otherwise will seg_fault
-	 *   - Please ensure _lookup is monotonic decreasing in voltage and SOC
-	 *   - We couldn't find a nuttx table which has a .size() method!  Suggestions welcome
-	 */
-	struct SOCLookup {
-		// return soc [0, 1] given open circuit cell voltage
-		float GetSOC(float voltage);
-
-	private:
-		struct Lookup {
-			float _oc_voltage{0.f};
-			float _soc{0.f};
-		};
-		/// size of lookup table - NB MUST be correct or risk of seg_fault / bad lookup
-		const int _lookup_size = 13;
-		/// lookup table - NB MUST be monontonic descending
-		const Lookup _lookup[13] {
-			// Tattu 25Ah High Voltage packs; nominal 4.35V max
-			{4.315f, 100.00f}, //
-			{4.221f, 91.53f}, //
-			{4.132f, 83.08f}, //
-			{4.053f, 74.65f}, //
-			{3.976f, 66.22f}, //
-			{3.898f, 57.76f}, //
-			{3.846f, 49.22f}, //
-			{3.809f, 40.75f}, //
-			{3.780f, 32.23f}, //
-			{3.752f, 23.78f}, //
-			{3.719f, 15.22f}, //
-			{3.683f, 6.55f}, //
-			{3.426f, 0.f}
-		};
-	} _soc_lookup;
 };
