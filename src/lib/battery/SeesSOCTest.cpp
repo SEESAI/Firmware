@@ -111,8 +111,29 @@ TEST_F(SeesSOCTest, TestSOCValidRange)
 // Test chemistry lookup table interpolation at known data points
 TEST_F(SeesSOCTest, TestChemistryLookupAccuracy)
 {
-// Test known lookup table values to ensure proper interpolation
-	EXPECT_NEAR(battery->testChemistryLookup(4.203f), 0.88f, 0.02f) << "4.203V should map to ~88% chemistry SOC";
-	EXPECT_NEAR(battery->testChemistryLookup(3.838f), 0.48f, 0.02f) << "3.838V should map to ~48% chemistry SOC";
-	EXPECT_NEAR(battery->testChemistryLookup(3.678f), 0.08f, 0.02f) << "3.678V should map to ~8% chemistry SOC";
+	// Test interpolated values between lookup table entries to ensure proper interpolation
+	// These are verified against equivalent interpolation on Thresholds spreadsheet https://docs.google.com/spreadsheets/d/1mJYqzWPWuRRIfoN48dVwd0J62OSpabojHOFuW5-iv9Q/edit?usp=sharing
+	EXPECT_NEAR(battery->testChemistryLookup(4.214f), 0.888f,
+		    0.001f) << "4.214V should interpolate to ~88.8% chemistry charge";
+	EXPECT_NEAR(battery->testChemistryLookup(4.046f), 0.727f,
+		    0.001f) << "4.046V should interpolate to ~72.7% chemistry charge";
+	EXPECT_NEAR(battery->testChemistryLookup(3.861f), 0.512f,
+		    0.001f) << "3.861V should interpolate to ~51.2% chemistry charge";
+	EXPECT_NEAR(battery->testChemistryLookup(3.745f), 0.235f,
+		    0.001f) << "3.745V should interpolate to ~23.5% chemistry charge";
+	EXPECT_NEAR(battery->testChemistryLookup(3.577f), 0.0359f,
+		    0.001f) << "3.577V should interpolate to ~3.59% chemistry charge";
+
+}
+
+// Test SOC calculation accuracy at specific interpolated voltage points
+TEST_F(SeesSOCTest, TestGetSOCAccuracy)
+{
+	// Test interpolated SOC values to ensure proper voltage-to-SOC conversion
+	// These are verified against equivalent interpolation on Thresholds spreadsheet https://docs.google.com/spreadsheets/d/1mJYqzWPWuRRIfoN48dVwd0J62OSpabojHOFuW5-iv9Q/edit?usp=sharing
+	EXPECT_NEAR(battery->testGetSOC(4.214f), 0.887f, 0.001f) << "4.214V should convert to ~88.7% operational SOC";
+	EXPECT_NEAR(battery->testGetSOC(4.046f), 0.724f, 0.001f) << "4.046V should convert to ~72.4% operational SOC";
+	EXPECT_NEAR(battery->testGetSOC(3.861f), 0.507f, 0.001f) << "3.861V should convert to ~50.7% operational SOC";
+	EXPECT_NEAR(battery->testGetSOC(3.745f), 0.226f, 0.001f) << "3.745V should convert to ~22.6% operational SOC";
+	EXPECT_NEAR(battery->testGetSOC(3.577f), 0.0257f, 0.001f) << "3.577V should convert to ~2.57% operational SOC";
 }
