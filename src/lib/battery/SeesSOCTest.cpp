@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <iostream>
 #include "battery.h"
 
 // Minimal ModuleParams for testing
@@ -50,6 +51,11 @@ protected:
 	void SetUp() override
 	{
 		battery = new TestableBattery();
+
+		// Validate test setup parameters
+		EXPECT_EQ(battery->cell_count(), 6);
+		EXPECT_NEAR(battery->empty_cell_voltage(), 3.4f, 0.01f);
+		EXPECT_NEAR(battery->full_cell_voltage(), 4.35f, 0.01f);
 	}
 
 	void TearDown() override
@@ -61,25 +67,21 @@ protected:
 	TestableBattery *battery;
 };
 
-// Test that the SOC calculation returns 100% (1.0) when given the maximum voltage (4.35V)
-// This validates that a fully charged battery is correctly identified
-TEST_F(SeesSOCTest, TestGetSOCAtMaxVoltage)
+// Test SOC calculation at boundary voltages (empty=0%, charged=100%)
+// Also validates that out-of-range voltages are properly clamped
+TEST_F(SeesSOCTest, TestSOCBoundariesAndClamping)
 {
-	float result = battery->testGetSOC(4.35f);
-	EXPECT_NEAR(result, 1.0f, 0.01f);
-}
+// Test operational boundaries
+	EXPECT_NEAR(battery->testGetSOC(3.4f), 0.0f, 0.01f) << "Empty voltage should return 0% SOC";
+	EXPECT_NEAR(battery->testGetSOC(4.35f), 1.0f, 0.01f) << "Charged voltage should return 100% SOC";
 
-// Test that the SOC calculation returns 0% (0.0) when given the minimum voltage (3.4V)
-// This validates that an empty battery is correctly identified
-TEST_F(SeesSOCTest, TestGetSOCAtMinVoltage)
-{
-	float result = battery->testGetSOC(3.4f);
-	EXPECT_NEAR(result, 0.0f, 0.01f);
+// Test clamping behavior for out-of-range voltages
+	EXPECT_NEAR(battery->testGetSOC(3.0f), 0.0f, 0.01f) << "Below-empty voltage should be clamped to 0%";
+	EXPECT_NEAR(battery->testGetSOC(5.0f), 1.0f, 0.01f) << "Above-charged voltage should be clamped to 100%";
 }
 
 // Test that SOC values increase monotonically with increasing voltage
-// This ensures the SOC calculation behaves predictably across the voltage range
-TEST_F(SeesSOCTest, TestGetSOCMonotonicBehavior)
+TEST_F(SeesSOCTest, TestSOCMonotonicBehavior)
 {
 	std::vector<float> test_voltages = {3.5f, 3.7f, 3.9f, 4.1f, 4.3f};
 	std::vector<float> soc_values;
@@ -90,66 +92,27 @@ TEST_F(SeesSOCTest, TestGetSOCMonotonicBehavior)
 
 	for (size_t i = 1; i < soc_values.size(); i++) {
 		EXPECT_GT(soc_values[i], soc_values[i - 1])
-				<< "SOC should increase with voltage";
+				<< "SOC should increase monotonically with voltage";
 	}
 }
 
-// Test that voltages outside the normal range are properly clamped
-// Voltages above max should return 100%, voltages below min should return 0%
-TEST_F(SeesSOCTest, TestGetSOCBoundaryConditions)
-{
-	float result_above_max = battery->testGetSOC(5.0f);
-	float result_below_min = battery->testGetSOC(3.0f);
-
-	EXPECT_NEAR(result_above_max, 1.0f, 0.01f);
-	EXPECT_NEAR(result_below_min, 0.0f, 0.01f);
-}
-
-// Test that SOC values are always within the valid range [0.0, 1.0]
-// This ensures no calculation errors produce invalid SOC values
-TEST_F(SeesSOCTest, TestSOCRange)
+// Test that all SOC values are within valid range [0.0, 1.0] across voltage spectrum
+TEST_F(SeesSOCTest, TestSOCValidRange)
 {
 	std::vector<float> test_voltages = {3.0f, 3.5f, 3.9f, 4.1f, 4.35f, 5.0f};
 
 	for (float voltage : test_voltages) {
 		float soc = battery->testGetSOC(voltage);
-		std::cout << "Voltage: " << voltage << "V, SOC: " << soc << std::endl;
 		EXPECT_GE(soc, 0.0f) << "SOC should be >= 0.0 for voltage " << voltage;
 		EXPECT_LE(soc, 1.0f) << "SOC should be <= 1.0 for voltage " << voltage;
 	}
 }
 
-
-// Test that battery parameter values are correctly configured
-// This validates the test setup and parameter initialization
-TEST_F(SeesSOCTest, TestParameterIntegration)
+// Test chemistry lookup table interpolation at known data points
+TEST_F(SeesSOCTest, TestChemistryLookupAccuracy)
 {
-	EXPECT_EQ(battery->cell_count(), 6);
-	EXPECT_NEAR(battery->empty_cell_voltage(), 3.4f, 0.01f);
-	EXPECT_NEAR(battery->full_cell_voltage(), 4.35f, 0.01f);
-}
-
-// Test SOC calculation at specific key voltages (empty, charged)
-// This validates the normalization and scaling of SOC values
-TEST_F(SeesSOCTest, TestSOCNormalization)
-{
-	float soc_empty = battery->testGetSOC(3.4f);
-	float soc_charged = battery->testGetSOC(4.35f);
-
-	EXPECT_NEAR(soc_empty, 0.0f, 0.01f);
-	EXPECT_NEAR(soc_charged, 1.0f, 0.01f);
-}
-
-// Test that chemistry lookup values from the lookup table are reasonable
-// This validates specific points in the non-linear chemistry curve
-TEST_F(SeesSOCTest, TestChemistryLookupTableValues)
-{
-// Test known lookup table values (voltage -> expected chemistry SOC)
-	float lookup_4_203 = battery->testChemistryLookup(4.203f);  // Should be around 0.88
-	float lookup_3_838 = battery->testChemistryLookup(3.838f);  // Should be around 0.48
-	float lookup_3_678 = battery->testChemistryLookup(3.678f);  // Should be around 0.08
-
-	EXPECT_NEAR(lookup_4_203, 0.88f, 0.02f);
-	EXPECT_NEAR(lookup_3_838, 0.48f, 0.02f);
-	EXPECT_NEAR(lookup_3_678, 0.08f, 0.02f);
+// Test known lookup table values to ensure proper interpolation
+	EXPECT_NEAR(battery->testChemistryLookup(4.203f), 0.88f, 0.02f) << "4.203V should map to ~88% chemistry SOC";
+	EXPECT_NEAR(battery->testChemistryLookup(3.838f), 0.48f, 0.02f) << "3.838V should map to ~48% chemistry SOC";
+	EXPECT_NEAR(battery->testChemistryLookup(3.678f), 0.08f, 0.02f) << "3.678V should map to ~8% chemistry SOC";
 }
