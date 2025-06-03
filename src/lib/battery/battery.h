@@ -148,7 +148,9 @@ protected:
 	void updateParams() override;
 
 	/**
-	 * Self-contained simple lookup class for SOC given a voltage
+	 * Self-contained simple lookup class for LiPo charge at a given OC voltage.
+	 * The SoC is then calculated by scaling to fit the operation max and min voltage (derived from factors such as voltage required to maintain sufficient thrust overhead).
+	 * It's important to understand these two steps and to know that this lookup table does not directly translate to the drone SoC.
 	 *
 	 * NB
 	 *   - currently const (not reading from params) just to get going quickly
@@ -221,8 +223,8 @@ private:
 	hrt_abstime _last_timestamp{0};
 	bool _armed{false};
 
-	// Sees SOC calculation - a lookup table vs OC voltage at low current, and then pure coulomb coutning at high current
-	float _soc_initial{0}; /// SOC at last low-current time (initialisation point for columnb counting)
+	// Sees SOC calculation - a lookup table vs OC voltage at low current, and then pure coulomb counting at high current
+	float _soc_initial{0}; /// SOC at last low-current time (initialisation point for coulomb counting)
 	float _discharged_mah_initial{0}; /// discharged mah at last low-current time (initialisation point for column counting)
 	hrt_abstime _sees_warning_last{0}; /// Time we last warned about cell voltage - used to limit warning frequency
 	orb_advert_t _mavlink_log_pub{nullptr}; /// pointer to the mavlink publisher for the warning

@@ -318,6 +318,7 @@ float Battery::SeesSOC::ChemistryLookup(float voltage)
 
 float Battery::SeesSOC::GetSOC(float oc_voltage)
 {
+	// Limit to max and min operational voltage
 	if (oc_voltage <= _soc_params.v_empty) {
 		return 0.0f;
 	}
@@ -326,6 +327,7 @@ float Battery::SeesSOC::GetSOC(float oc_voltage)
 		return 1.0f;
 	}
 
+	// Lookup chemistry charge, then scale for to operational max & min voltages for SoC
 	float chemistry_cap = ChemistryLookup(oc_voltage);
 	const float max_chemistry_cap = ChemistryLookup(_soc_params.v_charged);
 	const float min_chemistry_cap = ChemistryLookup(_soc_params.v_empty);
