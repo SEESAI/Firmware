@@ -50,7 +50,8 @@ using namespace time_literals;
 Battery::Battery(int index, ModuleParams *parent, const int sample_interval_us, const uint8_t source) :
 	ModuleParams(parent),
 	_index(index < 1 || index > 9 ? 1 : index),
-	_source(source)
+	_source(source),
+	_sees_soc(_params)
 {
 	const float expected_filter_dt = static_cast<float>(sample_interval_us) / 1_s;
 	_voltage_filter_v.setParameters(expected_filter_dt, 1.f);
@@ -219,7 +220,7 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 		if (!_armed) {
 
 			// Get the initial SOC from cell voltage
-			_soc_initial = _soc_lookup.GetSOC(oc_cell_voltage);
+			_soc_initial = _sees_soc.GetSOC(oc_cell_voltage);
 
 			// If the 'initial' SoC is refreshed (e.g between flights), the discharged_initial is updated
 			// to ensure appropriate continuity in coulomb counting.
@@ -290,12 +291,12 @@ void Battery::estimateStateOfCharge(const float voltage_v, const float current_a
 	}
 }
 
-float Battery::SOCLookup::GetSOC(float voltage)
+float Battery::SeesSOC::ChemistryLookup(float voltage)
 {
 	if (voltage >= _lookup[0]._oc_voltage) {
 		return 1.f;
 
-	} else if (voltage <= _lookup[_lookup_size]._oc_voltage) {
+	} else if (voltage <= _lookup[_lookup_size - 1]._oc_voltage) {
 		return 0.f;
 
 	} else {
@@ -307,12 +308,30 @@ float Battery::SOCLookup::GetSOC(float voltage)
 				const float soc1 = _lookup[i]._soc;
 				const float volt2 = _lookup[i - 1]._oc_voltage;
 				const float soc2 = _lookup[i - 1]._soc;
-				return math::gradual(voltage, volt1, volt2, soc1, soc2) / 100.f;
+				return math::gradual(voltage, volt1, volt2, soc1, soc2);
 			}
 		}
 	}
 
 	return 0.0;
+}
+
+float Battery::SeesSOC::GetSOC(float oc_voltage)
+{
+	// Limit to max and min operational voltage
+	if (oc_voltage <= _soc_params.v_empty) {
+		return 0.0f;
+	}
+
+	if (oc_voltage >= _soc_params.v_charged) {
+		return 1.0f;
+	}
+
+	// Lookup chemistry charge, then scale for to operational max & min voltages for SoC
+	float chemistry_cap = ChemistryLookup(oc_voltage);
+	const float max_chemistry_cap = ChemistryLookup(_soc_params.v_charged);
+	const float min_chemistry_cap = ChemistryLookup(_soc_params.v_empty);
+	return (chemistry_cap - min_chemistry_cap) / (max_chemistry_cap - min_chemistry_cap);
 }
 
 uint8_t Battery::determineWarning(float state_of_charge)
