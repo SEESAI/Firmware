@@ -389,13 +389,13 @@ PARAM_DEFINE_INT32(UAVCAN_ROVER_ID, 125);
  * Added by sees.ai for Param Management system.
  * Currently there is no other way to determine all CAN Nodes on a system which is required for getting and setting params robustly.
  *
- * @min 0
+ * @min -1
  * @max 125
  *
  * @reboot_required true
  * @group UAVCAN
  */
-PARAM_DEFINE_INT32(UAVCAN_COMPID_1, 125);
+PARAM_DEFINE_INT32(UAVCAN_COMPID_1, -1);
 
 /**
  * UAVCAN Component ID 2
@@ -403,10 +403,10 @@ PARAM_DEFINE_INT32(UAVCAN_COMPID_1, 125);
  * Added by sees.ai for Param Management system.
  * Currently there is no other way to determine all CAN Nodes on a system which is required for getting and setting params robustly.
  *
- * @min 0
+ * @min -1
  * @max 125
  *
  * @reboot_required true
  * @group UAVCAN
  */
-PARAM_DEFINE_INT32(UAVCAN_COMPID_2, 124);
+PARAM_DEFINE_INT32(UAVCAN_COMPID_2, -1);
