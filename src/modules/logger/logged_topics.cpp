@@ -68,7 +68,8 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic("heater_status");
 	add_topic("home_position");
 	add_topic("hover_thrust_estimate", 100);
-	add_topic("input_rc", 500);
+	add_topic("input_rc", 100);					// Sees.ai - Increased rate from 2Hz to 10Hz
+	add_topic("rc_channels", 100);					// Sees.ai - Added logging to see parsed rc_channels
 	add_optional_topic("internal_combustion_engine_status", 10);
 	add_topic("irlock_report", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
 	add_topic("landing_target_pose", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
@@ -76,6 +77,7 @@ void LoggedTopics::add_default_topics()
 	add_topic("magnetometer_noise", 200);				// Sees.ai - Added topic for monitoring mag disturbance/filter performance
 	add_topic("manual_control_setpoint", 200);
 	add_topic("manual_control_switches");
+	add_topic("manual_control_input", 100);				// Sees.ai - Added topic for monitoring RC
 	add_topic("mission_result");
 	add_topic("navigator_mission_item");
 	add_topic("npfg_status", 100);
