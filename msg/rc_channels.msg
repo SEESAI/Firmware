@@ -37,3 +37,4 @@ int8[27] function						# Functions mapping
 uint8 rssi							# Receive signal strength index
 bool signal_lost						# Control signal lost, should be checked together with topic timeout
 uint32 frame_drop_count						# Number of dropped frames
+uint8 num_channels_lost						# Sees.ai - Number of channels with values that are out of bounds (<900)
