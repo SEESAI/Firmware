@@ -404,10 +404,10 @@ void RCUpdate::Run()
 		// If any channel value is <900, then receiver has not yet recovered from poor signal, or there is another problem.
 		// Therefore, flag as signal_lost.
 		for (unsigned int i = 0; i < input_rc.channel_count; i++) {
-				if (input_rc.values[i] < 900) {
-					channels_lost_count++;
-				}
+			if (input_rc.values[i] < 900) {
+				channels_lost_count++;
 			}
+		}
 
 		/* check flags and require at least four channels to consider the signal valid */
 		if (input_rc.rc_lost || input_rc.rc_failsafe || input_rc.channel_count < 4 || channels_lost_count) {

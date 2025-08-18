@@ -268,6 +268,7 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 					// i.e if safety pilot switches to Position Control, then give them control.
 					if (_selector.getSeesDesiredControl() != manual_control_setpoint_s::SOURCE_RC) {
 						_selector.setControlSourceRC();
+
 						// If transitioning between RC and Mav, reassess all inputs to check for new valid input.
 						// This is to prevent publishing the old setpoint in its Invalid state (triggering Manual Control Lost prematurely)
 						// before the new one has been selected.
@@ -278,6 +279,7 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 								_selector.updateWithNewInputSample(now, manual_control_input, i);
 							}
 						}
+
 						mavlink_log_info(&_mavlink_log_pub, "Flight Mode changed by RC. Switching to RC Control.");
 					}
 				}
