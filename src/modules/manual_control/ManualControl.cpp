@@ -146,7 +146,7 @@ void ManualControl::Run()
 	// ---Sees.ai--- Flag a Mavlink Info message to indicate switching state (visible in QGC and ulog).
 	if (control_source_toggled) {
 		int sees_desired_control = _selector.getSeesDesiredControl();
-		reassess_inputs();
+		reassess_inputs(now);
 
 		if (sees_desired_control == manual_control_setpoint_s::SOURCE_RC) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
@@ -259,7 +259,7 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 					if (_selector.getSeesDesiredControl() != manual_control_setpoint_s::SOURCE_RC) {
 						_selector.setControlSourceRC();
 
-						reassess_inputs();
+						reassess_inputs(now);
 						mavlink_log_info(&_mavlink_log_pub, "Flight Mode changed by RC. Switching to RC Control.");
 					}
 				}
@@ -511,7 +511,7 @@ void ManualControl::send_video_command()
 	_video_recording = !_video_recording;
 }
 
-void ManualControl::reassess_inputs()
+void ManualControl::reassess_inputs(hrt_abstime now)
 {
 	// If transitioning between RC and Mav, reassess all inputs to check for new valid input.
 	// This is to prevent publishing the old setpoint in its Invalid state (triggering Manual Control Lost prematurely)
