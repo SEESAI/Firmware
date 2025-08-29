@@ -146,17 +146,7 @@ void ManualControl::Run()
 	// ---Sees.ai--- Flag a Mavlink Info message to indicate switching state (visible in QGC and ulog).
 	if (control_source_toggled) {
 		int sees_desired_control = _selector.getSeesDesiredControl();
-
-		// If transitioning between RC and Mav, reassess all inputs to check for new valid input.
-		// This is to prevent publishing the old setpoint in its Invalid state (triggering Manual Control Lost prematurely)
-		// before the new one has been selected.
-		for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
-			manual_control_setpoint_s manual_control_input;
-
-			if (_manual_control_setpoint_subs[i].copy(&manual_control_input)) {
-				_selector.updateWithNewInputSample(now, manual_control_input, i);
-			}
-		}
+		reassess_inputs(now);
 
 		if (sees_desired_control == manual_control_setpoint_s::SOURCE_RC) {
 			mavlink_log_info(&_mavlink_log_pub, "Switching to RC Control");
@@ -268,6 +258,8 @@ void ManualControl::rc_switches_execute(bool switches_updated, const manual_cont
 					// i.e if safety pilot switches to Position Control, then give them control.
 					if (_selector.getSeesDesiredControl() != manual_control_setpoint_s::SOURCE_RC) {
 						_selector.setControlSourceRC();
+
+						reassess_inputs(now);
 						mavlink_log_info(&_mavlink_log_pub, "Flight Mode changed by RC. Switching to RC Control.");
 					}
 				}
@@ -517,6 +509,20 @@ void ManualControl::send_video_command()
 	command_pub.publish(command);
 
 	_video_recording = !_video_recording;
+}
+
+void ManualControl::reassess_inputs(hrt_abstime now)
+{
+	// If transitioning between RC and Mav, reassess all inputs to check for new valid input.
+	// This is to prevent publishing the old setpoint in its Invalid state (triggering Manual Control Lost prematurely)
+	// before the new one has been selected.
+	for (int i = 0; i < MAX_MANUAL_INPUT_COUNT; i++) {
+		manual_control_setpoint_s manual_control_input;
+
+		if (_manual_control_setpoint_subs[i].copy(&manual_control_input)) {
+			_selector.updateWithNewInputSample(now, manual_control_input, i);
+		}
+	}
 }
 
 int ManualControl::task_spawn(int argc, char *argv[])

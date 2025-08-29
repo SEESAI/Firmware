@@ -398,9 +398,19 @@ void RCUpdate::Run()
 
 		/* detect RC signal loss */
 		bool signal_lost = true;
+		int channels_lost_count = 0;
+
+		// ---Sees.ai---
+		// If any channel value is <900, then receiver has not yet recovered from poor signal, or there is another problem.
+		// Therefore, flag as signal_lost.
+		for (unsigned int i = 0; i < input_rc.channel_count; i++) {
+			if (input_rc.values[i] < 900) {
+				channels_lost_count++;
+			}
+		}
 
 		/* check flags and require at least four channels to consider the signal valid */
-		if (input_rc.rc_lost || input_rc.rc_failsafe || input_rc.channel_count < 4) {
+		if (input_rc.rc_lost || input_rc.rc_failsafe || input_rc.channel_count < 4 || channels_lost_count) {
 			/* signal is lost or no enough channels */
 			signal_lost = true;
 
@@ -501,6 +511,7 @@ void RCUpdate::Run()
 		_rc_signal_lost_hysteresis.set_state_and_update(signal_lost, hrt_absolute_time());
 
 		_rc.channel_count = input_rc.channel_count;
+		_rc.num_channels_lost = channels_lost_count;
 		_rc.rssi = input_rc.rssi;
 		_rc.signal_lost = _rc_signal_lost_hysteresis.get_state();
 		_rc.timestamp = input_rc.timestamp_last_signal;

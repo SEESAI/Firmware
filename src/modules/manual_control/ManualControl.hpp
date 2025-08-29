@@ -97,6 +97,7 @@ private:
 	void send_camera_mode_command(CameraMode camera_mode);
 	void send_photo_command();
 	void send_video_command();
+	void reassess_inputs(hrt_abstime now);
 
 	uORB::Publication<manual_control_setpoint_s> _manual_control_setpoint_pub{ORB_ID(manual_control_setpoint)};
 	uORB::Publication<sees_manual_control_data_s> _sees_manual_control_data_pub{ORB_ID(sees_manual_control_data)};
