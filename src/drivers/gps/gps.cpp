@@ -739,6 +739,13 @@ GPS::run()
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_dynmodel);
 	}
+	
+	int32_t gps_ubx_dgnss_timeout = 60; // default to 60 s
+	handle = param_find("GPS_UBX_RTCM_TIMEOUT");
+	
+	if (handle != PARAM_INVALID) {
+		param_get(handle, &gps_ubx_dgnss_timeout);
+	}
 
 	handle = param_find("GPS_UBX_MODE");
 
@@ -832,7 +839,7 @@ GPS::run()
 		/* FALLTHROUGH */
 		case gps_driver_mode_t::UBX:
 			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info,
-						   gps_ubx_dynmodel, heading_offset, ubx_mode);
+						   gps_ubx_dynmodel, gps_ubx_dgnss_timeout, heading_offset, ubx_mode);
 			set_device_type(DRV_GPS_DEVTYPE_UBX);
 			break;
 #ifndef CONSTRAINED_FLASH
