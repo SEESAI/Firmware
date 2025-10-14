@@ -70,6 +70,48 @@ PARAM_DEFINE_INT32(GPS_DUMP_COMM, 0);
 PARAM_DEFINE_INT32(GPS_UBX_DYNMODEL, 7);
 
 /**
+ * u-blox GPS DGNSS Timeout
+ *
+ * u-blox receivers support DGNSS timeout to adjust the timeout to drop back to a 3D or 3D/DGNSS mode
+ * if RTCM corrections are older than the specified time.
+ * 
+ * @min 0
+ * @max 255
+ * @unit s
+ * 
+ * @reboot_required true
+ * 
+ * @group GPS
+ */
+PARAM_DEFINE_INT32(GPS_UBX_DGNSS_TO, 60);
+
+/**
+ * u-blox GPS Minimum Satellite Signal Level for Navigation
+ *
+ * @min 0
+ * @max 255
+ * @unit dBHz
+ *
+ * @reboot_required true
+ *
+ * @group GPS
+ */
+PARAM_DEFINE_INT32(GPS_UBX_MINCNO, 6);
+
+/**
+ * u-blox GPS minimum elevation for a GNSS satellite to be used in navigation
+ *
+ * @min 0
+ * @max 127
+ * @unit deg
+ *
+ * @reboot_required true
+ *
+ * @group GPS
+ */
+PARAM_DEFINE_INT32(GPS_UBX_MINELEV, 10);
+
+/**
  * Enable sat info (if available)
  *
  * Enable publication of satellite info (ORB_ID(satellite_info)) if possible.
