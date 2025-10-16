@@ -119,8 +119,8 @@ bool PreFlightCheck::preflightCheck(orb_advert_t *mavlink_log_pub, vehicle_statu
 		param_get(param_find("SYS_HAS_NUM_DIST"), &sys_has_num_dist_sens);
 
 		if (sys_has_num_dist_sens > 0) {
-			static_cast<void>(sensorAvailabilityCheck(report_failures, sys_has_num_dist_sens,
-					  mavlink_log_pub, status, distSensCheck));
+			failed |= !sensorAvailabilityCheck(report_failures, sys_has_num_dist_sens,
+							   mavlink_log_pub, status, distSensCheck);
 		}
 
 	}
