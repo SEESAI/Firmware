@@ -452,6 +452,8 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	report.heading_offset = heading_offset;
 	report.heading_accuracy = heading_accuracy;
 
+	report.noise_per_ms = msg.noise_per_ms;
+
 	// ---sees.ai---
 	// CAN node IDs are persistent, however uorb instance numbering is not (i.e GPS 124 can initialise as uorb instance 0 or 1).
 	// To solve this, we've added a parameter that allows the user to specify the CAN ID that should be uorb instance 0 (Rover).

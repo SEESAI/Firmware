@@ -63,3 +63,6 @@
 	path = src/modules/mavlink/mavlink
 	url = https://github.com/SEESAI/mavlink.git
 	branch = 3b52eac_dev
+[submodule "src/drivers/uavcan/libuavcan"]
+	path = src/drivers/uavcan/libuavcan
+	url = git@github.com:SEESAI/libuavcan.git
