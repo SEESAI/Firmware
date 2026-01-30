@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (c) 2015-2021 PX4 Development Team. All rights reserved.
+#   Copyright (c) 2015-2023 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -42,7 +42,10 @@ px4_add_git_submodule(TARGET git_uavcan_pydronecan PATH ${LIBDRONECAN_DIR}/libua
 set(UAVCAN_PLATFORM "generic")
 
 if(CONFIG_ARCH_CHIP)
-	if(${CONFIG_ARCH_CHIP} MATCHES "kinetis")
+	if(${CONFIG_NET_CAN} MATCHES "y")
+		set(UAVCAN_DRIVER "socketcan")
+		set(UAVCAN_TIMER 1)
+	elseif(${CONFIG_ARCH_CHIP} MATCHES "kinetis")
 		set(UAVCAN_DRIVER "kinetis")
 		set(UAVCAN_TIMER 1)
 	elseif(${CONFIG_ARCH_CHIP} MATCHES "stm32h7")
@@ -74,6 +77,7 @@ add_definitions(
 	-DUAVCAN_${UAVCAN_DRIVER_UPPER}_${OS_UPPER}=1
 	-DUAVCAN_${UAVCAN_DRIVER_UPPER}_NUM_IFACES=${config_uavcan_num_ifaces}
 	-DUAVCAN_${UAVCAN_DRIVER_UPPER}_TIMER_NUMBER=${UAVCAN_TIMER}
+	-DUAVCAN_NUM_IFACES=${config_uavcan_num_ifaces}
 	-DUAVCAN_CPP_VERSION=UAVCAN_CPP03
 	-DUAVCAN_DRIVER=uavcan_${UAVCAN_DRIVER}
 	-DUAVCAN_IMPLEMENT_PLACEMENT_NEW=1
@@ -131,6 +135,8 @@ px4_add_module(
 	STACK_MAIN 4096
 	COMPILE_FLAGS
 		-Wno-format-security # logmessage.hpp
+		#-O0
+		#-DDEBUG_BUILD
 	INCLUDES
 		${DSDLC_OUTPUT}
 		${LIBDRONECAN_DIR}/libuavcan/include
@@ -138,6 +144,8 @@ px4_add_module(
 		${LIBDRONECAN_DIR_DRIVERS}/posix/include
 		${LIBDRONECAN_DIR_DRIVERS}/${UAVCAN_DRIVER}/driver/include
 	SRCS
+		arming_status.cpp
+		arming_status.hpp
 		beep.cpp
 		beep.hpp
 		rgbled.cpp
@@ -161,6 +169,7 @@ px4_add_module(
 		sensors/battery.cpp
 		sensors/airspeed.cpp
 		sensors/flow.cpp
+		sensors/gnss_relative.cpp
 		sensors/gnss.cpp
 		sensors/mag.cpp
 		sensors/rangefinder.cpp
@@ -169,17 +178,14 @@ px4_add_module(
 		sensors/ice_status.cpp
 		sensors/hygrometer.cpp
 		sensors/safety_button.cpp
-
 	MODULE_CONFIG
 		module.yaml
-
 	DEPENDS
 		px4_uavcan_dsdlc
 
 		button_publisher
 		drivers_rangefinder
 		led
-		mixer
 		mixer_module
 		version
 

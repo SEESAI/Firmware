@@ -46,6 +46,7 @@
 #include <drivers/drv_hrt.h>
 #include <systemlib/err.h>
 #include <mathlib/mathlib.h>
+#include <matrix/math.hpp>
 #include <lib/parameters/param.h>
 
 using namespace time_literals;
@@ -58,6 +59,7 @@ UavcanGnssBridge::UavcanGnssBridge(uavcan::INode &node) :
 	_sub_auxiliary(node),
 	_sub_fix(node),
 	_sub_fix2(node),
+	_sub_gnss_heading(node),
 	_pub_moving_baseline_data(node),
 	_pub_rtcm_stream(node),
 	_channel_using_fix2(new bool[_max_channels])
@@ -100,6 +102,12 @@ UavcanGnssBridge::init()
 		return res;
 	}
 
+	res = _sub_gnss_heading.start(RelPosHeadingCbBinder(this, &UavcanGnssBridge::gnss_relative_sub_cb));
+
+	if (res < 0) {
+		PX4_WARN("GNSS relative sub failed %i", res);
+		return res;
+	}
 
 	// UAVCAN_PUB_RTCM
 	int32_t uavcan_pub_rtcm = 0;
@@ -155,7 +163,7 @@ UavcanGnssBridge::gnss_fix_sub_cb(const uavcan::ReceivedDataStructure<uavcan::eq
 	float vel_cov[9];
 	msg.velocity_covariance.unpackSquareMatrix(vel_cov);
 
-	process_fixx(msg, fix_type, pos_cov, vel_cov, valid_pos_cov, valid_vel_cov, NAN, NAN, NAN);
+	process_fixx(msg, fix_type, pos_cov, vel_cov, valid_pos_cov, valid_vel_cov, NAN, NAN, NAN, -1, -1, 0, 0);
 }
 
 void
@@ -295,13 +303,22 @@ UavcanGnssBridge::gnss_fix2_sub_cb(const uavcan::ReceivedDataStructure<uavcan::e
 		}
 	}
 
+	// Invalidate the heading fields
 	float heading = NAN;
 	float heading_offset = NAN;
 	float heading_accuracy = NAN;
 
-	// Use ecef_position_velocity for now... There is no heading field
-	if (!msg.ecef_position_velocity.empty()) {
-		heading = msg.ecef_position_velocity[0].velocity_xyz[0];
+	int32_t noise_per_ms = -1;
+	int32_t jamming_indicator = -1;
+	uint8_t jamming_state = 0;
+	uint8_t spoofing_state = 0;
+
+	// TODO: this hack should eventually be removed now that we have the RelPosHeading message
+	// HACK: Use ecef_position_velocity for heading
+	if (!msg.ecef_position_velocity.empty() && !_rel_heading_valid) {
+		if (!isnan(msg.ecef_position_velocity[0].velocity_xyz[0])) {
+			heading = msg.ecef_position_velocity[0].velocity_xyz[0];
+		}
 
 		if (!isnan(msg.ecef_position_velocity[0].velocity_xyz[1])) {
 			heading_offset = msg.ecef_position_velocity[0].velocity_xyz[1];
@@ -310,19 +327,34 @@ UavcanGnssBridge::gnss_fix2_sub_cb(const uavcan::ReceivedDataStructure<uavcan::e
 		if (!isnan(msg.ecef_position_velocity[0].velocity_xyz[2])) {
 			heading_accuracy = msg.ecef_position_velocity[0].velocity_xyz[2];
 		}
+
+		noise_per_ms = msg.ecef_position_velocity[0].position_xyz_mm[0];
+		jamming_indicator = msg.ecef_position_velocity[0].position_xyz_mm[1];
+
+		jamming_state = msg.ecef_position_velocity[0].position_xyz_mm[2] >> 8;
+		spoofing_state = msg.ecef_position_velocity[0].position_xyz_mm[2] & 0xFF;
 	}
 
 	process_fixx(msg, fix_type, pos_cov, vel_cov, valid_covariances, valid_covariances, heading, heading_offset,
-		     heading_accuracy);
+		     heading_accuracy, noise_per_ms, jamming_indicator, jamming_state, spoofing_state);
 }
+void UavcanGnssBridge::gnss_relative_sub_cb(const
+		uavcan::ReceivedDataStructure<ardupilot::gnss::RelPosHeading> &msg)
+{
+	_rel_heading_valid = msg.reported_heading_acc_available;
+	_rel_heading = math::radians(msg.reported_heading_deg);
+	_rel_heading_accuracy = math::radians(msg.reported_heading_acc_deg);
 
+}
 template <typename FixType>
 void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType> &msg,
 				    uint8_t fix_type,
 				    const float (&pos_cov)[9], const float (&vel_cov)[9],
 				    const bool valid_pos_cov, const bool valid_vel_cov,
 				    const float heading, const float heading_offset,
-				    const float heading_accuracy)
+				    const float heading_accuracy, const int32_t noise_per_ms,
+				    const int32_t jamming_indicator, const uint8_t jamming_state,
+				    const uint8_t spoofing_state)
 {
 	sensor_gps_s report{};
 	report.device_id = get_device_id();
@@ -337,10 +369,10 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	 */
 	report.timestamp = hrt_absolute_time();
 
-	report.lat           = msg.latitude_deg_1e8 / 10;
-	report.lon           = msg.longitude_deg_1e8 / 10;
-	report.alt           = msg.height_msl_mm;
-	report.alt_ellipsoid = msg.height_ellipsoid_mm;
+	report.lat           = msg.latitude_deg_1e8 / 1e8;
+	report.lon           = msg.longitude_deg_1e8 / 1e8;
+	report.alt           = msg.height_msl_mm / 1e3;
+	report.alt_ellipsoid = msg.height_ellipsoid_mm / 1e3;
 
 	if (valid_pos_cov) {
 		// Horizontal position uncertainty
@@ -421,7 +453,7 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	}
 
 	// If we haven't already done so, set the system clock using GPS data
-	if (valid_pos_cov && !_system_clock_set) {
+	if (report.time_utc_usec != 0 && (fix_type >= 2) && !_system_clock_set) {
 		timespec ts{};
 
 		// get the whole microseconds
@@ -448,108 +480,27 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 		report.vdop = msg.pdop;
 	}
 
-	report.heading = heading;
-	report.heading_offset = heading_offset;
-	report.heading_accuracy = heading_accuracy;
+	// Use heading from RelPosHeading message if available and we have RTK Fixed solution.
+	if (_rel_heading_valid && (fix_type == 6)) {
+		report.heading = _rel_heading;
+		report.heading_offset = NAN;
+		report.heading_accuracy = _rel_heading_accuracy;
 
-	// ---sees.ai---
-	// CAN node IDs are persistent, however uorb instance numbering is not (i.e GPS 124 can initialise as uorb instance 0 or 1).
-	// To solve this, we've added a parameter that allows the user to specify the CAN ID that should be uorb instance 0 (Rover).
-	// No other GPS will initialise until the GPS with the specified CAN ID has initialised.
-	// This ensure Rover is always instance 0 and, subsequently, moving base is always instance 1.
+		_rel_heading = NAN;
+		_rel_heading_accuracy = NAN;
+		_rel_heading_valid = false;
 
-	// Only read the param on boot as it feels unnecessary to continuously read.
-	// Editting the parameter will require reboot.
-	if (_gps_rover_can_id == -1) {
-		param_get(param_find("UAVCAN_ROVER_ID"), &_gps_rover_can_id);
+	} else {
+		report.heading = heading;
+		report.heading_offset = heading_offset;
+		report.heading_accuracy = heading_accuracy;
 	}
 
-	if (_set_once == false) {
-		param_set(param_find("UAVCAN_COMPID_1"), &_uavcan_compid_1);
-		param_set(param_find("UAVCAN_COMPID_2"), &_uavcan_compid_2);
-		_set_once = true;
-	}
+	report.noise_per_ms = noise_per_ms;
+	report.jamming_indicator = jamming_indicator;
+	report.jamming_state = jamming_state;
 
-	// If compid_1 isn't set, then take the first CAN ID
-	if (_uavcan_compid_1 == -1) {
-		_uavcan_compid_1 = msg.getSrcNodeID().get();
-		param_set(param_find("UAVCAN_COMPID_1"), &_uavcan_compid_1);
-	}
-
-	// If compid_1 IS set, and compid_2 is not yet set AND this CAN ID does not match compid_1, then take this other CAN ID
-	if (_uavcan_compid_1 != -1 && _uavcan_compid_2 == -1 && msg.getSrcNodeID().get() != _uavcan_compid_1) {
-		_uavcan_compid_2 = msg.getSrcNodeID().get();
-		param_set(param_find("UAVCAN_COMPID_2"), &_uavcan_compid_2);
-	}
-
-	// Do not publish if sensor_gps instance 0 does not exist and if this gps report is not from the Rover.
-	if (OK != orb_exists(ORB_ID(sensor_gps), 0) && msg.getSrcNodeID().get() != _gps_rover_can_id) {
-		if ((hrt_absolute_time() - _last_warn) > 1'000'000) {
-			PX4_INFO("Selected Rover (CAN ID %i) not available or initialized. Not initializing GPS with ID %i",
-				 int(_gps_rover_can_id),
-				 msg.getSrcNodeID().get());
-			_last_warn = hrt_absolute_time();
-		}
-
-		return;
-	}
-
-	int32_t param_sys_failure_en = 0;
-	param_get(param_find("SYS_FAILURE_EN"), &param_sys_failure_en);
-
-	if (param_sys_failure_en == 1) {
-		checkFailureInjections();
-	}
-
-	if (!_gps_blocked) {
-		publish(msg.getSrcNodeID().get(), &report);
-	}
-}
-
-void UavcanGnssBridge::checkFailureInjections()
-{
-	vehicle_command_s vehicle_command;
-
-	while (_vehicle_command_sub.update(&vehicle_command)) {
-		if (vehicle_command.command != vehicle_command_s::VEHICLE_CMD_INJECT_FAILURE) {
-			continue;
-		}
-
-		bool handled = false;
-		bool supported = false;
-
-		const int failure_unit = static_cast<int>(vehicle_command.param1 + 0.5f);
-		const int failure_type = static_cast<int>(vehicle_command.param2 + 0.5f);
-		// const int instance = static_cast<int>(vehicle_command.param3 + 0.5f);
-
-		if (failure_unit == vehicle_command_s::FAILURE_UNIT_SENSOR_GPS) {
-			handled = true;
-
-			// Currently only implemented for all/none GPS, not individual instances.
-			if (failure_type == vehicle_command_s::FAILURE_TYPE_OFF) {
-				PX4_WARN("CMD_INJECT_FAILURE, GPS off");
-				supported = true;
-				_gps_blocked = true;
-
-			} else if (failure_type == vehicle_command_s::FAILURE_TYPE_OK) {
-				PX4_INFO("CMD_INJECT_FAILURE, GPS ok");
-				supported = true;
-				_gps_blocked = false;
-			}
-
-		}
-
-		if (handled) {
-			vehicle_command_ack_s ack{};
-			ack.command = vehicle_command.command;
-			ack.from_external = false;
-			ack.result = supported ?
-				     vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED :
-				     vehicle_command_ack_s::VEHICLE_RESULT_UNSUPPORTED;
-			ack.timestamp = hrt_absolute_time();
-			_command_ack_pub.publish(ack);
-		}
-	}
+	publish(msg.getSrcNodeID().get(), &report);
 }
 
 void UavcanGnssBridge::update()
@@ -564,37 +515,68 @@ void UavcanGnssBridge::update()
 // to work.
 void UavcanGnssBridge::handleInjectDataTopic()
 {
-	// Limit maximum number of GPS injections to 6 since usually
-	// GPS injections should consist of 1-4 packets (GPS, Glonass, BeiDou, Galileo).
-	// Looking at 6 packets thus guarantees, that at least a full injection
-	// data set is evaluated.
-	static constexpr size_t MAX_NUM_INJECTIONS = 6;
+	// We don't want to call copy again further down if we have already done a
+	// copy in the selection process.
+	bool already_copied = false;
+	gps_inject_data_s msg;
 
-	size_t num_injections = 0;
-	gps_inject_data_s gps_inject_data;
+	// If there has not been a valid RTCM message for a while, try to switch to a different RTCM link
+	if ((hrt_absolute_time() - _last_rtcm_injection_time) > 5_s) {
 
-	while ((num_injections <= MAX_NUM_INJECTIONS) && _gps_inject_data_sub.update(&gps_inject_data)) {
-		// Write the message to the gps device. Note that the message could be fragmented.
-		// But as we don't write anywhere else to the device during operation, we don't
-		// need to assemble the message first.
-		if (_publish_rtcm_stream) {
-			PublishRTCMStream(gps_inject_data.data, gps_inject_data.len);
+		for (int instance = 0; instance < _orb_inject_data_sub.size(); instance++) {
+			const bool exists = _orb_inject_data_sub[instance].advertised();
+
+			if (exists) {
+				if (_orb_inject_data_sub[instance].copy(&msg)) {
+					if ((hrt_absolute_time() - msg.timestamp) < 5_s) {
+						// Remember that we already did a copy on this instance.
+						already_copied = true;
+						_selected_rtcm_instance = instance;
+						break;
+					}
+				}
+			}
 		}
-
-		if (_publish_moving_baseline_data) {
-			PublishMovingBaselineData(gps_inject_data.data, gps_inject_data.len);
-		}
-
-		num_injections++;
 	}
+
+	bool updated = already_copied;
+
+	// Limit maximum number of GPS injections to 8 since usually
+	// GPS injections should consist of 1-4 packets (GPS, Glonass, BeiDou, Galileo).
+	// Looking at 8 packets thus guarantees, that at least a full injection
+	// data set is evaluated.
+	// Moving Base requires a higher rate, so we allow up to 8 packets.
+	const size_t max_num_injections = gps_inject_data_s::ORB_QUEUE_LENGTH;
+	size_t num_injections = 0;
+
+	do {
+		if (updated) {
+			num_injections++;
+
+			// Write the message to the gps device. Note that the message could be fragmented.
+			// But as we don't write anywhere else to the device during operation, we don't
+			// need to assemble the message first.
+			if (_publish_rtcm_stream) {
+				PublishRTCMStream(msg.data, msg.len);
+			}
+
+			if (_publish_moving_baseline_data) {
+				PublishMovingBaselineData(msg.data, msg.len);
+			}
+
+			_last_rtcm_injection_time = hrt_absolute_time();
+		}
+
+		updated = _orb_inject_data_sub[_selected_rtcm_instance].update(&msg);
+
+	} while (updated && num_injections < max_num_injections);
 }
 
 bool UavcanGnssBridge::PublishRTCMStream(const uint8_t *const data, const size_t data_len)
 {
-	using uavcan::equipment::gnss::RTCMStream;
+	uavcan::equipment::gnss::RTCMStream msg;
 
-	RTCMStream msg;
-	msg.protocol_id = RTCMStream::PROTOCOL_ID_RTCM3;
+	msg.protocol_id = uavcan::equipment::gnss::RTCMStream::PROTOCOL_ID_RTCM3;
 
 	const size_t capacity = msg.data.capacity();
 	size_t written = 0;

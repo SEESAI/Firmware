@@ -78,15 +78,6 @@ PARAM_DEFINE_INT32(UAVCAN_NODE_ID, 1);
 PARAM_DEFINE_INT32(UAVCAN_BITRATE, 1000000);
 
 /**
- * UAVCAN ESC will spin at idle throttle when armed, even if the mixer outputs zero setpoints.
- *
- * @boolean
- * @reboot_required true
- * @group UAVCAN
- */
-PARAM_DEFINE_INT32(UAVCAN_ESC_IDLT, 1);
-
-/**
  * UAVCAN rangefinder minimum range
  *
  * This parameter defines the minimum valid range for a rangefinder connected via UAVCAN.
@@ -94,7 +85,7 @@ PARAM_DEFINE_INT32(UAVCAN_ESC_IDLT, 1);
  * @unit m
  * @group UAVCAN
  */
-PARAM_DEFINE_FLOAT(UAVCAN_RNG_MIN, 0.3f);
+PARAM_DEFINE_FLOAT(UAVCAN_RNG_MIN, 0.0f);
 
 /**
  * UAVCAN rangefinder maximum range
@@ -104,7 +95,41 @@ PARAM_DEFINE_FLOAT(UAVCAN_RNG_MIN, 0.3f);
  * @unit m
  * @group UAVCAN
  */
-PARAM_DEFINE_FLOAT(UAVCAN_RNG_MAX, 200.0f);
+PARAM_DEFINE_FLOAT(UAVCAN_RNG_MAX, 999.0f);
+
+/**
+ * UAVCAN fuel tank maximum capacity
+ *
+ * This parameter defines the maximum fuel capacity of the vehicle's fuel tank.
+ *
+ * @min 0.0
+ * @max 100000.0
+ * @unit liters
+ * @decimal 1
+ * @increment 0.1
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_FLOAT(UAVCAN_ECU_MAXF, 15.0f);
+
+/**
+ * UAVCAN fuel tank fuel type
+ *
+ * This parameter defines the type of fuel used in the vehicle's fuel tank.
+ *
+ * 0: Unknown
+ * 1: Liquid (e.g., gasoline, diesel)
+ * 2: Gas (e.g., hydrogen, methane, propane)
+ *
+ * @min 0
+ * @max 2
+ * @value 0 Unknown
+ * @value 1 Liquid
+ * @value 2 Gas
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(UAVCAN_ECU_FUELT, 1);
 
 /**
  * UAVCAN ANTI_COLLISION light operating mode
@@ -195,6 +220,18 @@ PARAM_DEFINE_INT32(UAVCAN_LGT_NAV, 3);
 PARAM_DEFINE_INT32(UAVCAN_LGT_LAND, 0);
 
 /**
+ * publish Arming Status stream
+ *
+ * Enable UAVCAN Arming Status stream publication
+ *  uavcan::equipment::safety::ArmingStatus
+ *
+ * @boolean
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(UAVCAN_PUB_ARM, 0);
+
+/**
  * publish RTCM stream
  *
  * Enable UAVCAN RTCM stream publication
@@ -252,7 +289,15 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_BARO, 0);
  *  uavcan::equipment::power::BatteryInfo
  *  ardupilot::equipment::power::BatteryInfoAux
  *
- * @boolean
+ *  0 - Disable
+ *  1 - Use raw data. Recommended for Smart battery
+ *  2 - Filter the data with internal battery library
+ *
+ * @min 0
+ * @max 2
+ * @value 0 Disable
+ * @value 1 Raw data
+ * @value 2 Filter data
  * @reboot_required true
  * @group UAVCAN
  */
@@ -282,6 +327,17 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_DPRES, 0);
 PARAM_DEFINE_INT32(UAVCAN_SUB_FLOW, 0);
 
 /**
+ * subscription fuel tank
+ *
+ * Enable UAVCAN fuel tank status subscription.
+ *
+ * @boolean
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(UAVCAN_SUB_FUEL, 0);
+
+/**
  * subscription GPS
  *
  * Enable UAVCAN GPS subscriptions.
@@ -294,6 +350,18 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_FLOW, 0);
  * @group UAVCAN
  */
 PARAM_DEFINE_INT32(UAVCAN_SUB_GPS, 1);
+
+/**
+ * subscription GPS Relative
+ *
+ * Enable UAVCAN GPS Relative subscription.
+ * ardupilot::gnss::RelPosHeading
+ *
+ * @boolean
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(UAVCAN_SUB_GPS_R, 1);
 
 /**
  * subscription hygrometer
@@ -310,7 +378,7 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_HYGRO, 0);
 /**
  * subscription ICE
  *
- * Enable UAVCAN internal combusion engine (ICE) subscription.
+ * Enable UAVCAN internal combustion engine (ICE) subscription.
  *  uavcan::equipment::ice::reciprocating::Status
  *
  * @boolean
@@ -367,46 +435,3 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_RNG, 0);
  * @group UAVCAN
  */
 PARAM_DEFINE_INT32(UAVCAN_SUB_BTN, 0);
-
-/**
- * Specified Rover GPS CAN ID
- *
- * Added by sees.ai for Dual ARK RTK GPS system.
- * This CAN ID will be initialised as uorb sensor_gps instance 0.
- * Does not affect non-CAN systems.
- *
- * @min 0
- * @max 125
- *
- * @reboot_required true
- * @group UAVCAN
- */
-PARAM_DEFINE_INT32(UAVCAN_ROVER_ID, 125);
-
-/**
- * UAVCAN Component ID 1
- *
- * Added by sees.ai for Param Management system.
- * Currently there is no other way to determine all CAN Nodes on a system which is required for getting and setting params robustly.
- *
- * @min -1
- * @max 125
- *
- * @reboot_required true
- * @group UAVCAN
- */
-PARAM_DEFINE_INT32(UAVCAN_COMPID_1, -1);
-
-/**
- * UAVCAN Component ID 2
- *
- * Added by sees.ai for Param Management system.
- * Currently there is no other way to determine all CAN Nodes on a system which is required for getting and setting params robustly.
- *
- * @min -1
- * @max 125
- *
- * @reboot_required true
- * @group UAVCAN
- */
-PARAM_DEFINE_INT32(UAVCAN_COMPID_2, -1);

@@ -118,4 +118,3 @@ cmake ../../libuavcan -G"Eclipse CDT4 - Unix Makefiles" \
 Path `../../libuavcan` in the command above points at the directory where the top-level `CMakeLists.txt` is located;
 you may need to adjust this per your environment.
 Note that the directory where Eclipse project is generated must not be a descendant of the source directory.
-
