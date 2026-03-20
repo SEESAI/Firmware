@@ -740,21 +740,21 @@ GPS::run()
 		param_get(handle, &gps_ubx_dynmodel);
 	}
 	
-	int32_t gps_ubx_min_satellite_signal_level = 6; // default to 6: u-Blox F9P settings
+	int32_t gps_ubx_min_satellite_signal_level = 0; // default to 0: default u-Blox minCNO settings
 	handle = param_find("GPS_UBX_MINCNO");
 	
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_min_satellite_signal_level);
 	}
 	
-	int32_t gps_ubx_min_elevation = 10; // default to 10: u-Blox F9P settings
+	int32_t gps_ubx_min_elevation = 0; // default to 0: default u-Blox minElev settings
 	handle = param_find("GPS_UBX_MINELEV");
 	
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_min_elevation);
 	}
 	
-	int32_t gps_ubx_dgnss_timeout = 60; // default to 60 s
+	int32_t gps_ubx_dgnss_timeout = 0; // default to 0: default u-Blox dgnssTimeout settings
 	handle = param_find("GPS_UBX_DGNSS_TO");
 	
 	if (handle != PARAM_INVALID) {
