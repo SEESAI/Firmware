@@ -140,6 +140,8 @@ public:
 				fix2.ecef_position_velocity.push_back(ecefpositionvelocity);
 			}
 
+			fix2.noise_per_ms = gps.noise_per_ms;
+
 			uavcan::Publisher<uavcan::equipment::gnss::Fix2>::broadcast(fix2);
 
 			// ensure callback is registered
