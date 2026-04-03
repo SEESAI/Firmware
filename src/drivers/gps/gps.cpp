@@ -739,26 +739,26 @@ GPS::run()
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_dynmodel);
 	}
+
+	int32_t gps_ubx_dgnss_timeout = 0; // default to 0: default u-Blox dgnssTimeout settings
+	handle = param_find("GPS_UBX_DGNSS_TO");
 	
+	if (handle != PARAM_INVALID) {
+		param_get(handle, &gps_ubx_dgnss_timeout);
+	}
+
 	int32_t gps_ubx_min_satellite_signal_level = 0; // default to 0: default u-Blox minCNO settings
 	handle = param_find("GPS_UBX_MINCNO");
 	
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_min_satellite_signal_level);
 	}
-	
+
 	int32_t gps_ubx_min_elevation = 0; // default to 0: default u-Blox minElev settings
 	handle = param_find("GPS_UBX_MINELEV");
-	
+
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_min_elevation);
-	}
-	
-	int32_t gps_ubx_dgnss_timeout = 0; // default to 0: default u-Blox dgnssTimeout settings
-	handle = param_find("GPS_UBX_DGNSS_TO");
-	
-	if (handle != PARAM_INVALID) {
-		param_get(handle, &gps_ubx_dgnss_timeout);
 	}
 
 	handle = param_find("GPS_UBX_MODE");
@@ -853,8 +853,8 @@ GPS::run()
 		/* FALLTHROUGH */
 		case gps_driver_mode_t::UBX:
 			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info,
-						   gps_ubx_dynmodel, gps_ubx_min_satellite_signal_level, gps_ubx_min_elevation, 
-						   gps_ubx_dgnss_timeout, heading_offset, ubx_mode);
+						   gps_ubx_dynmodel, gps_ubx_dgnss_timeout, gps_ubx_min_satellite_signal_level,
+						   gps_ubx_min_elevation, heading_offset, ubx_mode);
 			set_device_type(DRV_GPS_DEVTYPE_UBX);
 			break;
 #ifndef CONSTRAINED_FLASH
