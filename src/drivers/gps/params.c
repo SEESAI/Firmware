@@ -149,6 +149,22 @@ PARAM_DEFINE_INT32(GPS_SAT_INFO, 0);
  */
 PARAM_DEFINE_INT32(GPS_UBX_MODE, 0);
 
+/**
+ * Wipes the flash config of UBX modules.
+ *
+ * Some UBX modules have a FLASH that allows to store persistent configuration that will be loaded on start.
+ * PX4 does override all configuration parameters it needs in RAM, which takes precedence over the value in FLASH.
+ * However, configuration parameters that are not overriden by PX4 can still cause unexpected problems during flight.
+ * To avoid these kind of problems a clean config can be reached by wiping the FLASH on boot.
+ *
+ * Note: Currently only supported on UBX.
+ *
+ * @reboot_required true
+ * @group GPS
+ * @boolean
+ */
+PARAM_DEFINE_INT32(GPS_CFG_WIPE, 0);
+
 
 /**
  * Heading/Yaw offset for dual antenna GPS

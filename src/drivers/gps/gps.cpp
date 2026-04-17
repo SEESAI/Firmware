@@ -82,6 +82,8 @@
 
 #define TIMEOUT_1HZ		1300	//!< Timeout time in mS, 1000 mS (1Hz) + 300 mS delta for error
 #define TIMEOUT_5HZ		500		//!< Timeout time in mS,  200 mS (5Hz) + 300 mS delta for error
+#define TIMEOUT_INIT_1HZ	(3 * TIMEOUT_1HZ) //!< Timeout time in mS, used until GPS is healthy
+#define TIMEOUT_INIT_5HZ	(3 * TIMEOUT_5HZ) //!< Timeout time in mS, used until GPS is healthy
 #define RATE_MEASUREMENT_PERIOD 5000000
 
 enum class gps_driver_mode_t {
@@ -171,6 +173,7 @@ private:
 	char				_port[20] {};					///< device / serial port path
 
 	bool				_healthy{false};				///< flag to signal if the GPS is ok
+	bool				_cfg_wiped{false};				///< flag to signal if the config was already wiped
 	bool				_mode_auto;					///< if true, auto-detect which GPS is attached
 
 	gps_driver_mode_t		_mode;						///< current mode
@@ -742,14 +745,14 @@ GPS::run()
 
 	int32_t gps_ubx_dgnss_timeout = 0; // default to 0: default u-Blox dgnssTimeout settings
 	handle = param_find("GPS_UBX_DGNSS_TO");
-	
+
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_dgnss_timeout);
 	}
 
 	int32_t gps_ubx_min_satellite_signal_level = 0; // default to 0: default u-Blox minCNO settings
 	handle = param_find("GPS_UBX_MINCNO");
-	
+
 	if (handle != PARAM_INVALID) {
 		param_get(handle, &gps_ubx_min_satellite_signal_level);
 	}
@@ -900,6 +903,15 @@ GPS::run()
 			gpsConfig.output_mode = GPSHelper::OutputMode::GPS;
 		}
 
+		int32_t gps_cfg_wipe = 0;
+		handle = param_find("GPS_CFG_WIPE");
+
+		if (handle != PARAM_INVALID) {
+			param_get(handle, &gps_cfg_wipe);
+		}
+
+		gpsConfig.cfg_wipe = static_cast<bool>(gps_cfg_wipe) && !_cfg_wiped;
+
 		if (_helper && _helper->configure(_baudrate, gpsConfig) == 0) {
 
 			/* reset report */
@@ -945,13 +957,20 @@ GPS::run()
 			}
 
 			int helper_ret;
-			unsigned receive_timeout = TIMEOUT_5HZ;
+
+			/* After being configured (especially in combination with FLASH wipes) the GPS may require
+			 * additional time before outputting the first navigation data. To account for this, there is
+			 * an init timeout. As soon as the GPS is healthy, the timeout is decreased. This allows for
+			 * a quick reaction to a connection loss. */
+			unsigned receive_timeout = TIMEOUT_INIT_5HZ;
+			unsigned healthy_timeout = TIMEOUT_5HZ;
 
 			if ((ubx_mode == GPSDriverUBX::UBXMode::RoverWithMovingBase)
 			    || (ubx_mode == GPSDriverUBX::UBXMode::RoverWithMovingBaseUART1)) {
 				/* The MB rover will wait as long as possible to compute a navigation solution,
 				 * possibly lowering the navigation rate all the way to 1 Hz while doing so. */
-				receive_timeout = TIMEOUT_1HZ;
+				receive_timeout = TIMEOUT_INIT_1HZ;
+				healthy_timeout = TIMEOUT_1HZ;
 			}
 
 			while ((helper_ret = _helper->receive(receive_timeout)) > 0 && !should_exit()) {
@@ -1009,6 +1028,12 @@ GPS::run()
 //
 //						PX4_WARN("module found: %s", mode_str);
 					_healthy = true;
+					receive_timeout = healthy_timeout;
+				}
+
+				/* Do not wipe the FLASH config multiple times. */
+				if (!_cfg_wiped) {
+					_cfg_wiped = true;
 				}
 			}
 

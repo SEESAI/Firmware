@@ -421,7 +421,7 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	}
 
 	// If we haven't already done so, set the system clock using GPS data
-	if (valid_pos_cov && !_system_clock_set) {
+	if ((fix_type >= sensor_gps_s::FIX_TYPE_2D) && !_system_clock_set) {
 		timespec ts{};
 
 		// get the whole microseconds
@@ -566,11 +566,11 @@ void UavcanGnssBridge::update()
 // to work.
 void UavcanGnssBridge::handleInjectDataTopic()
 {
-	// Limit maximum number of GPS injections to 6 since usually
+	// Limit maximum number of GPS injections to 8 since usually
 	// GPS injections should consist of 1-4 packets (GPS, Glonass, BeiDou, Galileo).
 	// Looking at 6 packets thus guarantees, that at least a full injection
 	// data set is evaluated.
-	static constexpr size_t MAX_NUM_INJECTIONS = 6;
+	static constexpr size_t MAX_NUM_INJECTIONS = gps_inject_data_s::ORB_QUEUE_LENGTH;
 
 	size_t num_injections = 0;
 	gps_inject_data_s gps_inject_data;
