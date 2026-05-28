@@ -70,8 +70,8 @@ private:
 	bool send() override
 	{
 		mavlink_open_drone_id_location_t msg{};
-		msg.target_component = 0; // 0 for broadcast
-		msg.target_system = 0; // 0 for broadcast
+		msg.target_component = 236; // 0 for broadcast
+		msg.target_system = 236; // 0 for broadcast
 		// msg.id_or_mac // Only used for drone ID data received from other UAs.
 
 		// initialize all fields to unknown

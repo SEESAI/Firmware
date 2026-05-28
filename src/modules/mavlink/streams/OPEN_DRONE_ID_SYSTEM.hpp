@@ -73,8 +73,8 @@ private:
 			    && home_position.valid_alt && home_position.valid_hpos) {
 
 				mavlink_open_drone_id_system_t msg{};
-				msg.target_component = 0; // 0 for broadcast
-				msg.target_system = 0; // 0 for broadcast
+				msg.target_component = 236; // 0 for broadcast
+				msg.target_system = 236; // 0 for broadcast
 				// msg.id_or_mac // Only used for drone ID data received from other UAs.
 				msg.operator_location_type = MAV_ODID_OPERATOR_LOCATION_TYPE_TAKEOFF;
 				msg.classification_type = MAV_ODID_CLASSIFICATION_TYPE_UNDECLARED;
