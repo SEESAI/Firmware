@@ -2843,6 +2843,30 @@ void Commander::dataLinkCheck()
 	}
 
 
+	// Remote ID system via DroneCAN: arm_status published by UavcanRemoteIDController acts
+	// as the keepalive. The shared _datalink_last_heartbeat_open_drone_id_system timestamp
+	// means the existing timeout block below handles the lost case for both paths.
+	{
+		open_drone_id_arm_status_s arm_status;
+
+		if (_open_drone_id_arm_status_sub.update(&arm_status)) {
+			if (_open_drone_id_system_lost) {
+				_open_drone_id_system_lost = false;
+
+				if (_datalink_last_heartbeat_open_drone_id_system != 0) {
+					mavlink_log_info(&_mavlink_log_pub, "Remote ID system regained\t");
+					events::send(events::ID("commander_open_drone_id_regained_dronecan"), events::Log::Info, "Remote ID system regained");
+				}
+			}
+
+			_datalink_last_heartbeat_open_drone_id_system = hrt_absolute_time();
+			_vehicle_status.open_drone_id_system_present = true;
+			// status == 0 is MAV_ODID_ARM_STATUS_GOOD_TO_ARM
+			_vehicle_status.open_drone_id_system_healthy = (arm_status.status == 0);
+		}
+	}
+
+
 	// GCS data link loss failsafe
 	if (!_vehicle_status.gcs_connection_lost) {
 		if ((_datalink_last_heartbeat_gcs != 0)
