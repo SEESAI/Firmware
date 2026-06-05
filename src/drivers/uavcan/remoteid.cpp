@@ -238,7 +238,8 @@ void UavcanRemoteIDController::send_system()
 {
 	open_drone_id_system_s system;
 
-	if (_open_drone_id_system.advertised() && _open_drone_id_system.copy(&system)) {
+	if(1==0) {
+	//if (_open_drone_id_system.advertised() && _open_drone_id_system.copy(&system)) {
 
 		// Use what ground station sends us.
 
