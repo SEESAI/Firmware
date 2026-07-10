@@ -78,6 +78,11 @@ PARAM_DEFINE_FLOAT(SENS_GPS_TAU, 10.0f);
  *
  * This parameter has no effect if blending is active.
  *
+ * When set to a UAVCAN node ID (2-127), the corresponding receiver is
+ * additionally pinned to the first sensor_gps uORB instance (and therefore
+ * GPS_RAW_INT). A reboot is required for the instance reservation to take
+ * effect.
+ *
  * @group Sensors
  * @min -1
  * @max 127

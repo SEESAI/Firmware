@@ -140,6 +140,29 @@ UavcanGnssBridge::init()
 		_moving_baseline_data_sub_perf = perf_alloc(PC_INTERVAL, "uavcan: gnss: moving baseline data rtcm stream sub");
 	}
 
+	// SENS_GPS_PRIME: if a primary CAN node is configured (2..127), reserve
+	// sensor_gps instance 0 for it so the instance assignment is deterministic
+	// across boots regardless of node startup order.
+	int32_t gps_prime = -1;
+	param_get(param_find("SENS_GPS_PRIME"), &gps_prime);
+
+	if (gps_prime >= 2 && gps_prime <= 127) {
+		sensor_gps_s initial_report{};
+		initial_report.timestamp = hrt_absolute_time();
+		initial_report.device_id = make_uavcan_device_id(static_cast<uint8_t>(gps_prime), 0);
+		initial_report.fix_type = 0;
+		initial_report.heading = NAN;
+		initial_report.heading_offset = NAN;
+		initial_report.heading_accuracy = NAN;
+
+		// non-fatal: on failure fall back to first-come-first-served instance assignment
+		const int reserve_res = reserve_channel(gps_prime, &initial_report);
+
+		if (reserve_res < 0) {
+			PX4_WARN("GNSS instance reservation for node %i failed %i", (int)gps_prime, reserve_res);
+		}
+	}
+
 	return res;
 }
 

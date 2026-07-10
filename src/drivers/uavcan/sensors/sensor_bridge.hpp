@@ -133,6 +133,18 @@ protected:
 	void publish(const int node_id, const void *report);
 
 	/**
+	 * Reserve the first uORB instance for a specific node ID.
+	 * Must be called before any channel has been allocated (i.e. during init,
+	 * before data from any node has been published). Advertises the topic
+	 * immediately with the provided initial report so that the given node
+	 * deterministically maps to the first uORB instance.
+	 * @param node_id        Node ID to pin to the first instance
+	 * @param initial_report Zeroed/invalid ORB message used for the initial advertise
+	 * @return PX4_OK on success, -EBUSY if channels already allocated, -ENOMEM on advertise failure
+	 */
+	int reserve_channel(int node_id, const void *initial_report);
+
+	/**
 	 * Init the sensor driver for this channel.
 	 * Implementation depends on sensor type being constructed.
 	 * @param channel Channel pointer for which h_driver should be initialized.

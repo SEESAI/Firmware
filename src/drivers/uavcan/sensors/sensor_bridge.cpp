@@ -316,6 +316,35 @@ UavcanSensorBridgeBase::publish(const int node_id, const void *report)
 	(void)orb_publish(_orb_topic, channel->orb_advert, report);
 }
 
+int
+UavcanSensorBridgeBase::reserve_channel(const int node_id, const void *initial_report)
+{
+	// Only valid before any channel has been allocated, otherwise the
+	// first-come-first-served ordering has already been decided.
+	for (unsigned i = 0; i < _max_channels; i++) {
+		if (_channels[i].node_id >= 0) {
+			return -EBUSY;
+		}
+	}
+
+	uavcan_bridge::Channel *channel = &_channels[0];
+
+	_device_id.devid_s.address = static_cast<uint8_t>(node_id);
+	_device_id.devid_s.bus_type = DeviceBusType_UAVCAN;
+
+	channel->orb_advert = orb_advertise_multi(_orb_topic, initial_report, &channel->instance);
+
+	if (channel->orb_advert == nullptr) {
+		DEVICE_LOG("uORB advertise failed for reserved channel");
+		return -ENOMEM;
+	}
+
+	channel->node_id = node_id;
+	DEVICE_LOG("reserved node %d topic %s instance %d", channel->node_id, _orb_topic->o_name, channel->instance);
+
+	return PX4_OK;
+}
+
 uavcan_bridge::Channel *UavcanSensorBridgeBase::get_channel_for_node(int node_id, uint8_t iface_index)
 {
 	uavcan_bridge::Channel *channel = nullptr;
