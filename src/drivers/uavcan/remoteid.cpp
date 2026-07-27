@@ -242,8 +242,8 @@ void UavcanRemoteIDController::send_system()
 	// of the settings in the RemoteID configuration tab, meaning this block was always executed.
 	// For FAA regulations purposes we need to send the takeoff/home location, so we disable
 	// this path to avoid overriding the correct data with whatever QGC sends unconditionally.
-	if(1==0) {
-	//if (_open_drone_id_system.advertised() && _open_drone_id_system.copy(&system)) {
+	//if(1==0) {
+	if (_open_drone_id_system.advertised() && _open_drone_id_system.copy(&system)) {
 
 		// Use what ground station sends us.
 
