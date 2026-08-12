@@ -155,7 +155,7 @@ UavcanGnssBridge::gnss_fix_sub_cb(const uavcan::ReceivedDataStructure<uavcan::eq
 	float vel_cov[9];
 	msg.velocity_covariance.unpackSquareMatrix(vel_cov);
 
-	process_fixx(msg, fix_type, pos_cov, vel_cov, valid_pos_cov, valid_vel_cov, NAN, NAN, NAN);
+	process_fixx(msg, fix_type, pos_cov, vel_cov, valid_pos_cov, valid_vel_cov, NAN, NAN, NAN, -1, -1, 0, 0);
 }
 
 void
@@ -298,6 +298,11 @@ UavcanGnssBridge::gnss_fix2_sub_cb(const uavcan::ReceivedDataStructure<uavcan::e
 	float heading = NAN;
 	float heading_offset = NAN;
 	float heading_accuracy = NAN;
+	
+	int32_t noise_per_ms = -1;
+	int32_t jamming_indicator = -1;
+	uint8_t jamming_state = 0;
+	uint8_t spoofing_state = 0;
 
 	// Use ecef_position_velocity for now... There is no heading field
 	if (!msg.ecef_position_velocity.empty()) {
@@ -310,10 +315,16 @@ UavcanGnssBridge::gnss_fix2_sub_cb(const uavcan::ReceivedDataStructure<uavcan::e
 		if (!isnan(msg.ecef_position_velocity[0].velocity_xyz[2])) {
 			heading_accuracy = msg.ecef_position_velocity[0].velocity_xyz[2];
 		}
+		
+		noise_per_ms = msg.ecef.position_velocity[0].position_xyz_mm[0];
+		jamming_indicator = msg.ecef_position_velocity[0].position_xyz_mm[1];
+		
+		jamming_state = msg.ecef_position_velocity[0].position_xyz_mm[2] >> 8;
+		spoofing_state = msg.ecef_position_velocity[0].position_xyz_mm[2] & 0xFF;
 	}
 
 	process_fixx(msg, fix_type, pos_cov, vel_cov, valid_covariances, valid_covariances, heading, heading_offset,
-		     heading_accuracy);
+		     heading_accuracy, noise_per_ms, jamming_indicator, jamming_state, spoofing_state);
 }
 
 template <typename FixType>
@@ -322,7 +333,9 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 				    const float (&pos_cov)[9], const float (&vel_cov)[9],
 				    const bool valid_pos_cov, const bool valid_vel_cov,
 				    const float heading, const float heading_offset,
-				    const float heading_accuracy)
+				    const float heading_accuracy, const int32_t noise_per_ms,
+				    const int32_t jamming_indicator, const uint8_t jamming_state,
+				    const uint8_t spoofing_state)
 {
 	sensor_gps_s report{};
 	report.device_id = get_device_id();
@@ -452,7 +465,10 @@ void UavcanGnssBridge::process_fixx(const uavcan::ReceivedDataStructure<FixType>
 	report.heading_offset = heading_offset;
 	report.heading_accuracy = heading_accuracy;
 
-	report.noise_per_ms = msg.noise_per_ms;
+	report.noise_per_ms = noise_per_ms;
+	report.jamming_indicator = jamming_indicator;
+	report.jamming_state = jamming_state;
+	report.spoofing_state = spoofing_state;
 
 	// ---sees.ai---
 	// CAN node IDs are persistent, however uorb instance numbering is not (i.e GPS 124 can initialise as uorb instance 0 or 1).

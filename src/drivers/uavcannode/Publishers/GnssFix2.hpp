@@ -125,6 +125,11 @@ public:
 			ecefpositionvelocity.velocity_xyz[1] = NAN;
 			ecefpositionvelocity.velocity_xyz[2] = NAN;
 
+			// Use ecef_position_velocity for now... There are no fields for these
+			ecefpositionvelocity.position_xyz_mm[0] = gps.noise_per_ms;
+			ecefpositionvelocity.position_xyz_mm[1] = gps.jamming_indicator;
+			ecefpositionvelocity.position_xyz_mm[2] = (gps.jamming_state << 8) | gps.spoofing_state;
+
 			// Use ecef_position_velocity for now... There is no heading field
 			if (!isnan(gps.heading)) {
 				ecefpositionvelocity.velocity_xyz[0] = gps.heading;
