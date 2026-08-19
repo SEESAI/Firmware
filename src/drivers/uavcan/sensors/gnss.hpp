@@ -92,8 +92,7 @@ private:
 			  const bool valid_pos_cov, const bool valid_vel_cov,
 			  const float heading, const float heading_offset,
 			  const float heading_accuracy, const int32_t noise_per_ms,
-			  const int32_t jamming_indicator, const uint8_t jamming_state,
-			  const uint8_t spoofing_state);
+			  const int32_t jamming_indicator, const uint8_t jamming_state);
 
 	void handleInjectDataTopic();
 	bool PublishRTCMStream(const uint8_t *data, size_t data_len);
