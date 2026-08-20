@@ -298,14 +298,16 @@ UavcanGnssBridge::gnss_fix2_sub_cb(const uavcan::ReceivedDataStructure<uavcan::e
 	float heading = NAN;
 	float heading_offset = NAN;
 	float heading_accuracy = NAN;
-	
+
 	int32_t noise_per_ms = -1;
 	int32_t jamming_indicator = -1;
 	uint8_t jamming_state = 0;
 
 	// Use ecef_position_velocity for now... There is no heading field
 	if (!msg.ecef_position_velocity.empty()) {
-		heading = msg.ecef_position_velocity[0].velocity_xyz[0];
+		if (!isnan(msg.ecef_position_velocity[0].velocity_xyz[0])) {
+			heading = msg.ecef_position_velocity[0].velocity_xyz[0];
+		}
 
 		if (!isnan(msg.ecef_position_velocity[0].velocity_xyz[1])) {
 			heading_offset = msg.ecef_position_velocity[0].velocity_xyz[1];
@@ -314,10 +316,10 @@ UavcanGnssBridge::gnss_fix2_sub_cb(const uavcan::ReceivedDataStructure<uavcan::e
 		if (!isnan(msg.ecef_position_velocity[0].velocity_xyz[2])) {
 			heading_accuracy = msg.ecef_position_velocity[0].velocity_xyz[2];
 		}
-		
+
 		noise_per_ms = msg.ecef_position_velocity[0].position_xyz_mm[0];
 		jamming_indicator = msg.ecef_position_velocity[0].position_xyz_mm[1];
-		
+
 		jamming_state = msg.ecef_position_velocity[0].position_xyz_mm[2] >> 8;
 	}
 

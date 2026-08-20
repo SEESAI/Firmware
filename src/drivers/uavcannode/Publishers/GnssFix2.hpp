@@ -141,9 +141,9 @@ public:
 				if (!isnan(gps.heading_accuracy)) {
 					ecefpositionvelocity.velocity_xyz[2] = gps.heading_accuracy;
 				}
-
-				fix2.ecef_position_velocity.push_back(ecefpositionvelocity);
 			}
+
+			fix2.ecef_position_velocity.push_back(ecefpositionvelocity);
 
 			uavcan::Publisher<uavcan::equipment::gnss::Fix2>::broadcast(fix2);
 
