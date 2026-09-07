@@ -58,9 +58,7 @@ Most of the 57 commits aren't independent — they're installments of five long-
 4. **Custom magnetometer filtering + noise metric** — `b932235e`, `106674e8`, `7ae25eee`. Two-stage low-pass filter + RMS noise calculation on mag data.
 5. **FRSky/Horus telemetry customization** — `2337435c`, `e9b776fe`. Custom Smartport DIY streams (dual-GPS, RC/Mav status, flight mode).
 
-(There may be other little ones like geo-fencing. Commits may be missing)
-
-Everything else is a standalone fix, tuning value, or CI/tooling change.
+(There may be other little ones like geo-fencing. Commits may be missing. Everything else is a standalone fix, tuning value, or CI/tooling change.)
 
 ---
 
@@ -87,42 +85,62 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
   - NO_PORT: ignore our change
   - DEFER_UNTIL_TEST: Test upstream behaviour first. If upstream fix is good, then NO_PORT, otherwise PORT
   - PORT: Implement our change
+- :done: Port 'Portable as-is' set first. They are low effort and helps develop familiarity with codebase
 - Flight test to resolve all DEFER_UNTIL_TEST to NO_PORT/PORT(with IER score).
   - Define a pass/fail criteria for each such item
-- Port L/L/L tasks to get familiar with firmware codebase, flight test
-- Port H/L/L tasks next, flight test
-- Port H/M/L tasks, flight test
-- Port remaining high impact tasks, flight test
-- Port remaining tasks, flight test
+- Port most critical feature set for release
+  - Feature set: Safety-pilot RC/Mavlink control-source selector
+  - Develop Requirements. Have it reviewed. Only then implement
+  - Flight test for V&V
+- Port next feature set
+  - Feature set: Dual CAN-GPS
+  - Develop Requirements. Have it reviewed. Only then implement
+  - Flight test for V&V
+- Port next feature set
+  - Feature set: Battery SOC
+  - Develop Requirements. Have it reviewed. Only then implement
+  - Flight test for V&V
+- Port next feature set
+  - Feature set: Magnetometer filter
+  - Develop Requirements. Have it reviewed. Only then implement
+  - Flight test for V&V
+
+**Notes from RH**
+
+- Specify requirements related to each change group. Write them as statements verifiable by pass/fail tests
+- Drag estimator (#26): Review/understand the design/approach before implementing fix on v1.17.0. Potential for a simpler fix. Something about derivative kick on step acceleration input. Talk to David/Will.
 
 
 ### 3.1 Portable as-is (16) — clean, low-risk cherry-picks
 
 | Commit | PR | Subject | Note | I/E/R score, Action |
 |---|---|---|---|--|
-| `5f1e7223` | #32 | `CONFIG_DRIVERS_HYGROMETER_SHT3x=y` on cubeorange board | One-line board config | PORT - L/L/L |
-| `fcecf06e` | #37 | Enable `GPS_RTCM_DATA` mavlink stream in onboard mode | Stream exists upstream, still not auto-enabled there | PORT - M/L/L |
-| `46cd8f26` | #40 | Precision-land "hold position" fallback instead of falling through to normal landing | Safety feature, state machine structurally unchanged | NO_PORT |
-| `b1983220` | #47 | Start `landing_target_estimator` on `SENS_EN_IRLOCK=1` | `rcS` still lacks this; still needed for precision-land HW | NO_PORT |
-| `8b92bd69` | #48 | ICM20602 accelerometer error debug logging | Pure debug logging, code paths unchanged | PORT - L/L/L |
-| `a80433c3` | #54 | Fix stuck UAVCAN param queue (missing `dequeue_uavcan_request()`) | Identical surrounding code, bug still present upstream | PORT - H/L/L |
-| `7982691f` + `ccd58586` | #56, #57 | batmon deci-current fallback for saturated current reads (apply together) | File essentially identical; note original diff used spaces not tabs — run `make format` | NO_PORT |
-| `1dd11de2` | #59 | Sanity-guard `NAV_ACC_RAD` in `get_default_acceptance_radius()` to stop uncontrolled yaw on auto-takeoff | Function unchanged upstream | DEFER_UNTIL_TEST |
-| `6508e103` | #60 | Audible tone on kill-switch / AUTO_RTL entry (BVLOS compliance) | Confirm tone choice still matches regulatory requirement | PORT - H/L/L|
-| `20cec0d3` | #63 | Bump mavlink instances 3→4 | `module.yaml` unchanged | PORT - H/L/L |
-| `020a4815` + `a931f3e5` | #66, #67 | Broadcast STATUSTEXT to onboard controller without requiring GCS | Apply together | PORT - L/L/L |
-| `5a450f6a` | #74 | In-flight GPS failure injector (`VEHICLE_CMD_INJECT_FAILURE`) | No upstream equivalent; also enable `CONFIG_SYSTEMCMDS_FAILURE` on the 2 boards | DEFER_UNTIL_TEST - L/M/H |
-| `28e74b0b` | #84 | Offboard acceleration frame fix (use yaw-only rotation, matching velocity handling) | Bug still present and unfixed upstream | DEFER_UNTIL_TEST - H/M/H |
-| `e680fcb8` | #86 | Default-enable IRLock/landing-target-pose logging | Same file/line, still optional/off upstream | NO_PORT |
+| `1dd11de2` | #59 | Sanity-guard `NAV_ACC_RAD` in `get_default_acceptance_radius()` to stop uncontrolled yaw on auto-takeoff | Function unchanged upstream | PORTED (#101, branch: fix/nav_acc_rad_guard) |
+| `5a450f6a` | #74 | In-flight GPS failure injector (`VEHICLE_CMD_INJECT_FAILURE`) | No upstream equivalent; also enable `CONFIG_SYSTEMCMDS_FAILURE` on the 2 boards | **DEFER_UNTIL_TEST** - L/M/H |
+| `28e74b0b` | #84 | Offboard acceleration frame fix (use yaw-only rotation, matching velocity handling) | Bug still present and unfixed upstream | PORTED - H/M/H (#102, branch: fix/v1.17.0/yaw_only_for_acc) |
+| `5f1e7223` | #32 | `CONFIG_DRIVERS_HYGROMETER_SHT3x=y` on cubeorange board | One-line board config | PORTED - L/L/L (#103, branch: fix/v1.17.0/enable_hygrometer) |
+| `fcecf06e` | #37 | Enable `GPS_RTCM_DATA` mavlink stream in onboard mode | Stream exists upstream, still not auto-enabled there | PORTED - M/L/L (#104, branch: fix/v1.17.0/rtcm_over_mavlink) |
+| `8b92bd69` | #48 | ICM20602 accelerometer error debug logging | Pure debug logging, code paths unchanged | PORTED - L/L/L (#105, branch: fix/v1.17.0/icm20602_logs) |
+| `a80433c3` | #54 | Fix stuck UAVCAN param queue (missing `dequeue_uavcan_request()`) | Identical surrounding code, bug still present upstream | PORTED - H/L/L (#106, branch: fix/v1.17.0/unstuck_uavcan) |
+| `6508e103` | #60 | Audible tone on kill-switch / AUTO_RTL entry (BVLOS compliance) | Confirm tone choice still matches regulatory requirement | PORTED - H/L/L (#107, branch: fix/v1.17.0/tone_on_kill_and_rtl) |
+| `20cec0d3` | #63 | Bump mavlink instances 3→4 | `module.yaml` unchanged | PORTED - H/L/L (#108, branch: fix/v1.17.0-dev/extra_mavlink) |
+| `020a4815` + `a931f3e5` | #66, #67 | Broadcast STATUSTEXT to onboard controller without requiring GCS | Apply together | PORTED - L/L/L (#109, branch: fix/v1.17.0-dev/bcast_statustext) |
+| `7982691f` + `ccd58586` | #56, #57 | batmon deci-current fallback for saturated current reads (apply together) | File essentially identical; note original diff used spaces not tabs — run `make format` | **NO_PORT** **REVIEW AGAIN** |
+| `46cd8f26` | #40 | Precision-land "hold position" fallback instead of falling through to normal landing | Safety feature, state machine structurally unchanged | **NO_PORT** **REVIEW AGAIN** |
+| `b1983220` | #47 | Start `landing_target_estimator` on `SENS_EN_IRLOCK=1` | `rcS` still lacks this; still needed for precision-land HW | **NO_PORT - FEATURE UNUSED (#111, branch: origin/fix/v1.17.0/landing_target_est)** |
+| `e680fcb8` | #86 | Default-enable IRLock/landing-target-pose logging | Same file/line, still optional/off upstream | **NO_PORT - FEATURE UNUSED (#110, branch: fix/v1.17.0-dev/log_irlock)** |
 
 ### 3.2 Port with adaptation (18) — real features, need reimplementation
 
 | Commit | PR | Subject | What changed upstream | I/E/R score, Action |
 |---|---|---|---|---|
+| `39110b7b` | #30 | Coulomb-counting SOC estimator + low-cell-voltage warning | `battery.cpp` rewritten (RLS estimator); rebuild against new API | DEFER_UNTIL_TEST - H/M/M |
+| `e116be69` | #50 | Delay GPS node-124 publish until node-125 (Rover) claims uORB instance 0 | Confirm dual-CAN-GPS node-ID assumptions still match fleet config; upstream now uses a different channel-index mechanism | DEFER_UNTIL_TEST, POSSIBLY BACKPORT FROM LATEST MASTER |
+| `b90eb056` | #89 | `MC_YAW_ACC_MAX` param via SlewRate limiter on yaw stick | `StickYaw` moved to `src/lib/stick_yaw/`, rewritten to an LPF/error-convergence approach — no SlewRate member left | DEFER_UNTIL_TEST - H/L/L |
+| `b7aa8c4b` + `f918007e` | #94, #96 | `UAVCAN_COMPID_1/2` auto-detection for param-management tooling | Needs the (unported) rover-ID prerequisite logic re-anchored first | DEFER_UNTIL_TEST - H/L/L |
 | `dc5376bc` | #26 | Drag-compensated rate controller (DragEstimator module + filtered D-term) | `mc_rate_control` moved to shared `src/lib/rate_control/`; `drag_estimator` module and `LowPassFilter1p.hpp` both gone — full rebuild against new lib | PORT - H/H/H |
 | `2337435c` | #29 | FRSky telemetry: custom RADIO_STATUS stream, flight-mode remap, secondary-GPS fix-type | `RADIO_STATUS.hpp` stream must be recreated; `vehicle_gps_position_s` fully replaced by `sensor_gps_s` | PORT - H/L/L |
 | `e9b776fe` | #45 | FRSky Horus custom DIY Smartport streams | Depends on #29/#38 landing first, then low-conflict reapply | PORT WITH #29 - H/L/L|
-| `39110b7b` | #30 | Coulomb-counting SOC estimator + low-cell-voltage warning | `battery.cpp` rewritten (RLS estimator); rebuild against new API | DEFER_UNTIL_TEST - H/M/M |
 | `b7eed0cd` | #61 | 25Ah Tattu HV SoC lookup table + critical-voltage warning | Confirm curve/pack still applies; battery mechanism was replaced upstream | REVIEW WITH #30 (SOC) - MAY NOT BE REQUIRED BUT LUT MAY STILL BE IN USE, CRITICAL WARNING STILL VALID |
 | `5f316bfa` | #95 | Battery chemistry curve v1.2 + SOC tests | Same as above; also depends on `39110b7b`'s prerequisite being re-ported first | REVIEW WITH #30 (SOC) |
 | `0efcb970` | #31 | GPS driver submodule swap + timeout warning via `isFallbackAllowed()` | Blending logic rewritten, no equivalent concept present | REVIEW UPSTREAM MASTER FIRST, PORT - H/L/L |
@@ -132,14 +150,11 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 | `988f4bc0` | #62 | Manual-control refactor (adds `sees_manual_control_data` topic + counters) | `ManualControl.cpp` is pure vanilla upstream; message doesn't exist — rebuild from scratch | PORT WITH #38 - H/H/H |
 | `60142574` | #68 | Use `sees_manual_control_data` counters instead of `rc_channels.signal_lost` in SYS_STATUS | Fold into #62's reimplementation | PORT WITH #38 - H/H/H |
 | `72da9ff2` | #72 | Recheck manual-control inputs on source toggle to avoid spurious "control lost" | Fold into #62's reimplementation (navigator part is moot, see §3.3) | PORT WITH #38 H/H/H |
-| `e116be69` | #50 | Delay GPS node-124 publish until node-125 (Rover) claims uORB instance 0 | Confirm dual-CAN-GPS node-ID assumptions still match fleet config; upstream now uses a different channel-index mechanism | DEFER_UNTIL_TEST, POSSIBLY BACKPORT FROM LATEST MASTER |
 | `77b5150e` | #69 | `UAVCAN_ROVER_ID` param for configurable CAN node ID | Verify whether the instance-ordering problem still exists under the new upstream mechanism before rebuilding | PORT WITH #50 - H/L/L |
 | `1ecc00e7` | #52 | New outbound `GPS_INPUT` mavlink stream (NED velocity + uncertainty) | Stream mechanism intact, but file must be recreated (no conflicting upstream feature) | NEEDS MAVLINK UPDATE - USE PX4 MAVLINK - PORT - H/L/L |
 | `7ae25eee` | #53 | Per-instance mag-filter warning (only alert on primary) | Depends on the undocumented base mag-filtering feature (`b932235e`) — confirm that feature is still wanted before building this on top | PORT - L/L/L |
 | `6d28a6dd` | #64 | "AWS" audio triggers for external BVLOS system on kill/disarm/landing/critical-SoC | Confirm the external AWS integration is still required before rebuilding against the restructured Commander tune logic | PORT - H/L/L |
 | `72657ad9` | #65 | GPS-loss failsafe: fall to Altitude/Manual before Loiter; force RC-aware offboard-loss response | `state_machine_helper.cpp` replaced by `commander/failsafe/{failsafe.cpp,framework.cpp}` — reimplement against new framework | PORT - H/M/H |
-| `b90eb056` | #89 | `MC_YAW_ACC_MAX` param via SlewRate limiter on yaw stick | `StickYaw` moved to `src/lib/stick_yaw/`, rewritten to an LPF/error-convergence approach — no SlewRate member left | DEFER_UNTIL_TEST - H/L/L |
-| `b7aa8c4b` + `f918007e` | #94, #96 | `UAVCAN_COMPID_1/2` auto-detection for param-management tooling | Needs the (unported) rover-ID prerequisite logic re-anchored first | DEFER_UNTIL_TEST - H/L/L |
 | `4ab4a120` | #92 | GPS submodule: F9P rate 7Hz, UART2 baud 921600 | Needs re-pointing the GPS driver submodule to a Sees fork rebased on new upstream — hardware tuning, not a cherry-pick | REVIEW - BACKPORT FROM 1.17 or MASTER M/L/L |
 | `bb02f594` | #97 | `num_channels_lost` field + <900µs signal-lost detection; refactor RC/Mav input reassessment | `rc_channels.msg` path moved; also depends on unported manual-control-selector prerequisite | PORT - H/L/L |
 | `445f7a3a` | #41 | RFD868 link-budget mavlink stream/rate tuning | RF-engineering call — reapply against current defaults once decided | NO_PORT - UNUSED |
@@ -148,13 +163,9 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 
 | Commit | PR | Subject | Why it's moot | I/E/R score, Action |
 |---|---|---|---|---|
-| `1d5bc57f` | #28 | Mavlink shell fflush fix | Upstream already carries the equivalent fix | DEFER_UNTIL_TEST (CHECK IF OUR PR IS A BACKPORT) |
 | `d8b4aeb7` | #46 | CAN GPS hardcoded-node stop-gap | Superseded by the author's own follow-up `e116be69` (#50) | DEFER_UNTIL_TEST |
-| `f9e0294f` | #44 | Mag-always-log + rate tuning | `logged_topics.cpp` rewritten; mag already logged by default | DEFER_UNTIL_TEST |
-| `b7ad225f` | #51 | Param/log cleanup (`drag_estimator` default, mavlink_log spam removal, `PLD_TARGET_YAW`, `SENS_MAG_LP_CUT`) | `drag_estimator` module removed; both params removed upstream; log cleanup already done independently | DEFER_UNTIL_TEST |
-| `53a4ad59` | #55 | Unlimited high-rate topics for FFT | Upstream defaults already log these near-unlimited | DEFER_UNTIL_TEST |
-| `287fb4ba` | #39 | Blank-logs-need-refresh fix + stdio redirect | Log handler fully rewritten (old bug pattern gone); stdio fix already present upstream | NO_PORT |
-| `758d575d` | #82 | CMake `BOARD_LINUX`→`BOARD_LINUX_TARGET` rename | Identical rename already present upstream | NO_PORT |
+| `f9e0294f` | #44 | Mag-always-log + rate tuning | `logged_topics.cpp` rewritten; mag already logged by default | **WAS DEFER_UNTIL_TEST, PORTED #44 with #55 (#112, branch: fix/v1.17/increase_logging)** |
+| `53a4ad59` | #55 | Unlimited high-rate topics for FFT | Upstream defaults already log these near-unlimited | **WAS DEFER_UNTIL_TEST, PORTED #44 with #55 (#112, branch: fix/v1.17/increase_logging)** |
 | `a98af32c` | #81 | GPS_INPUT accuracy fields + mavlink submodule bump | Stream removed entirely upstream; submodule already newer | DEFER_UNTIL_TEST |
 | `8786adcc` | #70 | ADS-B vertical separation + time-to-flyby params | Traffic avoidance rewritten with equivalent `NAV_TRAFF_A_VER`/`NAV_TRAFF_COLL_T` params | DEFER_UNTIL_TEST M/?/? |
 | `319cdf8d` | #88 | Keep offboard-acceleration mode alive on position loss | New gating condition (`attitude_invalid` vs `local_velocity_invalid`) already achieves this | DEFER_UNTIL_TEST |
@@ -162,4 +173,43 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 | `f2d54bbc` | #85 | High-rate actuator/torque logging for FFT plots | Already logged at max rate unconditionally upstream | DEFER_UNTIL_TEST |
 | `253ec2c0` | #90 | CI action/runner version bumps | Stale; CI has long since moved past these versions | DEFER_UNTIL_TEST L/L/L |
 | `218c1095` | #98 | Fix discarded-return-value bug in distance-sensor pre-arm check | `PreFlightCheck.cpp` replaced by `HealthAndArmingChecks/`; new code doesn't have this bug | DEFER_UNTIL_TEST - M/L/L |
+| `b7ad225f` | #51 | Param/log cleanup (`drag_estimator` default, mavlink_log spam removal, `PLD_TARGET_YAW`, `SENS_MAG_LP_CUT`) | `drag_estimator` module removed; both params removed upstream; log cleanup already done independently | NO_PORT - NOTHING TO DO |
+| `1d5bc57f` | #28 | Mavlink shell fflush fix | Upstream already carries the equivalent fix | NO_PORT - BACKPORTED |
 | `7d2ac4b9` | #99 | Custom-DSDL `noise_per_ms` field exposed over UAVCAN | `v1.17.0-dev` already carries `noise_per_ms` end-to-end via a different (submodule-free) mechanism | NO_PORT - BACKPORTED |
+| `287fb4ba` | #39 | Blank-logs-need-refresh fix + stdio redirect | Log handler fully rewritten (old bug pattern gone); stdio fix already present upstream | NO_PORT - BACKPORTED |
+| `758d575d` | #82 | CMake `BOARD_LINUX`→`BOARD_LINUX_TARGET` rename | Identical rename already present upstream | NO_PORT - BACKPORTED |
+
+## 4. Porting report by feature groupings onto `v1.17.0-dev`
+
+- This does not include commits from 3.1 (port-as-is) and 3.3 (potentially obsolete)
+- Listed in decreasing order of priority
+
+### Safety-pilot RC/Mavlink control-source selector, FRSky/Horus telemetry customization
+
+- `2337435c` | #29 | FRSky telemetry: custom RADIO_STATUS stream, flight-mode remap, secondary-GPS fix-type | `RADIO_STATUS.hpp` stream must be recreated; `vehicle_gps_position_s` fully replaced by `sensor_gps_s` | PORT - H/L/L |
+- `fc334f30` | #38 | "OBManualControl" — `COM_RC_IN_MODE=5` toggle between RC/Mavlink-joystick | `ManualControlSelector` now enum-based (`RcInMode`); reimplement as a new case — mode-number choice needs domain review | PORT - H/H/H |
+- `e9b776fe` | #45 | FRSky Horus custom DIY Smartport streams | Depends on #29/#38 landing first, then low-conflict reapply | PORT WITH #29 - H/L/L|
+- `1ecc00e7` | #52 | New outbound `GPS_INPUT` mavlink stream (NED velocity + uncertainty) | Stream mechanism intact, but file must be recreated (no conflicting upstream feature) | NEEDS MAVLINK UPDATE - USE PX4 MAVLINK - PORT - H/L/L |
+- `c392d6d1` | #58 | Safety-pilot control-source selector (core feature, see §2) | Must be rebuilt against new versioned msg schema + current `ManualControl`/`sPort_data.cpp` | PORT WITH #38 - H/H/H |
+- `988f4bc0` | #62 | Manual-control refactor (adds `sees_manual_control_data` topic + counters) | `ManualControl.cpp` is pure vanilla upstream; message doesn't exist — rebuild from scratch | PORT WITH #38 - H/H/H |
+- `60142574` | #68 | Use `sees_manual_control_data` counters instead of `rc_channels.signal_lost` in SYS_STATUS | Fold into #62's reimplementation | PORT WITH #38 - H/H/H |
+- `72da9ff2` | #72 | Recheck manual-control inputs on source toggle to avoid spurious "control lost" | Fold into #62's reimplementation (navigator part is moot, see §3.3) | PORT WITH #38 H/H/H |
+- `bb02f594` | #97 | `num_channels_lost` field + <900µs signal-lost detection; refactor RC/Mav input reassessment | `rc_channels.msg` path moved; also depends on unported manual-control-selector prerequisite | PORT - H/L/L |
+
+### Dual-CAN-GPS node-ID ordering / Rover-ID
+
+- `0efcb970` | #31 | GPS driver submodule swap + timeout warning via `isFallbackAllowed()` | Blending logic rewritten, no equivalent concept present | REVIEW UPSTREAM MASTER FIRST, PORT - H/L/L |
+- `e116be69` | #50 | Delay GPS node-124 publish until node-125 (Rover) claims uORB instance 0 | Confirm dual-CAN-GPS node-ID assumptions still match fleet config; upstream now uses a different channel-index mechanism | DEFER_UNTIL_TEST, POSSIBLY BACKPORT FROM LATEST MASTER |
+- `77b5150e` | #69 | `UAVCAN_ROVER_ID` param for configurable CAN node ID | Verify whether the instance-ordering problem still exists under the new upstream mechanism before rebuilding | PORT WITH #50 - H/L/L |
+- `b7aa8c4b` + `f918007e` | #94, #96 | `UAVCAN_COMPID_1/2` auto-detection for param-management tooling | Needs the (unported) rover-ID prerequisite logic re-anchored first | DEFER_UNTIL_TEST - H/L/L |
+
+### Battery SOC / chemistry curve
+
+- `39110b7b` | #30 | Coulomb-counting SOC estimator + low-cell-voltage warning | `battery.cpp` rewritten (RLS estimator); rebuild against new API | DEFER_UNTIL_TEST - H/M/M |
+- `b7eed0cd` | #61 | 25Ah Tattu HV SoC lookup table + critical-voltage warning | Confirm curve/pack still applies; battery mechanism was replaced upstream | REVIEW WITH #30 (SOC) - MAY NOT BE REQUIRED BUT LUT MAY STILL BE IN USE, CRITICAL WARNING STILL VALID |
+- `5f316bfa` | #95 | Battery chemistry curve v1.2 + SOC tests | Same as above; also depends on `39110b7b`'s prerequisite being re-ported first | REVIEW WITH #30 (SOC) |
+
+### Custom magnetometer filtering + noise metric
+
+- `b932235e` + `106674e8` | #33, #36 | Two-stage mag low-pass filter + RMS noise metric + per-instance init fix | `VehicleMagnetometer.cpp` has none of this; depends on removed `LowPassFilter1p.hpp` | PORT - H/M/M
+- `7ae25eee` | #53 | Per-instance mag-filter warning (only alert on primary) | Depends on the undocumented base mag-filtering feature (`b932235e`) — confirm that feature is still wanted before building this on top | PORT - L/L/L |
