@@ -141,11 +141,11 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_constraints", 1000);
 	add_topic("vehicle_control_mode");
 	add_topic("vehicle_global_position", 200);
-	add_topic("vehicle_gps_position", 100);
+	add_topic("vehicle_gps_position", 20);				// Sees.ai - Increased rate as used in SeesAnalytics plots
 	add_topic("vehicle_land_detected");
 	add_topic("vehicle_local_position", 100);
 	add_topic("vehicle_local_position_setpoint", 100);
-	add_topic("vehicle_magnetometer", 200);
+	add_topic("vehicle_magnetometer");				// Sees.ai - Increased rate to monitor mag disturbance
 	add_topic("vehicle_rates_setpoint", 20);
 	add_topic("vehicle_roi", 1000);
 	add_topic("vehicle_status");
@@ -160,7 +160,7 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic("fixed_wing_runway_control", 100);
 
 	// multi topics
-	add_optional_topic_multi("actuator_outputs", 100, 3);
+	add_optional_topic_multi("actuator_outputs", 50, 3);
 	add_optional_topic_multi("airspeed_wind", 1000, 4);
 	add_optional_topic_multi("control_allocator_status", 200, 2);
 	add_optional_topic_multi("rate_ctrl_status", 200, 2);
@@ -184,20 +184,20 @@ void LoggedTopics::add_default_topics()
 
 	// important EKF topics (higher rate)
 	add_optional_topic("estimator_selector_status", 10);
-	add_optional_topic_multi("estimator_event_flags", 10);
+	add_optional_topic_multi("estimator_event_flags", 0);
 	add_optional_topic_multi("estimator_optical_flow_vel", 200);
-	add_optional_topic_multi("estimator_sensor_bias", 1000);
+	add_optional_topic_multi("estimator_sensor_bias", 0);
 	add_optional_topic_multi("estimator_status", 200);
-	add_optional_topic_multi("estimator_status_flags", 10);
+	add_optional_topic_multi("estimator_status_flags", 0);
 	add_optional_topic_multi("yaw_estimator_status", 1000);
 
 	// log all raw sensors at minimal rate (at least 1 Hz)
 	add_topic_multi("battery_status", 200, 3);
 	add_topic_multi("differential_pressure", 1000, 2);
-	add_topic_multi("distance_sensor", 1000, 2);
+	add_topic_multi("distance_sensor", 0, 2);			// Sees.ai - Increased logging rate as generally helpful
 	add_optional_topic_multi("sensor_accel", 1000, 4);
 	add_topic_multi("sensor_baro", 1000, 4);
-	add_topic_multi("sensor_gps", 1000, 2);
+	add_topic_multi("sensor_gps", 0, 2);				// Sees.ai - Increased logging rate for gps as generally helpful
 	add_topic_multi("sensor_gnss_relative", 1000, 1);
 	add_optional_topic_multi("sensor_gyro", 1000, 4);
 	add_topic_multi("sensor_mag", 1000, 4);
