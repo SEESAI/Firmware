@@ -141,11 +141,11 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_constraints", 1000);
 	add_topic("vehicle_control_mode");
 	add_topic("vehicle_global_position", 200);
-	add_topic("vehicle_gps_position", 100);
+	add_topic("vehicle_gps_position", 20);				// Sees.ai - Increased rate as used in SeesAnalytics plots
 	add_topic("vehicle_land_detected");
 	add_topic("vehicle_local_position", 100);
 	add_topic("vehicle_local_position_setpoint", 100);
-	add_topic("vehicle_magnetometer", 200);
+	add_topic("vehicle_magnetometer");				// Sees.ai - Increased rate to monitor mag disturbance
 	add_topic("vehicle_rates_setpoint", 20);
 	add_topic("vehicle_roi", 1000);
 	add_topic("vehicle_status");
@@ -160,7 +160,7 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic("fixed_wing_runway_control", 100);
 
 	// multi topics
-	add_optional_topic_multi("actuator_outputs", 100, 3);
+	add_optional_topic_multi("actuator_outputs", 50, 3);
 	add_optional_topic_multi("airspeed_wind", 1000, 4);
 	add_optional_topic_multi("control_allocator_status", 200, 2);
 	add_optional_topic_multi("rate_ctrl_status", 200, 2);
@@ -184,23 +184,23 @@ void LoggedTopics::add_default_topics()
 
 	// important EKF topics (higher rate)
 	add_optional_topic("estimator_selector_status", 10);
-	add_optional_topic_multi("estimator_event_flags", 10);
+	add_optional_topic_multi("estimator_event_flags", 0);
 	add_optional_topic_multi("estimator_optical_flow_vel", 200);
-	add_optional_topic_multi("estimator_sensor_bias", 1000);
+	add_optional_topic_multi("estimator_sensor_bias", 0);
 	add_optional_topic_multi("estimator_status", 200);
-	add_optional_topic_multi("estimator_status_flags", 10);
+	add_optional_topic_multi("estimator_status_flags", 0);
 	add_optional_topic_multi("yaw_estimator_status", 1000);
 
 	// log all raw sensors at minimal rate (at least 1 Hz)
 	add_topic_multi("battery_status", 200, 3);
 	add_topic_multi("differential_pressure", 1000, 2);
-	add_topic_multi("distance_sensor", 1000, 2);
+	add_topic_multi("distance_sensor", 0, 2);			// Sees.ai - Increased logging rate as generally helpful
 	add_optional_topic_multi("sensor_accel", 1000, 4);
 	add_topic_multi("sensor_baro", 1000, 4);
-	add_topic_multi("sensor_gps", 1000, 2);
+	add_topic_multi("sensor_gps", 0, 2);				// Sees.ai - Increased logging rate for gps as generally helpful
 	add_topic_multi("sensor_gnss_relative", 1000, 1);
 	add_optional_topic_multi("sensor_gyro", 1000, 4);
-	add_topic_multi("sensor_mag", 1000, 4);
+	add_topic_multi("sensor_mag", 1000, 4);				// Sees.ai - Upgraded from "optional" to ensure raw mag is logged
 	add_topic_multi("sensor_optical_flow", 1000, 2);
 
 	add_topic_multi("vehicle_imu", 500, 4);
@@ -236,7 +236,7 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic("vehicle_thrust_setpoint_virtual_mc");
 	add_optional_topic("vehicle_thrust_setpoint_virtual_fw");
 	add_topic("time_offset");
-	add_topic("vehicle_angular_velocity", 10);
+	add_topic("vehicle_angular_velocity", 50);
 	add_topic("vehicle_angular_velocity_groundtruth", 10);
 	add_topic("vehicle_attitude_groundtruth", 10);
 	add_topic("vehicle_global_position_groundtruth", 100);
@@ -272,17 +272,17 @@ void LoggedTopics::add_high_rate_topics()
 {
 	// maximum rate to analyze fast maneuvers (e.g. for racing)
 	add_topic("manual_control_setpoint");
-	add_topic_multi("rate_ctrl_status", 20, 2);
+	add_topic_multi("rate_ctrl_status", 0, 2);
 	add_topic("sensor_combined");
 	add_topic("vehicle_angular_velocity");
 	add_topic("vehicle_attitude");
 	add_topic("vehicle_attitude_setpoint");
 	add_topic("vehicle_rates_setpoint");
 
-	add_topic("esc_status", 5);
-	add_topic("actuator_motors");
-	add_topic("actuator_outputs_debug");
-	add_topic("actuator_servos");
+	add_topic("esc_status", 50);
+	add_topic("actuator_motors", 50);
+	add_topic("actuator_outputs_debug", 50);
+	add_topic("actuator_servos", 50);
 	add_topic_multi("vehicle_thrust_setpoint", 0, 2);
 	add_topic_multi("vehicle_torque_setpoint", 0, 2);
 }
@@ -303,7 +303,7 @@ void LoggedTopics::add_debug_topics()
 void LoggedTopics::add_estimator_replay_topics()
 {
 	// for estimator replay (need to be at full rate)
-	add_topic("ekf2_timestamps");
+	add_topic("ekf2_timestamps", 50);
 
 	// current EKF2 subscriptions
 	add_topic("airspeed");
@@ -361,7 +361,7 @@ void LoggedTopics::add_system_identification_topics()
 {
 	// for system id need to log imu and controls at full rate
 	add_topic("sensor_combined");
-	add_topic("vehicle_angular_velocity");
+	add_topic("vehicle_angular_velocity", 50);
 	add_topic("vehicle_torque_setpoint");
 	add_topic("vehicle_acceleration");
 	add_topic("actuator_motors");
@@ -372,7 +372,7 @@ void LoggedTopics::add_high_rate_sensors_topics()
 	add_topic_multi("distance_sensor", 0, 4);
 	add_topic_multi("sensor_optical_flow", 0, 2);
 	add_topic_multi("sensor_gps", 0, 4);
-	add_topic_multi("sensor_mag", 0, 4);
+	add_topic_multi("sensor_mag", 1000, 4);
 }
 
 void LoggedTopics::add_mavlink_tunnel()
