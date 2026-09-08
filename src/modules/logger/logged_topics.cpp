@@ -86,10 +86,10 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic("internal_combustion_engine_control", 10);
 	add_optional_topic("internal_combustion_engine_status", 10);
 	add_optional_topic("iridiumsbd_status", 1000);
-	add_optional_topic("irlock_report", 1000);
+	add_topic("irlock_report", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
 	add_optional_topic("landing_gear", 200);
 	add_optional_topic("landing_gear_wheel", 100);
-	add_optional_topic("landing_target_pose", 1000);
+	add_topic("landing_target_pose", 250);				// Sees.ai - Changed from 'optional' topic and increased rate
 	add_optional_topic("launch_detection_status", 200);
 	add_optional_topic("magnetometer_bias_estimate", 200);
 	add_topic("manual_control_setpoint", 200);
