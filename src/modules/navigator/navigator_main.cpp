@@ -60,6 +60,9 @@
 #include <px4_platform_common/tasks.h>
 #include <systemlib/mavlink_log.h>
 
+#include <drivers/drv_tone_alarm.h>
+#include <commander/commander_helper.h>
+
 using namespace time_literals;
 
 namespace navigator
@@ -782,6 +785,7 @@ void Navigator::run()
 			break;
 
 		case vehicle_status_s::NAVIGATION_STATE_AUTO_RTL:
+			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);  // Edu added for BVLOS compliance
 
 			// If we are already in mission landing, do not switch.
 			if (_navigation_mode == &_mission && _mission.isLanding()) {
