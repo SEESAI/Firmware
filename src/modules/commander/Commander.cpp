@@ -1698,7 +1698,8 @@ void Commander::executeActionRequest(const action_request_s &action_request)
 		if (!_actuator_armed.kill) {
 			const char kill_switch_string[] = "Kill engaged\t";
 			events::LogLevels log_levels{events::Log::Info};
-
+			set_tune(tune_control_s::TUNE_ID_BATTERY_WARNING_FAST);  // Edu added for BVLOS compliance
+			
 			if (_vehicle_land_detected.landed) {
 				mavlink_log_info(&_mavlink_log_pub, kill_switch_string);
 
