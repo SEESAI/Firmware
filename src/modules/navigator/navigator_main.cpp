@@ -782,6 +782,7 @@ void Navigator::run()
 			break;
 
 		case vehicle_status_s::NAVIGATION_STATE_AUTO_RTL:
+			publish_auto_rtl_alert_tune();
 
 			// If we are already in mission landing, do not switch.
 			if (_navigation_mode == &_mission && _mission.isLanding()) {
@@ -1514,6 +1515,22 @@ void Navigator::publish_distance_sensor_mode_request()
 		_distance_sensor_mode_change_request_pub.get().request_on_off =
 			distance_sensor_mode_change_request_s::REQUEST_OFF;
 		_distance_sensor_mode_change_request_pub.update();
+	}
+}
+
+void Navigator::publish_auto_rtl_alert_tune()
+{
+	static constexpr hrt_abstime AUTO_RTL_TUNE_DURATION = 800_ms;
+
+	const hrt_abstime now = hrt_absolute_time();
+
+	if (now > _auto_rtl_tune_end) {
+		tune_control_s tune_control{};
+		tune_control.tune_id = tune_control_s::TUNE_ID_BATTERY_WARNING_FAST;
+		tune_control.volume = tune_control_s::VOLUME_LEVEL_DEFAULT;
+		tune_control.timestamp = now;
+		_tune_control_pub.publish(tune_control);
+		_auto_rtl_tune_end = now + AUTO_RTL_TUNE_DURATION;
 	}
 }
 
