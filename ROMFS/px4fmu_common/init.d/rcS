@@ -613,6 +613,14 @@ else
 	unset RC_LOGGING
 
 	#
+	# Start the Landing Target Estimator for precision land
+	#
+	if param compare -s SENS_EN_IRLOCK 1
+	then
+		landing_target_estimator start
+	fi
+
+	#
 	# Set additional parameters and env variables for selected AUTOSTART.
 	#
 	if ! param compare SYS_AUTOSTART 0
