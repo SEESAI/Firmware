@@ -94,9 +94,20 @@ jobs:
         # On a direct push, fall back to the branch we're running on.
         BRANCH="${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
         REPO_URL="https://github.com/Auterion/px4-ros2-interface-lib.git"
+        # Our branch names (e.g. v1.17.0-dev) don't match px4-ros2-interface-lib's
+        # release/X.Y convention, so also try a release/X.Y candidate derived from
+        # any X.Y version in our branch name before falling back to main.
+        VERSION="$(echo "$BRANCH" | grep -oE '[0-9]+\.[0-9]+' | head -1)"
+        CANDIDATE_BRANCH=""
+        if [ -n "$VERSION" ]; then
+          CANDIDATE_BRANCH="release/$VERSION"
+        fi
         if git ls-remote --heads "$REPO_URL" "$BRANCH" | grep -q "$BRANCH"; then
           echo "Cloning px4-ros2-interface-lib with matching branch: $BRANCH"
           git clone --recursive --branch "$BRANCH" "$REPO_URL"
+        elif [ -n "$CANDIDATE_BRANCH" ] && git ls-remote --heads "$REPO_URL" "$CANDIDATE_BRANCH" | grep -q "$CANDIDATE_BRANCH"; then
+          echo "Branch '$BRANCH' not found in px4-ros2-interface-lib, using version-matched branch: $CANDIDATE_BRANCH"
+          git clone --recursive --branch "$CANDIDATE_BRANCH" "$REPO_URL"
         else
           echo "Branch '$BRANCH' not found in px4-ros2-interface-lib, using default (main)"
           git clone --recursive "$REPO_URL"
