@@ -29,7 +29,10 @@ jobs:
       fail-fast: false
       matrix:
         version: ['ubuntu:22.04', 'ubuntu:24.04']
-    runs-on: [runs-on,runner=4cpu-linux-x64,"image=ubuntu24-full-x64","run-id=${{ github.run_id }}",spot=false]
+    # runs-on: [runs-on,runner=4cpu-linux-x64,"image=ubuntu24-full-x64","run-id=${{ github.run_id }}",spot=false]
+    # Using GitHub-hosted runners: the runs-on.com/AWS runner integration isn't
+    # configured for this fork.
+    runs-on: ubuntu-latest
     container:
       image: ${{ matrix.version }}
       volumes:

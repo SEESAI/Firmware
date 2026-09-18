@@ -46,6 +46,12 @@ excluded_labels = [
     'nolockstep', 'replay', 'test',
     'uavcanv1', # TODO: fix and enable
     ]
+# Specific board+label targets excluded regardless of the board_name/label
+# exclusion lists above (which would also exclude other boards sharing the
+# same label).
+excluded_targets = [
+    'px4_fmu-v6c_neural', # FLASH overflow: experimental board sits at ~100% upstream already
+    ]
 
 github_action_config = { 'include': build_configs }
 extra_args = {}
@@ -154,6 +160,10 @@ for manufacturer in os.scandir(os.path.join(source_dir, '../boards')):
 
                 if label in excluded_labels:
                     if verbose: print(f'excluding label {label} ({target_name})')
+                    continue
+
+                if target_name in excluded_targets:
+                    if verbose: print(f'excluding target {target_name}')
                     continue
                 target = process_target(files.path, target_name)
                 if (args.group and target is not None):
