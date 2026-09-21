@@ -58,7 +58,6 @@ using matrix::wrap_pi;
 MissionBlock::MissionBlock(Navigator *navigator, uint8_t navigator_state_id) :
 	NavigatorMode(navigator, navigator_state_id)
 {
-
 }
 
 bool
@@ -1045,3 +1044,4 @@ void MissionBlock::updateMaxHaglFailsafe()
 		_navigator->set_position_setpoint_triplet_updated();
 	}
 }
+
