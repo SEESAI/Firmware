@@ -65,6 +65,37 @@ Notes on the flags:
 - The repo is mounted at the **same path** as on the host, so the build directory still works whether you build on the host or in the container.
 - `LOCAL_USER_ID` makes the build run as your user, so files in `build/` aren't owned by root.
 
+## Build and flash Cube Orange (v1.13)
+
+The v1.13 NuttX setup script pins `gcc-arm-none-eabi` to **9-2020-q2-update**. On an x86_64 Linux host, download that version once so the container build does not depend on the host's Ubuntu compiler package:
+
+```bash
+mkdir -p "${HOME}/.local/opt"
+wget -O /tmp/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2 \
+  https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+tar -xjf /tmp/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2 -C "${HOME}/.local/opt"
+"${HOME}/.local/opt/gcc-arm-none-eabi-9-2020-q2-update/bin/arm-none-eabi-gcc" --version
+```
+
+From the repo root on the `v1.13.1_dev` branch, build with the NuttX image and the pinned compiler:
+
+```bash
+docker pull px4io/px4-dev-nuttx-focal:2021-09-08
+docker run -it --rm --init --privileged --name px4-cubeorange \
+  -e LOCAL_USER_ID=$(id -u) \
+  -e CCACHE_DIR=${HOME}/.ccache -v ${HOME}/.ccache:${HOME}/.ccache \
+  -v ${HOME}/.local/opt/gcc-arm-none-eabi-9-2020-q2-update:/opt/gcc-arm-none-eabi-9-2020-q2-update:ro \
+  -v ${PWD}:${PWD} -w ${PWD} \
+  px4io/px4-dev-nuttx-focal:2021-09-08 \
+  bash -c 'export PATH=/opt/gcc-arm-none-eabi-9-2020-q2-update/bin:$PATH; arm-none-eabi-gcc --version; make -C platforms/nuttx/NuttX/nuttx/tools -f Makefile.host clean && make -C platforms/nuttx/NuttX/nuttx/tools -f Makefile.host default mkversion && make cubepilot_cubeorange_default'
+```
+
+The NuttX tool cleanup removes generated host utilities (such as `incdir` and `mkconfig`), then rebuilds them against the container's glibc before Ninja starts. This matters if the checkout was previously built on a newer host: otherwise the container can fail with `GLIBC_2.34 not found`. Do not run the cleanup alone before an incremental build.
+
+If NuttX then reports `include/arch already exists but is not a symbolic link`, check that `platforms/nuttx/NuttX/nuttx/include/arch` is empty. If it is, run `rmdir platforms/nuttx/NuttX/nuttx/include/arch` from the repo root and rerun the build. Do not remove it if it contains files.
+
+The firmware is written to `build/cubepilot_cubeorange_default/cubepilot_cubeorange_default.px4`. To flash it, connect the Cube Orange to the host over USB, open QGroundControl's **Vehicle Setup > Firmware**, choose **Advanced settings > Custom firmware file**, and select that `.px4` file. Disconnect other flight controllers before flashing; QGroundControl may ask you to unplug and reconnect the Cube to enter its bootloader.
+
 ### Additional notes
 
 - **Other vehicles**: Replace `gazebo` with a model-specific target, e.g.:
