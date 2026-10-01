@@ -17,7 +17,6 @@ A test case defines the behavior, how to exercise it, and pass criteria. There a
 | HITL (bench) | B | Driver-level behavior needing real peripherals (CAN GPS, batmon, IMU, radios) | Bench rig with the specific sensor/radio, `nsh` console, log inspection (`ulog`) |
 | Flight | F | End-to-end behavior only observable in flight (GPS RTK quality, magnetic interference, RF link budget) | Test flight per existing Sees flight-test procedure |
 
-
 ---
 
 ## Tests

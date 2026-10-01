@@ -109,7 +109,7 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 **Notes from RH**
 
 - Specify requirements related to each change group. Write them as statements verifiable by pass/fail tests
-- Drag estimator (#26): Review/understand the design/approach before implementing fix on v1.17.0. Potential for a simpler fix. Something about derivative kick on step acceleration input. The rate controller fix (`mc_rate_control`) is quite important. Talk to David/Will.
+- Rate controller (#26): We don't need the drag estimator, but the `mc_rate_control` fix is important. We need the introduction of the D-term in the controller. PX4 only used `(kd * v)` to damp based on current velocity. This makes the control too sluggish for response to obstacle avoidance. We want `kd * (v - vd)`, which provides a derivative kick on the acceleration input. Review/understand the design/approach before implementing fix on v1.17.0. Potential for a simpler fix. We introduced the low pass filter. So reintroduce it
 - Thinks SoC estimation is quite critical. The SoC estimate as implemented in upstream v1.13 was up to 40% off, making it useless. Do not release to production without this fix. Internal releases may be ok. **We put the same SoC estimator algorithm in both SI2 and v1.13. So just copy that implementation over. Helps with being consistent**
 - Thinks backup controller arbitration is less important than SoC. It is only required for BVLOS and we don't have BVLOS operations. We are ok as long as we can take manual control over RCC
 
@@ -184,7 +184,39 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 ## 4. Porting report by feature groupings onto `v1.17.0-dev`
 
 - This does not include commits from 3.1 (port-as-is) and 3.3 (potentially obsolete)
-- Listed in decreasing order of priority
+- Listed in decreasing order of priority (after discussion with RH)
+
+### Dual-CAN-GPS node-ID ordering / Rover-ID
+
+| Commit | PR | Subject | Note | I/E/R score, Action |
+|---|---|---|---|---|
+| `0efcb970` | #31 | GPS driver submodule swap + timeout warning via `isFallbackAllowed()` | Blending logic rewritten, no equivalent concept present | REVIEW UPSTREAM MASTER FIRST, PORT - H/L/L |
+| `e116be69` | #50 | Delay GPS node-124 publish until node-125 (Rover) claims uORB instance 0 | Confirm dual-CAN-GPS node-ID assumptions still match fleet config; upstream now uses a different channel-index mechanism | **DEFER_UNTIL_TEST**, POSSIBLY BACKPORT FROM LATEST MASTER |
+| `77b5150e` | #69 | `UAVCAN_ROVER_ID` param for configurable CAN node ID | Verify whether the instance-ordering problem still exists under the new upstream mechanism before rebuilding | PORT WITH #50 - H/L/L |
+| `b7aa8c4b` + `f918007e` | #94, #96 | `UAVCAN_COMPID_1/2` auto-detection for param-management tooling | Needs the (unported) rover-ID prerequisite logic re-anchored first | **DEFER_UNTIL_TEST** - H/L/L |
+| `72657ad9` | #65 | GPS-loss failsafe: fall to Altitude/Manual before Loiter; force RC-aware offboard-loss response | `state_machine_helper.cpp` replaced by `commander/failsafe/{failsafe.cpp,framework.cpp}` — reimplement against new framework | PORT - H/M/H |
+| `4ab4a120` | #92 | GPS submodule: F9P rate 7Hz, UART2 baud 921600 | Needs re-pointing the GPS driver submodule to a Sees fork rebased on new upstream — hardware tuning, not a cherry-pick | REVIEW - BACKPORT FROM 1.17 or MASTER M/L/L |
+
+### Rate controller
+
+| Commit | PR | Subject | Note | I/E/R score, Action |
+|---|---|---|---|---|
+| `dc5376bc` | #26 | Drag-compensated rate controller (DragEstimator module + filtered D-term) | `mc_rate_control` moved to shared `src/lib/rate_control/`; `drag_estimator` module and `LowPassFilter1p.hpp` both gone — full rebuild against new lib | PORT - H/H/H |
+
+### Custom magnetometer filtering + noise metric
+
+| Commit | PR | Subject | Note | I/E/R score, Action |
+|---|---|---|---|---|
+| `b932235e` + `106674e8` | #33, #36 | Two-stage mag low-pass filter + RMS noise metric + per-instance init fix | `VehicleMagnetometer.cpp` has none of this; depends on removed `LowPassFilter1p.hpp` | PORT - H/M/M
+| `7ae25eee` | #53 | Per-instance mag-filter warning (only alert on primary) | Depends on the undocumented base mag-filtering feature (`b932235e`) — confirm that feature is still wanted before building this on top | PORT - L/L/L |
+
+### Battery SOC / chemistry curve
+
+| Commit | PR | Subject | Note | I/E/R score, Action |
+|---|---|---|---|---|
+| `39110b7b` | #30 | Coulomb-counting SOC estimator + low-cell-voltage warning | `battery.cpp` rewritten (RLS estimator); rebuild against new API | **DEFER_UNTIL_TEST** - H/M/M |
+| `b7eed0cd` | #61 | 25Ah Tattu HV SoC lookup table + critical-voltage warning | Confirm curve/pack still applies; battery mechanism was replaced upstream | **DEFER_UNTIL_TEST** - MAY NOT BE REQUIRED BUT LUT MAY STILL BE IN USE, CRITICAL WARNING STILL VALID |
+| `5f316bfa` | #95 | Battery chemistry curve v1.2 + SOC tests | Same as above; also depends on `39110b7b`'s prerequisite being re-ported first | **DEFER_UNTIL_TEST** |
 
 ### Safety-pilot RC/Mavlink control-source selector, FRSky/Horus telemetry customization
 
@@ -201,37 +233,5 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 | `72da9ff2` | #72 | Recheck manual-control inputs on source toggle to avoid spurious "control lost" | Fold into #62's reimplementation (navigator part is moot, see §3.3) | PORT WITH #38 H/H/H |
 | `bb02f594` | #97 | `num_channels_lost` field + <900µs signal-lost detection; refactor RC/Mav input reassessment | `rc_channels.msg` path moved; also depends on unported manual-control-selector prerequisite | PORT - H/L/L |
 
-### Dual-CAN-GPS node-ID ordering / Rover-ID
-
-| Commit | PR | Subject | Note | I/E/R score, Action |
-|---|---|---|---|---|
-| `0efcb970` | #31 | GPS driver submodule swap + timeout warning via `isFallbackAllowed()` | Blending logic rewritten, no equivalent concept present | REVIEW UPSTREAM MASTER FIRST, PORT - H/L/L |
-| `e116be69` | #50 | Delay GPS node-124 publish until node-125 (Rover) claims uORB instance 0 | Confirm dual-CAN-GPS node-ID assumptions still match fleet config; upstream now uses a different channel-index mechanism | **DEFER_UNTIL_TEST**, POSSIBLY BACKPORT FROM LATEST MASTER |
-| `77b5150e` | #69 | `UAVCAN_ROVER_ID` param for configurable CAN node ID | Verify whether the instance-ordering problem still exists under the new upstream mechanism before rebuilding | PORT WITH #50 - H/L/L |
-| `b7aa8c4b` + `f918007e` | #94, #96 | `UAVCAN_COMPID_1/2` auto-detection for param-management tooling | Needs the (unported) rover-ID prerequisite logic re-anchored first | **DEFER_UNTIL_TEST** - H/L/L |
-| `72657ad9` | #65 | GPS-loss failsafe: fall to Altitude/Manual before Loiter; force RC-aware offboard-loss response | `state_machine_helper.cpp` replaced by `commander/failsafe/{failsafe.cpp,framework.cpp}` — reimplement against new framework | PORT - H/M/H |
-| `4ab4a120` | #92 | GPS submodule: F9P rate 7Hz, UART2 baud 921600 | Needs re-pointing the GPS driver submodule to a Sees fork rebased on new upstream — hardware tuning, not a cherry-pick | REVIEW - BACKPORT FROM 1.17 or MASTER M/L/L |
-
-### Battery SOC / chemistry curve
-
-| Commit | PR | Subject | Note | I/E/R score, Action |
-|---|---|---|---|---|
-| `39110b7b` | #30 | Coulomb-counting SOC estimator + low-cell-voltage warning | `battery.cpp` rewritten (RLS estimator); rebuild against new API | **DEFER_UNTIL_TEST** - H/M/M |
-| `b7eed0cd` | #61 | 25Ah Tattu HV SoC lookup table + critical-voltage warning | Confirm curve/pack still applies; battery mechanism was replaced upstream | **DEFER_UNTIL_TEST** - MAY NOT BE REQUIRED BUT LUT MAY STILL BE IN USE, CRITICAL WARNING STILL VALID |
-| `5f316bfa` | #95 | Battery chemistry curve v1.2 + SOC tests | Same as above; also depends on `39110b7b`'s prerequisite being re-ported first | **DEFER_UNTIL_TEST** |
-
-### Rate controller
-
-| Commit | PR | Subject | Note | I/E/R score, Action |
-|---|---|---|---|---|
-| `dc5376bc` | #26 | Drag-compensated rate controller (DragEstimator module + filtered D-term) | `mc_rate_control` moved to shared `src/lib/rate_control/`; `drag_estimator` module and `LowPassFilter1p.hpp` both gone — full rebuild against new lib | PORT - H/H/H |
-
-
-### Custom magnetometer filtering + noise metric
-
-| Commit | PR | Subject | Note | I/E/R score, Action |
-|---|---|---|---|---|
-| `b932235e` + `106674e8` | #33, #36 | Two-stage mag low-pass filter + RMS noise metric + per-instance init fix | `VehicleMagnetometer.cpp` has none of this; depends on removed `LowPassFilter1p.hpp` | PORT - H/M/M
-| `7ae25eee` | #53 | Per-instance mag-filter warning (only alert on primary) | Depends on the undocumented base mag-filtering feature (`b932235e`) — confirm that feature is still wanted before building this on top | PORT - L/L/L |
 
 
