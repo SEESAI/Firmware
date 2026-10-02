@@ -30,8 +30,8 @@ PX4 v1.13 relies on outdated toolchain and components: CMake < 3.5, gcc-11, Gaze
 
   # Log out and log back in for this to take effect
   ```
-- QGroundControl on the host (optional, for flying the vehicle)
-- From the repo root:
+- Install QGroundControl on the host (optional, for flying the vehicle)
+- Get Docker image for simulation. From the repo root:
   ```bash
   git submodule update --init --recursive
   mkdir -p ~/.ccache
