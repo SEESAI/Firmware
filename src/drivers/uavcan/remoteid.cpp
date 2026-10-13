@@ -238,10 +238,11 @@ void UavcanRemoteIDController::send_system()
 {
 	open_drone_id_system_s system;
 
-	// Commenting out original condition: QGC always sends a MAVLink system message regardless
-	// of the settings in the RemoteID configuration tab, meaning this block was always executed.
-	// For FAA regulations purposes we need to send the takeoff/home location, so we disable
-	// this path to avoid overriding the correct data with whatever QGC sends unconditionally.
+	// QGC always sends a MAVLink system message regardless of the settings in the QGC RemoteID configuration tab
+	// (where we select sending the takeoff location or the drone position), meaning this fist block is always
+	// executed.
+	// If we ever need to send the takeoff/home location which is what the second block does it won't work.
+	// We've tested the second block runs OK by hardcoding a jump to it, and it works as expected.
 	//if(1==0) {
 	if (_open_drone_id_system.advertised() && _open_drone_id_system.copy(&system)) {
 
