@@ -165,7 +165,7 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 
 | Commit | PR | Subject | Why it's moot | I/E/R score, Action |
 |---|---|---|---|---|
-| `1dd11de2` | #59 | Sanity-guard `NAV_ACC_RAD` in `get_default_acceptance_radius()` to stop uncontrolled yaw on auto-takeoff | Potentially [fixed upstream](https://github.com/PX4/PX4-Autopilot/pull/22532) | **DEFER_UNTIL_TEST**, PORT_AVAILABLE (#101) |
+| `1dd11de2` | #59 | Sanity-guard `NAV_ACC_RAD` in `get_default_acceptance_radius()` to stop uncontrolled yaw on auto-takeoff | Not fixed by [PX4#22532](https://github.com/PX4/PX4-Autopilot/pull/22532): takeoff yaw still comes from `FlightTaskAuto::_set_heading_from_mode()`, gated by the acceptance radius | **REPLACED**: 1 m floor on the heading-update radius in `FlightTaskAuto` instead of rewriting `NAV_ACC_RAD` |
 | `d8b4aeb7` | #46 | CAN GPS hardcoded-node stop-gap | Superseded by the author's own follow-up `e116be69` (#50) | **DEFER_UNTIL_TEST** |
 | `f9e0294f` | #44 | Mag-always-log + rate tuning | `logged_topics.cpp` rewritten; mag already logged by default | **DEFER_UNTIL_TEST, PORTED (#112)** |
 | `53a4ad59` | #55 | Unlimited high-rate topics for FFT | Upstream defaults already log these near-unlimited | **DEFER_UNTIL_TEST, PORTED (#112)** |
