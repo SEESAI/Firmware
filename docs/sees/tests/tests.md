@@ -36,4 +36,3 @@ Test report has the following fields
 - **Test method**: Bullet list of steps to be followed to verify the change
 - **Pass criteria**: Specify a measurable pass/fail criteria based on the test
 - **Results**: Capture the results obtained from the test
-
