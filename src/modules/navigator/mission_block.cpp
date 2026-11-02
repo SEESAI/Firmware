@@ -1044,4 +1044,3 @@ void MissionBlock::updateMaxHaglFailsafe()
 		_navigator->set_position_setpoint_triplet_updated();
 	}
 }
-

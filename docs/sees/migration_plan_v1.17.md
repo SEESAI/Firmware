@@ -210,6 +210,3 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 | `60142574` | #68 | Use `sees_manual_control_data` counters instead of `rc_channels.signal_lost` in SYS_STATUS | Fold into #62's reimplementation | PORT WITH #38 - H/H/H |
 | `72da9ff2` | #72 | Recheck manual-control inputs on source toggle to avoid spurious "control lost" | Fold into #62's reimplementation (navigator part is moot, see §3.3) | PORT WITH #38 H/H/H |
 | `bb02f594` | #97 | `num_channels_lost` field + <900µs signal-lost detection; refactor RC/Mav input reassessment | `rc_channels.msg` path moved; also depends on unported manual-control-selector prerequisite | PORT - H/L/L |
-
-
-
