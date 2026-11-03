@@ -69,8 +69,8 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 
 | Verdict | Count | Meaning |
 |---|---|---|
-| **Port as-is** | 16 | File/logic essentially unchanged upstream — clean cherry-pick |
-| **Likely obsolete/superseded** | 15 | Subsystem removed, or upstream independently fixed/added the same thing |
+| **Port as-is** | 15 | File/logic essentially unchanged upstream — clean cherry-pick |
+| **Likely obsolete/superseded** | 16 | Subsystem removed, or upstream independently fixed/added the same thing |
 | **Port with adaptation** | 26 | Still needed, but surrounding code was rewritten — needs reimplementation |
 | **Total** | **57** | |
 
@@ -125,6 +125,7 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 | `5f1e7223` | #32 | `CONFIG_DRIVERS_HYGROMETER_SHT3x=y` on cubeorange board | One-line board config | **PORTED** - L/L/L (#103) |
 | `fcecf06e` | #37 | Enable `GPS_RTCM_DATA` mavlink stream in onboard mode | Stream exists upstream, still not auto-enabled there | **PORTED** - M/L/L (#104) |
 | `8b92bd69` | #48 | ICM20602 accelerometer error debug logging | Pure debug logging, code paths unchanged | **PORTED** - L/L/L (#105) |
+| `53a4ad59` | #55 | Unlimited high-rate topics for FFT | Upstream defaults already log these near-unlimited | **PORTED** (#112) |
 | `6508e103` | #60 | Audible tone on kill-switch / AUTO_RTL entry (BVLOS compliance) | Confirm tone choice still matches regulatory requirement | **PORTED** - H/L/L (#107) |
 | `20cec0d3` | #63 | Bump mavlink instances 3→4 | `module.yaml` unchanged | **PORTED** - H/L/L (#108) |
 | `020a4815` + `a931f3e5` | #66, #67 | Broadcast STATUSTEXT to onboard controller without requiring GCS | Apply together | **PORTED** - L/L/L (#109) |
@@ -136,23 +137,21 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 
 ### 3.2 Likely obsolete/superseded — verify, then drop
 
-| Commit | PR | Subject | Why it's moot | I/E/R score, Action |
+| Commit | PR | Subject | Note | I/E/R score, Action |
 |---|---|---|---|---|
 | `d8b4aeb7` | #46 | CAN GPS hardcoded-node stop-gap | Superseded by the author's own follow-up `e116be69` (#50) | **DEFER_UNTIL_TEST** |
-| `f9e0294f` | #44 | Mag-always-log + rate tuning | `logged_topics.cpp` rewritten; mag already logged by default | **DEFER_UNTIL_TEST, PORTED (#112)** |
-| `53a4ad59` | #55 | Unlimited high-rate topics for FFT | Upstream defaults already log these near-unlimited | **DEFER_UNTIL_TEST, PORTED (#112)** |
-| `a98af32c` | #81 | GPS_INPUT accuracy fields + mavlink submodule bump | Stream removed entirely upstream; submodule already newer | **DEFER_UNTIL_TEST** |
 | `8786adcc` | #70 | ADS-B vertical separation + time-to-flyby params | Traffic avoidance rewritten with equivalent `NAV_TRAFF_A_VER`/`NAV_TRAFF_COLL_T` params | **DEFER_UNTIL_TEST** M/?/? |
 | `319cdf8d` | #88 | Keep offboard-acceleration mode alive on position loss | New gating condition (`attitude_invalid` vs `local_velocity_invalid`) already achieves this | **DEFER_UNTIL_TEST** |
 | `57ca578a` | #93 | `GF_SEES_STOP` — geofence loiter holds at current position | New `GF_PREDICT=0` default already produces the same stop-and-hold behavior | **DEFER_UNTIL_TEST** - H/M/H |
-| `f2d54bbc` | #85 | High-rate actuator/torque logging for FFT plots | Already logged at max rate unconditionally upstream | **DEFER_UNTIL_TEST** |
 | `218c1095` | #98 | Fix discarded-return-value bug in distance-sensor pre-arm check | `PreFlightCheck.cpp` replaced by `HealthAndArmingChecks/`; new code doesn't have this bug | **DEFER_UNTIL_TEST** - M/L/L |
 | `b7ad225f` | #51 | Param/log cleanup (`drag_estimator` default, mavlink_log spam removal, `PLD_TARGET_YAW`, `SENS_MAG_LP_CUT`) | `drag_estimator` module removed; both params removed upstream; log cleanup already done independently | NO_PORT - NOTHING TO DO |
 | `1d5bc57f` | #28 | Mavlink shell fflush fix | Upstream already carries the equivalent fix | NO_PORT - BACKPORTED |
 | `287fb4ba` | #39 | Blank-logs-need-refresh fix + stdio redirect | Log handler fully rewritten (old bug pattern gone); stdio fix already present upstream | NO_PORT - BACKPORTED |
+| `f9e0294f` | #44 | Mag-always-log + rate tuning | `logged_topics.cpp` rewritten; mag already logged by default | NO_PORT - NOTHING TO DO |
 | `a80433c3` | #54 | Fix stuck UAVCAN param queue (missing `dequeue_uavcan_request()`) | Identical surrounding code, bug still present upstream | NO_PORT - BACKPORTED - H/L/L (#116) |
 | `1dd11de2` | #59 | Sanity-guard `NAV_ACC_RAD` in `get_default_acceptance_radius()` to stop uncontrolled yaw on auto-takeoff | Fixed by upstream PR [#20464](https://github.com/PX4/PX4-Autopilot/pull/20464) | NO_PORT - BACKPORTED |
 | `758d575d` | #82 | CMake `BOARD_LINUX`→`BOARD_LINUX_TARGET` rename | Identical rename already present upstream | NO_PORT - BACKPORTED |
+| `f2d54bbc` | #85 | High-rate actuator/torque logging for FFT plots | Already logged at max rate unconditionally upstream | NO_PORT - OBSOLETE |
 | `7d2ac4b9` | #99 | Custom-DSDL `noise_per_ms` field exposed over UAVCAN | `v1.17.0-dev` already carries `noise_per_ms` end-to-end via a different (submodule-free) mechanism | NO_PORT - BACKPORTED |
 | `445f7a3a` | #41 | RFD868 link-budget mavlink stream/rate tuning | RF-engineering call — reapply against current defaults once decided | NO_PORT - UNUSED |
 
@@ -160,6 +159,13 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 
 - This does not include commits from 3.1 (port-as-is) and 3.2 (potentially obsolete)
 - Listed in decreasing order of priority (after discussion with RH)
+
+### Update MAVlink and introduce GPS fields for SI2
+
+| Commit | PR | Subject | Note | I/E/R score, Action |
+|---|---|---|---|---|
+| `1ecc00e7` | #52 | New outbound `GPS_INPUT` mavlink stream (NED velocity + uncertainty) | Stream mechanism intact, but file must be recreated (no conflicting upstream feature) | NEEDS MAVLINK UPDATE - USE PX4 MAVLINK - PORT - H/L/L |
+| `a98af32c` | #81 | Fixes duplicate files in GPS_INPUT with mavlink submodule bump | Stream removed entirely upstream; submodule already newer | **DEFER_UNTIL_TEST** |
 
 ### Dual-CAN-GPS node-ID ordering / Rover-ID
 
@@ -203,7 +209,6 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 | `2337435c` | #29 | FRSky telemetry: custom RADIO_STATUS stream, flight-mode remap, secondary-GPS fix-type | `RADIO_STATUS.hpp` stream must be recreated; `vehicle_gps_position_s` fully replaced by `sensor_gps_s` | PORT - H/L/L |
 | `fc334f30` | #38 | "OBManualControl" — `COM_RC_IN_MODE=5` toggle between RC/Mavlink-joystick | `ManualControlSelector` now enum-based (`RcInMode`); reimplement as a new case — mode-number choice needs domain review | PORT - H/H/H |
 | `e9b776fe` | #45 | FRSky Horus custom DIY Smartport streams | Depends on #29/#38 landing first, then low-conflict reapply | PORT WITH #29 - H/L/L|
-| `1ecc00e7` | #52 | New outbound `GPS_INPUT` mavlink stream (NED velocity + uncertainty) | Stream mechanism intact, but file must be recreated (no conflicting upstream feature) | NEEDS MAVLINK UPDATE - USE PX4 MAVLINK - PORT - H/L/L |
 | `c392d6d1` | #58 | Safety-pilot control-source selector (core feature, see §2) | Must be rebuilt against new versioned msg schema + current `ManualControl`/`sPort_data.cpp` | PORT WITH #38 - H/H/H |
 | `988f4bc0` | #62 | Manual-control refactor (adds `sees_manual_control_data` topic + counters) | `ManualControl.cpp` is pure vanilla upstream; message doesn't exist — rebuild from scratch | PORT WITH #38 - H/H/H |
 | `6d28a6dd` | #64 | "AWS" audio triggers for external BVLOS system on kill/disarm/landing/critical-SoC | Confirm the external AWS integration is still required before rebuilding against the restructured Commander tune logic | PORT - H/L/L |

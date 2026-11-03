@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Since v1.13, ported to v1.17. |
+| **Status** | Since v1.13 ([#84](https://github.com/SEESAI/Firmware/pull/84)), ported to v1.17 ([#102](https://github.com/SEESAI/Firmware/pull/102)) |
 | **Code** | `handle_message_set_position_target_local_ned()` in `src/modules/mavlink/mavlink_receiver.cpp` |
 
 ## Summary
