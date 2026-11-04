@@ -23,7 +23,7 @@
 - IST8310 rate is ≥ 140 Hz.
 - Step 2 is visibly noisier than step 1 (a slow ~5 Hz ripple). If not, increase the current or move the loop closer.
 - Step 3 looks the same as step 1.
-- `timestamp` − `timestamp_sample` is ~30 ms larger in step 3 than in step 2 (filter delay correction).
+- `timestamp` − `timestamp_sample` is ~32 ms larger in step 3 than in step 2 (filter delay correction).
 
 **Results**
 
