@@ -6,7 +6,7 @@
 
 **Background**
 - Upstream v1.17 only low-pass filters the joystick yaw rate, so peak yaw acceleration grows with the stick step. On Yealm this asks for more yaw torque than the motors can produce. The patch adds a yaw acceleration limit (`MPC_MAN_Y_ACC`, 180 deg/s² on Yealm).
-- This test uses a deliberately low limit (30 deg/s²) so the ramp is slow enough to see by eye. The limiter works the same at any value. Whether 180 deg/s² prevents motor saturation on Yealm needs a flight test (FY).
+- This test uses a deliberately low limit (30 deg/s²) so the ramp is slow enough to see by eye. The limiter works the same at any value.
 
 **Test Method**
 - `make px4_sitl sihsim_quadx`, connect QGC and enable a joystick (gamepad or on-screen).
