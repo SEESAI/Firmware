@@ -146,6 +146,8 @@ $$\tau = \hat{K}_p\cdot e + \frac{K_i}{s}\cdot e - \hat{K}_d\cdot\hat{H}\cdot s\
 With $K_{ff} = \Delta K_p$ (13) reproduces (5) up to the approximations in (11) and
 (12). Its gain is independent of the P and D gains, and with $K_{ff} = 0$ it is exactly vanilla.
 
+Unlike PR #26, this term is zero whenever the target attitude is constant, so it only acts on commanded changes, not on the drone's own motion.
+
 ## Parameter Values
 
 ### Current
