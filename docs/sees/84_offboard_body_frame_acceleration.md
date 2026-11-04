@@ -5,13 +5,15 @@
 | **Status** | Since v1.13, ported to v1.17. |
 | **Code** | `handle_message_set_position_target_local_ned()` in `src/modules/mavlink/mavlink_receiver.cpp` |
 
-## Summary
+## The Issue
 
-Upstream PX4 rotates offboard body frame velocity commands into NED by **yaw only**.
+Currently PX4 treats offboard acceleration as if it's in the **FRD** frame.
 
-However for offboard acceleration commands it uses the **full attitude**.
+SI2 outputs acceleration commands in the **FRDY** frame. This is a drone's FRD frame but with roll = pitch = 0.
 
-This patch changes how PX4 handles acceleration commands to match velocity.
+This means when the drone is tilted (e.g. braking), part of a horizontal acceleration command becomes a vertical one.
+
+This patch rotates offboard acceleration by yaw only, as PX4 already does for velocity.
 
 ## Why
 
@@ -19,9 +21,9 @@ SI2 has its own pose estimate, which does not depend on PX4. In fact the two mig
 
 Therefore we need to send commands that do not depend on SI2 & PX4 sharing the same world frame.
 
-We use the **FRDY frame** to do this. This is a drone's FRD frame but with roll = pitch = 0.
+The FRDY frame allows us to do this.
 
-Because SI2 & PX4 use their own attitude estimates to form FRDY, the differences in north cancel.
+As SI2 and PX4 each convert using their own heading, it doesn't matter if they disagree about where north is.
 
 ## Deviation from MAVLink Spec
 
@@ -38,9 +40,3 @@ Upstream PX4 is also inconsistent with MAVLink (velocity in FRDY, acceleration i
 ## Notes for porting new PX4 Versions
 
 MAVLink has `MAV_FRAME_LOCAL_FRD` which is the correct MAVLink frame for FRDY. PX4 does not yet accept it.
-
-## Testing & Validation
-
-We've deliberately not created unit tests for this. We are trying to keep each diff small and contained.
-
-To validate this we need to use SI2 to issue commands to PX4 (for example on a Mission / Joystick / Direct).
