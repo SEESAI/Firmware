@@ -17,9 +17,9 @@ This patch adds a limiter on the joystick yaw rate setpoint, which caps the comm
 
 ### Upstream shapes the joystick with a low-pass filter
 
-v1.17 now passes the joystick yaw rate through a first-order low-pass filter ($\tau$ = `MPC_MAN_Y_TAU` = 0.08 s).
+v1.17 passes the joystick yaw rate through a first-order low-pass filter ($\tau$ = `MPC_MAN_Y_TAU` = 0.08 s).
 
-It does not limit the yaw acceleration, letting it grow with the size of the joystick step.
+It does not limit the yaw acceleration, letting it grow with the size of the joystick movements.
 
 v1.13 hard-coded a 360 deg/s² limit instead.
 
@@ -31,13 +31,15 @@ Increasing the filter's time constant would limit the peak yaw acceleration, but
 
 ## Design
 
-### Limit yaw acceleration, disable filter
+### Limit yaw acceleration
 
 We use `SlewRate<float>` from `src/lib/slew_rate/SlewRate.hpp` to limit the rate of change of the target yaw rate.
 
 Each step it moves the yaw rate toward the target by at most `MPC_MAN_Y_ACC` $\cdot\ dt$.
 
-We set `MPC_MAN_Y_TAU` $= 0$ which disables the low pass filter. This leaves only the yaw rate limiter matching the behaviour on v1.13 in Position mode. (We also need to set `SYS_VEHICLE_RESP` $= -1$).
+`MPC_MAN_Y_ACC` $= 0$ (default) bypasses the limiter, so other airframes behave exactly as upstream.
+
+On Yealm we set `MPC_MAN_Y_TAU` $= 0$ which disables the low pass filter. This leaves only the yaw rate limiter matching the behaviour on v1.13 in Position mode. (`SYS_VEHICLE_RESP` must stay negative, which is the default).
 
 Stabilized and Altitude mode now also get the limit (on v1.13 they did not). This is intentional, because the motor saturation risk is the same in every mode.
 
