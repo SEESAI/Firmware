@@ -127,3 +127,16 @@ PARAM_DEFINE_INT32(SENS_MAG_MODE, 1);
  * @group Sensors
  */
 PARAM_DEFINE_INT32(SENS_MAG_AUTOCAL, 1);
+
+/**
+ * Magnetometer low-pass filter cut-off frequency (Sees.ai)
+ *
+ * Cut-off of two first-order low-pass filters applied to each magnetometer
+ * before averaging down to SENS_MAG_RATE. Removes 50 Hz power-line noise.
+ * Set to 0 to disable.
+ *
+ * @min 0
+ * @unit Hz
+ * @group Sensors
+ */
+PARAM_DEFINE_INT32(SENS_MAG_LP_CUT, 10);

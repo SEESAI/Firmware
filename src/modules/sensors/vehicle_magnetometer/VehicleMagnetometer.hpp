@@ -38,6 +38,7 @@
 #include <lib/sensor_calibration/Magnetometer.hpp>
 #include <lib/conversion/rotation.h>
 #include <lib/mathlib/math/Limits.hpp>
+#include <lib/mathlib/math/filter/AlphaFilter.hpp>
 #include <lib/matrix/matrix/math.hpp>
 #include <lib/perf/perf_counter.h>
 #include <lib/systemlib/mavlink_log.h>
@@ -164,6 +165,13 @@ private:
 	hrt_abstime _last_publication_timestamp[MAX_SENSOR_COUNT] {};
 
 	matrix::Vector3f _last_data[MAX_SENSOR_COUNT] {};
+
+	// --- SEES.AI --- two first-order low-pass stages per magnetometer
+	AlphaFilter<matrix::Vector3f> _lowpass_stage1[MAX_SENSOR_COUNT] {};
+	AlphaFilter<matrix::Vector3f> _lowpass_stage2[MAX_SENSOR_COUNT] {};
+	hrt_abstime _lowpass_last_timestamp[MAX_SENSOR_COUNT] {};
+	hrt_abstime _lowpass_delay_us{0};
+
 	bool _advertised[MAX_SENSOR_COUNT] {};
 
 	matrix::Vector3f _sensor_diff[MAX_SENSOR_COUNT] {}; // filtered differences between sensor instances
@@ -181,7 +189,8 @@ private:
 		(ParamFloat<px4::params::SENS_MAG_RATE>) _param_sens_mag_rate,
 		(ParamBool<px4::params::SENS_MAG_AUTOCAL>) _param_sens_mag_autocal,
 		(ParamInt<px4::params::CAL_MAG_SIDES>) _param_cal_mag_sides,
-		(ParamInt<px4::params::SENS_MAG_SIDES>) _param_sens_mag_sides
+		(ParamInt<px4::params::SENS_MAG_SIDES>) _param_sens_mag_sides,
+		(ParamInt<px4::params::SENS_MAG_LP_CUT>) _param_sens_mag_lp_cut
 	)
 };
 }; // namespace sensors
