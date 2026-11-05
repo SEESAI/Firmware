@@ -56,6 +56,22 @@ PARAM_DEFINE_FLOAT(MPC_MAN_TILT_MAX, 35.f);
 PARAM_DEFINE_FLOAT(MPC_MAN_Y_MAX, 150.f);
 
 /**
+ * Max manual yaw acceleration (Sees.ai)
+ *
+ * Limits how fast the stick can change the yaw rate setpoint,
+ * to avoid asking for more yaw torque than the motors can produce.
+ * Set to 0 to disable.
+ *
+ * @unit deg/s^2
+ * @min 0
+ * @max 1000
+ * @decimal 0
+ * @increment 10
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_MAN_Y_ACC, 0.f);
+
+/**
  * Minimum collective thrust in Stabilized mode
  *
  * The value is mapped to the lowest throttle stick position in Stabilized mode.

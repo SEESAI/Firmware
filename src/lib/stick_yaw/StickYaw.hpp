@@ -40,6 +40,7 @@
 #pragma once
 
 #include <lib/mathlib/math/filter/AlphaFilter.hpp>
+#include <lib/slew_rate/SlewRate.hpp>
 #include <px4_platform_common/module_params.h>
 
 class StickYaw : public ModuleParams
@@ -56,6 +57,7 @@ public:
 
 private:
 	AlphaFilter<float> _yawspeed_filter;
+	SlewRate<float> _yawspeed_slew_rate; // --- SEES.AI --- yaw acceleration limit
 
 	float _yaw_error_ref{0.f};
 	float _yaw_correction{0.f};
@@ -83,6 +85,7 @@ private:
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::MPC_MAN_Y_MAX>) _param_mpc_man_y_max, ///< Maximum yaw speed with full stick deflection
-		(ParamFloat<px4::params::MPC_MAN_Y_TAU>) _param_mpc_man_y_tau ///< time constant for yaw speed filtering
+		(ParamFloat<px4::params::MPC_MAN_Y_TAU>) _param_mpc_man_y_tau, ///< time constant for yaw speed filtering
+		(ParamFloat<px4::params::MPC_MAN_Y_ACC>) _param_mpc_man_y_acc ///< --- SEES.AI --- max yaw acceleration, 0 disables
 	)
 };
