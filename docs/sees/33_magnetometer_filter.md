@@ -62,5 +62,3 @@ EKF2_MAG_DELAY stays at 0, otherwise the delay is corrected twice.
 The v1.13 warning and fallback to unfiltered data when sampling is slow (#33, #53) are not ported. The filters are stable at any sample rate.
 
 #33 the `magnetometer_noise` is not ported; `sensor_mag` is logged at full rate instead.
-
-
