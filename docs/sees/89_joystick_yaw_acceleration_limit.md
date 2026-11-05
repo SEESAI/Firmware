@@ -41,7 +41,9 @@ Each step it moves the yaw rate toward the target by at most `MPC_MAN_Y_ACC` $\c
 
 On Yealm we set `MPC_MAN_Y_TAU` $= 0$ which disables the low pass filter. This leaves only the yaw rate limiter matching the behaviour on v1.13 in Position mode. (`SYS_VEHICLE_RESP` must stay negative, which is the default).
 
-Stabilized and Altitude mode now also get the limit (on v1.13 they did not). This is intentional, because the motor saturation risk is the same in every mode.
+Every mode that uses `StickYaw` gets the limit: Stabilized, Altitude, Position, Descend and stick yaw in Auto (on v1.13 only Position and Auto did). This is intentional, because the motor saturation risk is the same in every mode.
+
+Re-entering Stabilized can carry over the last yaw rate it had there. Yealm doesn't fly Stabilized, so this isn't handled.
 
 ## Notes for porting new PX4 Versions
 
@@ -49,6 +51,6 @@ v1.13 implemented this by making the existing `SlewRate` in `StickYaw` configura
 
 v1.17 replaced that `SlewRate` with an `AlphaFilter`, so the limiter is re-added alongside the filter.
 
-The v1.13 parameter `MC_YAW_ACC_MAX` is renamed to `MPC_MAN_Y_ACC` in v1.17, to sit with the other joystick yaw parameters. Update Yealm's parameter file, as the old name is no longer recognised.
+The v1.13 parameter `MC_YAW_ACC_MAX` (INT32) is renamed to `MPC_MAN_Y_ACC` (FLOAT) in v1.17, to sit with the other joystick yaw parameters. Update the name and type in Yealm's parameter file, as the old name is no longer recognised.
 
 When in offboard mode, yaw setpoints do not pass through `StickYaw` and are not affected by this patch.
