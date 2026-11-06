@@ -105,10 +105,31 @@ matrix::Vector3f AttitudeControl::update(const Quatf &q) const
 		rate_setpoint += q.inversed().dcm_z() * _yawspeed_setpoint;
 	}
 
+	rate_setpoint += _ff_rate;
+
 	// limit rates
 	for (int i = 0; i < 3; i++) {
 		rate_setpoint(i) = math::constrain(rate_setpoint(i), -_rate_limit(i), _rate_limit(i));
 	}
 
 	return rate_setpoint;
+}
+
+void AttitudeControl::updateFeedForward(const Quatf &q, const float dt)
+{
+	if (_ff_reset) {
+		_ff_setpoint_prev = _attitude_setpoint_q;
+		_ff_filter.reset(Vector3f());
+		_ff_reset = false;
+	}
+
+	// rotation of the setpoint since the last update, in the setpoint frame
+	Quatf dq = _ff_setpoint_prev.inversed() * _attitude_setpoint_q;
+	dq.canonicalize();
+	_ff_setpoint_prev = _attitude_setpoint_q;
+
+	// setpoint's rate in the body frame
+	const Vector3f rate = (q.inversed() * _attitude_setpoint_q).rotateVector(Vector3f(AxisAnglef(dq)) / dt);
+	const Vector3f rate_filtered = _ff_filter.update(rate, dt);
+	_ff_rate = _ff_gain * Vector3f(rate_filtered(0), rate_filtered(1), 0.f);
 }

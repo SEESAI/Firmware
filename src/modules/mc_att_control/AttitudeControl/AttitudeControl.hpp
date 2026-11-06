@@ -50,6 +50,7 @@
 
 #include <matrix/matrix/math.hpp>
 #include <mathlib/math/Limits.hpp>
+#include <mathlib/math/filter/AlphaFilter.hpp>
 
 class AttitudeControl
 {
@@ -91,7 +92,29 @@ public:
 	{
 		_attitude_setpoint_q = q_delta * _attitude_setpoint_q;
 		_attitude_setpoint_q.normalize();
+		_ff_setpoint_prev = q_delta * _ff_setpoint_prev;
 	}
+
+	/**
+	 * Set the feed-forward on the attitude setpoint's rate, roll and pitch only
+	 * @param gain fraction [0,1] of the setpoint's rate added to the rate setpoint
+	 * @param cutoff_freq [Hz] first order low pass on the setpoint's rate, 0 to disable
+	 */
+	void setFeedForward(const float gain, const float cutoff_freq)
+	{
+		_ff_gain = gain;
+		_ff_filter.setCutoffFreq(cutoff_freq);
+	}
+
+	/** Restart the feed-forward from the current setpoint, e.g. when attitude control was not running */
+	void resetFeedForward() { _ff_reset = true; }
+
+	/**
+	 * Update the feed-forward from the setpoint's rotation since the last call
+	 * @param q estimation of the current vehicle attitude unit quaternion
+	 * @param dt [s] time since the last call
+	 */
+	void updateFeedForward(const matrix::Quatf &q, const float dt);
 
 	/**
 	 * Run one control loop cycle calculation
@@ -107,4 +130,10 @@ private:
 
 	matrix::Quatf _attitude_setpoint_q; ///< latest known attitude setpoint e.g. from position control
 	float _yawspeed_setpoint{0.f}; ///< latest known yawspeed feed-forward setpoint
+
+	float _ff_gain{0.f};
+	bool _ff_reset{true};
+	matrix::Quatf _ff_setpoint_prev; ///< attitude setpoint at the last feed-forward update
+	AlphaFilter<matrix::Vector3f> _ff_filter;
+	matrix::Vector3f _ff_rate; ///< [rad/s] body frame feed-forward on the setpoint's rate
 };
