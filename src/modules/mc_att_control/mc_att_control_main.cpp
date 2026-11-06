@@ -92,6 +92,8 @@ MulticopterAttitudeControl::parameters_updated()
 	_attitude_control.setProportionalGain(Vector3f(_param_mc_roll_p.get(), _param_mc_pitch_p.get(), _param_mc_yaw_p.get()),
 					      _param_mc_yaw_weight.get());
 
+	_attitude_control.setFeedForward(_param_mc_att_ff.get(), _param_mc_att_ff_cut.get());
+
 	// angular rate limits
 	using math::radians;
 	_attitude_control.setRateLimit(Vector3f(radians(_param_mc_rollrate_max.get()), radians(_param_mc_pitchrate_max.get()),
@@ -339,6 +341,7 @@ MulticopterAttitudeControl::Run()
 				_quat_reset_counter = v_att.quat_reset_counter;
 			}
 
+			_attitude_control.updateFeedForward(q, dt);
 			Vector3f rates_sp = _attitude_control.update(q);
 
 			const hrt_abstime now = hrt_absolute_time();
@@ -369,6 +372,7 @@ MulticopterAttitudeControl::Run()
 			_man_pitch_input_filter.reset(0.f);
 			_yaw_setpoint_stabilized = NAN;
 			_stick_yaw.reset(Eulerf(q).psi(), _unaided_heading);
+			_attitude_control.resetFeedForward();
 		}
 
 		if (_landed) {
