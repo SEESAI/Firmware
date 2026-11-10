@@ -124,7 +124,7 @@ Stock PX4 differs from PR #26 by up to 10 dB and 42° from 1 to 20 Hz.
 
 - **Damping is a feedback gain.** PR #26's $-\Delta K_p\cdot\omega$ is hidden in the D term. The proposal puts it in $\hat K_p$, where it is tuned and analysed like any other rate gain.
 - **The push has its own gain.** In PR #26 the push is $K_d\cdot K_a$, so retuning `MC_ROLLRATE_D` or `MC_ROLL_P` silently changes it. In the proposal it is $K_{ff}$ alone.
-- **The rate limit applies.** The feed-forward is part of the rate setpoint, so `MC_ROLLRATE_MAX` bounds it. That is intended, since the rate limit is a safety limit, but it means the push is clipped in the very hardest brakes, where PR #26's is not.
+- **The rate limit applies.** The feed-forward is part of the rate setpoint, so `MC_ROLLRATE_MAX` bounds it.
 - **Stock rate controller.** The only custom code is the feed-forward in the attitude controller, about 20 lines plus two parameters, next to PX4's own yaw feed-forward.
 
 **Compared with a torque feed-forward**, putting $\Delta K_p\cdot F\cdot s\theta_T$ into the torque (6) instead of the rate setpoint (5): in a sustained turn the integrator cancels a torque feed-forward, so the drone lags the target by 0.21 s instead of PR #26's 0.18 s. In the attitude loop the feed-forward is part of the rate setpoint, which the integrator tracks, so the lag matches.
