@@ -113,6 +113,12 @@ public:
 	void updateAndPublishBatteryStatus(const hrt_abstime &timestamp);
 
 	/**
+	 * Sees: state of charge [0, 1] from open circuit cell voltage, using the Reference Chemistry Curve
+	 * rescaled to the operational window [v_empty, v_charged]. See docs/sees/30_battery_state_of_charge.md
+	 */
+	float stateOfChargeFromVoltage(float cell_voltage);
+
+	/**
 	 * Calculates how much time is left before the battery is depleted,
 	 * given the heavily low-pass filtered current consumption.
 	 * Requires the capacity and state of charge e.g. externally set through setCapacity() and setStateOfCharge().
@@ -143,6 +149,7 @@ protected:
 		param_t capacity;
 		param_t r_internal;
 		param_t low_thr;
+		param_t crit_v;
 		param_t crit_thr;
 		param_t emergen_thr;
 		param_t source;
@@ -155,6 +162,7 @@ protected:
 		int32_t  n_cells;
 		float r_internal;
 		float low_thr;
+		float crit_v;
 		float crit_thr;
 		float emergen_thr;
 		int32_t source;
@@ -201,6 +209,7 @@ private:
 	bool _armed{false};
 	bool _vehicle_status_is_fw{false};
 	hrt_abstime _last_unconnected_timestamp{0};
+	AlphaFilter<float> _cell_terminal_voltage_filter_v; ///< Sees: measured (not load-compensated) cell voltage for BAT_CRIT_V
 
 	// Internal Resistance estimation
 	void updateInternalResistanceEstimation(const float voltage_v, const float current_a);
