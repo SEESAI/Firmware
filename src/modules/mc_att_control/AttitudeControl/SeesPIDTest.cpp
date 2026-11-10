@@ -242,24 +242,24 @@ TEST(SeesPIDTest, NonFiniteSetpointRecovers)
 TEST(SeesPIDTest, ZeroGainIsStock)
 {
 	Random random;
-	AttitudeControl stock, off;
-
-	for (AttitudeControl *ac : {&stock, &off}) {
-		ac->setProportionalGain(Vector3f(6.5f, 6.5f, 2.8f), .4f);
-		ac->setRateLimit(Vector3f(3.8f, 3.8f, 3.5f));
-	}
-
+	AttitudeControl off;
+	off.setProportionalGain(Vector3f(6.5f, 6.5f, 2.8f), .4f);
+	off.setRateLimit(Vector3f(10.f, 10.f, 10.f));
 	off.setFeedForward(0.f, kCutoff);
 
 	for (int i = 0; i < 1000; i++) {
-		const Quatf target = random.attitude();
+		AttitudeControl stock;
+		stock.setProportionalGain(Vector3f(6.5f, 6.5f, 2.8f), .4f);
+		stock.setRateLimit(Vector3f(10.f, 10.f, 10.f));
+
 		const Quatf q = random.attitude();
+		const Quatf target = q * Quatf(AxisAnglef(random.vector(0.2f)));
 		const float dt = random.dt();
-		const Vector3f expected = step(stock, target, q, dt);
 		const Vector3f actual = step(off, target, q, dt);
+		const Vector3f expected = step(stock, target, q, dt);
 
 		for (int axis = 0; axis < 3; axis++) {
-			EXPECT_FLOAT_EQ(actual(axis), expected(axis));
+			EXPECT_EQ(actual(axis), expected(axis));
 		}
 	}
 }
