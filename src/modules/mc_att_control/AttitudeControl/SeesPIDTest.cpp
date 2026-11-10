@@ -43,7 +43,6 @@
 
 using namespace matrix;
 
-static constexpr float kDt = 0.004f;
 static constexpr int kCases = 20;
 static constexpr float kGain = 0.138f;
 static constexpr float kCutoff = 20.f;
@@ -54,6 +53,7 @@ struct Random {
 	float uniform(float lo, float hi) { return std::uniform_real_distribution<float>(lo, hi)(gen); }
 	Vector3f vector(float max) { return Vector3f(uniform(-max, max), uniform(-max, max), uniform(-max, max)); }
 	Quatf attitude() { return Quatf(AxisAnglef(vector(M_PI_F))); }
+	float dt() { return uniform(0.001f, 0.05f); } // [s] between setpoints, 20 Hz to 1 kHz
 };
 
 static Vector3f rollPitch(const Vector3f &v) { return Vector3f(v(0), v(1), 0.f); }
@@ -77,7 +77,7 @@ static AttitudeControl feedForwardOnly(float gain = kGain, float rate_limit = 10
 }
 
 // A new setpoint, then the rate setpoint for the drone at attitude q
-static Vector3f step(AttitudeControl &ac, const Quatf &target, const Quatf &q, float dt = kDt)
+static Vector3f step(AttitudeControl &ac, const Quatf &target, const Quatf &q, float dt)
 {
 	ac.setAttitudeSetpoint(target, 0.f, dt);
 	return ac.update(q);
@@ -91,9 +91,10 @@ TEST(SeesPIDTest, ConstantTargetGivesZero)
 	for (int n = 0; n < kCases; n++) {
 		AttitudeControl ac = feedForwardOnly();
 		const Quatf target = random.attitude();
+		const float dt = random.dt();
 
 		for (int i = 0; i < 100; i++) {
-			EXPECT_LT(step(ac, target, random.attitude()).norm(), kTol);
+			EXPECT_LT(step(ac, target, random.attitude(), dt).norm(), kTol);
 		}
 	}
 }
@@ -109,7 +110,7 @@ TEST(SeesPIDTest, SteadyRateGivesGainTimesRate)
 		const Quatf q0 = random.attitude();
 		const Quatf offset = random.attitude(); // of the drone from the target
 		const Vector3f r = tiltRate(random, q0, 1.f);
-		const float dt = kDt * (1 + n % 10);
+		const float dt = random.dt();
 		Vector3f ff;
 
 		for (float t = 0.f; t < 1.f; t += dt) {
@@ -131,7 +132,7 @@ TEST(SeesPIDTest, StepIntegralIsGainTimesStep)
 		AttitudeControl ac = feedForwardOnly();
 		const Vector3f delta = rollPitch(random.vector(1.5f));
 		const int ramp = (n % 2) ? 1 : 2 + n;
-		const float dt = kDt * (1 + n % 10);
+		const float dt = random.dt();
 		Vector3f integral;
 		step(ac, Quatf(), Quatf(), dt);
 
@@ -148,16 +149,17 @@ TEST(SeesPIDTest, StepIntegralIsGainTimesStep)
 TEST(SeesPIDTest, StepResponseIsFirstOrder)
 {
 	Random random;
-	const float a = kDt / (1.f / (M_TWOPI_F * kCutoff) + kDt);
 
 	for (int n = 0; n < kCases; n++) {
 		AttitudeControl ac = feedForwardOnly();
 		const Vector3f delta = rollPitch(random.vector(0.3f));
-		Vector3f expected = kGain * rollPitch(delta) / kDt * a;
-		step(ac, Quatf(), Quatf());
+		const float dt = random.dt();
+		const float a = dt / (1.f / (M_TWOPI_F * kCutoff) + dt);
+		Vector3f expected = kGain * delta / dt * a;
+		step(ac, Quatf(), Quatf(), dt);
 
 		for (int k = 0; k < 20; k++) {
-			EXPECT_LT((step(ac, Quatf(AxisAnglef(delta)), Quatf()) - expected).norm(), kTol * (1.f + expected.norm()));
+			EXPECT_LT((step(ac, Quatf(AxisAnglef(delta)), Quatf(), dt) - expected).norm(), kTol * (1.f + expected.norm()));
 			expected *= 1.f - a;
 		}
 	}
@@ -172,11 +174,12 @@ TEST(SeesPIDTest, QuaternionSignDoesNotMatter)
 		AttitudeControl ac = feedForwardOnly(), ac_flipped = feedForwardOnly();
 		const Quatf q0 = random.attitude();
 		const Vector3f r = random.vector(1.f);
+		const float dt = random.dt();
 
 		for (int i = 0; i < 100; i++) {
-			const Quatf target = q0 * Quatf(AxisAnglef(r * (i * kDt)));
+			const Quatf target = q0 * Quatf(AxisAnglef(r * (i * dt)));
 			const Quatf flipped = (random.uniform(0.f, 1.f) < 0.5f) ? Quatf(-target(0), -target(1), -target(2), -target(3)) : target;
-			EXPECT_LT((step(ac_flipped, flipped, target) - step(ac, target, target)).norm(), kTol);
+			EXPECT_LT((step(ac_flipped, flipped, target, dt) - step(ac, target, target, dt)).norm(), kTol);
 		}
 	}
 }
@@ -192,11 +195,12 @@ TEST(SeesPIDTest, HeadingResetGivesZero)
 		const Quatf target = random.attitude();
 		const Quatf q = random.attitude();
 		const Quatf reset(AxisAnglef(0.f, 0.f, random.uniform(-M_PI_F, M_PI_F)));
-		step(ac, target, q);
-		step(ac_adapted, target, q);
+		const float dt = random.dt();
+		step(ac, target, q, dt);
+		step(ac_adapted, target, q, dt);
 		ac_adapted.adaptAttitudeSetpoint(reset);
-		EXPECT_LT(step(ac, reset * target, q).norm(), kTol);
-		EXPECT_LT(step(ac_adapted, reset * target, q).norm(), kTol);
+		EXPECT_LT(step(ac, reset * target, q, dt).norm(), kTol);
+		EXPECT_LT(step(ac_adapted, reset * target, q, dt).norm(), kTol);
 	}
 }
 
@@ -209,10 +213,11 @@ TEST(SeesPIDTest, YawGivesZero)
 		AttitudeControl ac = feedForwardOnly();
 		const Quatf q0 = random.attitude();
 		const float yawspeed = random.uniform(-3.f, 3.f);
+		const float dt = random.dt();
 
 		for (int i = 0; i < 100; i++) {
-			const Quatf target = Quatf(AxisAnglef(0.f, 0.f, yawspeed * i * kDt)) * q0;
-			EXPECT_LT(step(ac, target, target).norm(), kTol);
+			const Quatf target = Quatf(AxisAnglef(0.f, 0.f, yawspeed * i * dt)) * q0;
+			EXPECT_LT(step(ac, target, target, dt).norm(), kTol);
 		}
 	}
 }
@@ -226,9 +231,10 @@ TEST(SeesPIDTest, NonFiniteSetpointRecovers)
 		AttitudeControl ac = feedForwardOnly();
 		const Quatf target = random.attitude();
 		const Quatf q = random.attitude();
-		step(ac, target, q);
-		step(ac, Quatf(NAN, NAN, NAN, NAN), q);
-		EXPECT_LT(step(ac, target, q).norm(), kTol);
+		const float dt = random.dt();
+		step(ac, target, q, dt);
+		step(ac, Quatf(NAN, NAN, NAN, NAN), q, dt);
+		EXPECT_LT(step(ac, target, q, dt).norm(), kTol);
 	}
 }
 
@@ -248,8 +254,9 @@ TEST(SeesPIDTest, ZeroGainIsStock)
 	for (int i = 0; i < 1000; i++) {
 		const Quatf target = random.attitude();
 		const Quatf q = random.attitude();
-		const Vector3f expected = step(stock, target, q);
-		const Vector3f actual = step(off, target, q);
+		const float dt = random.dt();
+		const Vector3f expected = step(stock, target, q, dt);
+		const Vector3f actual = step(off, target, q, dt);
 
 		for (int axis = 0; axis < 3; axis++) {
 			EXPECT_FLOAT_EQ(actual(axis), expected(axis));
@@ -267,9 +274,10 @@ TEST(SeesPIDTest, RateLimitHolds)
 		AttitudeControl ac = feedForwardOnly(random.uniform(0.f, 1.f), limit);
 		const Quatf q0 = random.attitude();
 		const Vector3f r = random.vector(50.f);
+		const float dt = random.dt();
 
 		for (int i = 0; i < 100; i++) {
-			const Vector3f ff = step(ac, q0 * Quatf(AxisAnglef(r * (i * kDt))), Quatf());
+			const Vector3f ff = step(ac, q0 * Quatf(AxisAnglef(r * (i * dt))), Quatf(), dt);
 
 			for (int axis = 0; axis < 3; axis++) {
 				EXPECT_LE(fabsf(ff(axis)), limit);
