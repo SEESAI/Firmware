@@ -60,15 +60,15 @@ The only code change is the feed-forward in (5). It goes in the attitude control
 
 ### PX4 Implementation
 
-PX4 uses quaternions for attitude. The change in the target's attitude from $k-1$ to $k$ is
+PX4 uses quaternions for attitude. When attitude setpoint $k$ arrives, the change in the target's attitude since setpoint $k-1$ is
 
 $$q_{T_{k-1}\leftarrow T_k} = q_{G\leftarrow T_{k-1}}^*\otimes q_{G\leftarrow T_k}$$
 
-We turn this quaternion into a rotation vector $\phi_{T_{k-1}\leftarrow T_k} = \text{Log}(q_{T_{k-1}\leftarrow T_k})$ using the logarithmic map. Dividing this by the $\Delta t$ from $k-1$ to $k$ and rotating into the drone's body frame gives $s\theta_T$.
+We turn this quaternion into a rotation vector $\phi_{T_{k-1}\leftarrow T_k} = \text{Log}(q_{T_{k-1}\leftarrow T_k})$ using the logarithmic map. Dividing this by the $\Delta t$ between the two setpoints and rotating into the drone's body frame gives $s\theta_T$, which is held until the next setpoint.
 
-$$s\theta_T \approx R\big(q_{G\leftarrow B}^*\otimes q_{G\leftarrow T_{k-1}}\big)\cdot\frac{\phi_{T_{k-1}\leftarrow T_k}}{\Delta t}$$
+$$s\theta_T \approx R\big(q_{G\leftarrow B}^*\otimes q_{G\leftarrow T_k}\big)\cdot\frac{\phi_{T_{k-1}\leftarrow T_k}}{\Delta t}$$
 
-$F$ is a first-order `AlphaFilter` with cut-off `MC_ATT_FF_CUT`, and $K_{ff}$ is `MC_ATT_FF`.
+$F$ is a first-order `AlphaFilter` with cut-off `MC_ATT_FF_CUTOFF`, and $K_{ff}$ is `MC_ATT_FF`.
 
 ## Parameter Values
 
@@ -82,7 +82,7 @@ $F$ is a first-order `AlphaFilter` with cut-off `MC_ATT_FF_CUT`, and $K_{ff}$ is
 | `IMU_DGYRO_CUTOFF` | 120 Hz | 17 Hz |
 | `MC_PR_D_CUTOFF` | 20 Hz | removed |
 | `MC_ATT_FF` ($K_{ff}$) | | 0.138 |
-| `MC_ATT_FF_CUT` ($F$) | | 20 Hz |
+| `MC_ATT_FF_CUTOFF` ($F$) | | 20 Hz |
 
 Pitch uses the same values.
 

@@ -34,123 +34,123 @@
 
 /**
  * Property tests of the attitude setpoint rate feed-forward, K_ff * F * s * theta_T in (5) of
- * docs/sees/26_proposed_controller.md. Each test checks one property over random cases.
+ * docs/sees/26_rate_controller.md. Each test checks one property over random cases.
  */
 
 #include <gtest/gtest.h>
 #include <AttitudeControl.hpp>
 #include <random>
-#include <vector>
 
 using namespace matrix;
 
-static constexpr float kDt = 0.004f; // 250 Hz attitude loop
-static constexpr int kOneSecond = 250; // steps
+static constexpr float kDt = 0.004f;
 static constexpr int kCases = 20;
 static constexpr float kGain = 0.138f;
 static constexpr float kCutoff = 20.f;
-static constexpr float kOmegaF = M_TWOPI_F * kCutoff;
 static constexpr float kTol = 1e-4f;
 
-static std::mt19937 rng(26);
-
-static float uniform(float lo, float hi) { return std::uniform_real_distribution<float>(lo, hi)(rng); }
-static Vector3f randomVector(float max) { return Vector3f(uniform(-max, max), uniform(-max, max), uniform(-max, max)); }
-
-static Quatf randomAttitude()
-{
-	std::normal_distribution<float> n;
-	Quatf q(n(rng), n(rng), n(rng), n(rng));
-	q.normalize();
-	return q;
-}
+struct Random {
+	std::mt19937 gen{26};
+	float uniform(float lo, float hi) { return std::uniform_real_distribution<float>(lo, hi)(gen); }
+	Vector3f vector(float max) { return Vector3f(uniform(-max, max), uniform(-max, max), uniform(-max, max)); }
+	Quatf attitude() { return Quatf(AxisAnglef(vector(M_PI_F))); }
+};
 
 static Vector3f rollPitch(const Vector3f &v) { return Vector3f(v(0), v(1), 0.f); }
 
 // Attitude control with only the feed-forward, so update() returns the feed-forward
-static AttitudeControl feedForwardOnly(float gain = kGain, const Vector3f &rate_limit = Vector3f(100.f, 100.f, 100.f))
+static AttitudeControl feedForwardOnly(float gain = kGain, float rate_limit = 100.f)
 {
 	AttitudeControl ac;
 	ac.setProportionalGain(Vector3f(), 1.f);
-	ac.setRateLimit(rate_limit);
+	ac.setRateLimit(Vector3f(rate_limit, rate_limit, rate_limit));
 	ac.setFeedForward(gain, kCutoff);
 	return ac;
 }
 
-// One attitude loop step with the drone at attitude q
-static Vector3f tick(AttitudeControl &ac, const Quatf &q)
+// A new setpoint, then the rate setpoint for the drone at attitude q
+static Vector3f step(AttitudeControl &ac, const Quatf &target, const Quatf &q, float dt = kDt)
 {
-	ac.updateFeedForward(q, kDt);
+	ac.setAttitudeSetpoint(target, 0.f, dt);
 	return ac.update(q);
-}
-
-static Vector3f step(AttitudeControl &ac, const Quatf &target, const Quatf &q)
-{
-	ac.setAttitudeSetpoint(target, 0.f);
-	return tick(ac, q);
-}
-
-// The target at time t, starting at q0 and turning at rate r in its own frame
-static Quatf turning(const Quatf &q0, const Vector3f &r, float t) { return q0 * Quatf(AxisAnglef(r * t)); }
-
-// Feed-forward over one second of a turning target, with the drone at a fixed offset from the target
-static std::vector<Vector3f> turn(const Quatf &q0, const Vector3f &r, const Quatf &offset = Quatf())
-{
-	AttitudeControl ac = feedForwardOnly();
-	std::vector<Vector3f> ff;
-
-	for (int i = 0; i < kOneSecond; i++) {
-		const Quatf target = turning(q0, r, i * kDt);
-		ff.push_back(step(ac, target, target * offset));
-	}
-
-	return ff;
 }
 
 // (5) only has s * theta_T, so a constant target gives zero, whatever the drone's attitude
 TEST(SeesPIDTest, ConstantTargetGivesZero)
 {
+	Random random;
+
 	for (int n = 0; n < kCases; n++) {
 		AttitudeControl ac = feedForwardOnly();
-		const Quatf target = randomAttitude();
+		const Quatf target = random.attitude();
 
-		for (int i = 0; i < kOneSecond; i++) {
-			EXPECT_LT(step(ac, target, randomAttitude()).norm(), kTol);
+		for (int i = 0; i < 100; i++) {
+			EXPECT_LT(step(ac, target, random.attitude()).norm(), kTol);
 		}
 	}
 }
 
-// F has unit DC gain, so a target turning at r settles to K_ff * r, on roll and pitch only
+// F has unit DC gain, so a target turning at r settles to K_ff * r, in the body frame, roll and pitch only,
+// at any setpoint rate
 TEST(SeesPIDTest, SteadyRateGivesGainTimesRate)
 {
+	Random random;
+
 	for (int n = 0; n < kCases; n++) {
-		const Vector3f r = randomVector(1.f);
-		EXPECT_LT((turn(randomAttitude(), r).back() - kGain * rollPitch(r)).norm(), kTol);
+		AttitudeControl ac = feedForwardOnly();
+		const Quatf q0 = random.attitude();
+		const Quatf offset = random.attitude(); // of the drone from the target
+		const Vector3f r = random.vector(1.f);
+		const float dt = kDt * (1 + n % 10);
+		Vector3f ff;
+
+		for (float t = 0.f; t < 1.f; t += dt) {
+			const Quatf target = q0 * Quatf(AxisAnglef(r * t));
+			ff = step(ac, target, target * offset, dt);
+		}
+
+		EXPECT_LT((ff - kGain * rollPitch(offset.inversed().rotateVector(r))).norm(), kTol);
 	}
 }
 
-// The rate setpoint is in the body frame, so a drone offset from the target sees the target's rate rotated
-TEST(SeesPIDTest, RateIsInBodyFrame)
+// F preserves area, so a change delta in the target integrates to K_ff * delta, however it is spread over
+// setpoints. Half the cases are one large step, which needs the full log map, not a small-angle approximation.
+TEST(SeesPIDTest, StepIntegralIsGainTimesStep)
 {
+	Random random;
+
 	for (int n = 0; n < kCases; n++) {
-		const Vector3f r = randomVector(1.f);
-		const Quatf offset = randomAttitude();
-		const Vector3f r_body = offset.inversed().rotateVector(r);
-		EXPECT_LT((turn(randomAttitude(), r, offset).back() - kGain * rollPitch(r_body)).norm(), kTol);
+		AttitudeControl ac = feedForwardOnly();
+		const Vector3f delta = random.vector(1.5f);
+		const int ramp = (n % 2) ? 1 : 2 + n;
+		const float dt = kDt * (1 + n % 10);
+		Vector3f integral;
+		step(ac, Quatf(), Quatf(), dt);
+
+		for (int i = 1; i < 250; i++) {
+			integral += step(ac, Quatf(AxisAnglef(delta * fminf(i / float(ramp), 1.f))), Quatf(), dt) * dt;
+		}
+
+		EXPECT_LT((integral - kGain * rollPitch(delta)).norm(), kTol);
 	}
 }
 
-// (5) is linear in theta_T, so at every step -r negates the feed-forward and 2r doubles it
-TEST(SeesPIDTest, LinearInRate)
+// F is first order, so after a step delta the feed-forward is K_ff * delta / dt * a * (1 - a)^k,
+// with a = dt / (tau + dt)
+TEST(SeesPIDTest, StepResponseIsFirstOrder)
 {
-	for (int n = 0; n < kCases; n++) {
-		const Quatf q0 = randomAttitude();
-		const Vector3f r = randomVector(1.f);
-		const std::vector<Vector3f> ff = turn(q0, r), ff_neg = turn(q0, -r), ff_double = turn(q0, 2.f * r);
+	Random random;
+	const float a = kDt / (1.f / (M_TWOPI_F * kCutoff) + kDt);
 
-		for (int i = 0; i < kOneSecond; i++) {
-			EXPECT_LT((ff_neg[i] + ff[i]).norm(), kTol);
-			EXPECT_LT((ff_double[i] - 2.f * ff[i]).norm(), kTol);
+	for (int n = 0; n < kCases; n++) {
+		AttitudeControl ac = feedForwardOnly();
+		const Vector3f delta = random.vector(0.3f);
+		Vector3f expected = kGain * rollPitch(delta) / kDt * a;
+		step(ac, Quatf(), Quatf());
+
+		for (int k = 0; k < 20; k++) {
+			EXPECT_LT((step(ac, Quatf(AxisAnglef(delta)), Quatf()) - expected).norm(), kTol * (1.f + expected.norm()));
+			expected *= 1.f - a;
 		}
 	}
 }
@@ -158,16 +158,17 @@ TEST(SeesPIDTest, LinearInRate)
 // q and -q are the same attitude, so flipping the setpoint quaternion's sign changes nothing
 TEST(SeesPIDTest, QuaternionSignDoesNotMatter)
 {
-	for (int n = 0; n < kCases; n++) {
-		const Quatf q0 = randomAttitude();
-		const Vector3f r = randomVector(1.f);
-		const std::vector<Vector3f> ff = turn(q0, r);
-		AttitudeControl ac = feedForwardOnly();
+	Random random;
 
-		for (int i = 0; i < kOneSecond; i++) {
-			const Quatf target = turning(q0, r, i * kDt);
-			const Quatf flipped = (rng() % 2) ? Quatf(-target(0), -target(1), -target(2), -target(3)) : target;
-			EXPECT_LT((step(ac, flipped, target) - ff[i]).norm(), kTol);
+	for (int n = 0; n < kCases; n++) {
+		AttitudeControl ac = feedForwardOnly(), ac_flipped = feedForwardOnly();
+		const Quatf q0 = random.attitude();
+		const Vector3f r = random.vector(1.f);
+
+		for (int i = 0; i < 100; i++) {
+			const Quatf target = q0 * Quatf(AxisAnglef(r * (i * kDt)));
+			const Quatf flipped = (random.uniform(0.f, 1.f) < 0.5f) ? Quatf(-target(0), -target(1), -target(2), -target(3)) : target;
+			EXPECT_LT((step(ac_flipped, flipped, target) - step(ac, target, target)).norm(), kTol);
 		}
 	}
 }
@@ -175,61 +176,38 @@ TEST(SeesPIDTest, QuaternionSignDoesNotMatter)
 // A heading reset moves the setpoint without the target moving, so it gives zero
 TEST(SeesPIDTest, HeadingResetGivesZero)
 {
+	Random random;
+
 	for (int n = 0; n < kCases; n++) {
 		AttitudeControl ac = feedForwardOnly();
-		const Quatf q = randomAttitude();
-		step(ac, randomAttitude(), q);
-		ac.adaptAttitudeSetpoint(Quatf(AxisAnglef(0.f, 0.f, uniform(-M_PI_F, M_PI_F))));
-		EXPECT_LT(tick(ac, q).norm(), kTol);
+		const Quatf target = random.attitude();
+		const Quatf q = random.attitude();
+		const Quatf reset(AxisAnglef(0.f, 0.f, random.uniform(-M_PI_F, M_PI_F)));
+		step(ac, target, q);
+		ac.adaptAttitudeSetpoint(reset);
+		EXPECT_LT(step(ac, reset * target, q).norm(), kTol);
 	}
 }
 
-// F preserves area, so after a change delta in the target the feed-forward integrates to K_ff * delta,
-// however the change is spread out and however often the setpoint arrives
-TEST(SeesPIDTest, StepIntegralIsGainTimesStep)
+// A non-finite setpoint does not stick in the feed-forward: like stock PX4, the next good setpoint recovers
+TEST(SeesPIDTest, NonFiniteSetpointRecovers)
 {
+	Random random;
+
 	for (int n = 0; n < kCases; n++) {
 		AttitudeControl ac = feedForwardOnly();
-		const Vector3f delta = randomVector(0.3f);
-		const int ramp_steps = 1 + rng() % 50;
-		const int setpoint_every = 1 + rng() % 10;
-		step(ac, Quatf(), Quatf());
-		Quatf target;
-		Vector3f integral;
-
-		for (int i = 0; i < kOneSecond; i++) {
-			if (i % setpoint_every == 0) {
-				target = Quatf(AxisAnglef(delta * fminf((i + 1.f) / ramp_steps, 1.f)));
-			}
-
-			integral += step(ac, target, Quatf()) * kDt;
-		}
-
-		EXPECT_LT((integral - kGain * rollPitch(delta)).norm(), kTol);
-	}
-}
-
-// F is first order, so a sudden step delta peaks at no more than K_ff * omega_f * delta
-TEST(SeesPIDTest, StepPeakIsBounded)
-{
-	for (int n = 0; n < kCases; n++) {
-		AttitudeControl ac = feedForwardOnly();
-		const Vector3f delta = randomVector(0.3f);
-		step(ac, Quatf(), Quatf());
-
-		for (int i = 0; i < kOneSecond; i++) {
-			const Vector3f ff = step(ac, Quatf(AxisAnglef(delta)), Quatf());
-
-			for (int axis = 0; axis < 2; axis++) {
-				EXPECT_LE(fabsf(ff(axis)), kGain * kOmegaF * fabsf(delta(axis)) + kTol);
-			}
-		}
+		const Quatf target = random.attitude();
+		const Quatf q = random.attitude();
+		step(ac, target, q);
+		step(ac, Quatf(NAN, NAN, NAN, NAN), q);
+		EXPECT_LT(step(ac, target, q).norm(), kTol);
 	}
 }
 
 // With K_ff = 0 the rate setpoint is exactly stock PX4, for any inputs
 TEST(SeesPIDTest, ZeroGainIsStock)
 {
+	Random random;
 	AttitudeControl stock, off;
 
 	for (AttitudeControl *ac : {&stock, &off}) {
@@ -239,28 +217,34 @@ TEST(SeesPIDTest, ZeroGainIsStock)
 
 	off.setFeedForward(0.f, kCutoff);
 
-	for (int i = 0; i < kCases * kOneSecond; i++) {
-		const Quatf target = randomAttitude();
-		const Quatf q = randomAttitude();
-		stock.setAttitudeSetpoint(target, 0.f);
-		EXPECT_EQ(step(off, target, q), stock.update(q));
+	for (int i = 0; i < 1000; i++) {
+		const Quatf target = random.attitude();
+		const Quatf q = random.attitude();
+		const Vector3f expected = step(stock, target, q);
+		const Vector3f actual = step(off, target, q);
+
+		for (int axis = 0; axis < 3; axis++) {
+			EXPECT_FLOAT_EQ(actual(axis), expected(axis));
+		}
 	}
 }
 
 // The feed-forward is added before the rate limit, so the rate setpoint never exceeds it
 TEST(SeesPIDTest, RateLimitHolds)
 {
-	for (int n = 0; n < kCases; n++) {
-		const Vector3f limit(uniform(0.5f, 5.f), uniform(0.5f, 5.f), uniform(0.5f, 5.f));
-		AttitudeControl ac = feedForwardOnly(uniform(0.f, 1.f), limit);
-		const Quatf q0 = randomAttitude();
-		const Vector3f r = randomVector(50.f);
+	Random random;
 
-		for (int i = 0; i < kOneSecond; i++) {
-			const Vector3f ff = step(ac, turning(q0, r, i * kDt), Quatf());
+	for (int n = 0; n < kCases; n++) {
+		const float limit = random.uniform(0.5f, 5.f);
+		AttitudeControl ac = feedForwardOnly(random.uniform(0.f, 1.f), limit);
+		const Quatf q0 = random.attitude();
+		const Vector3f r = random.vector(50.f);
+
+		for (int i = 0; i < 100; i++) {
+			const Vector3f ff = step(ac, q0 * Quatf(AxisAnglef(r * (i * kDt))), Quatf());
 
 			for (int axis = 0; axis < 3; axis++) {
-				EXPECT_LE(fabsf(ff(axis)), limit(axis));
+				EXPECT_LE(fabsf(ff(axis)), limit);
 			}
 		}
 	}

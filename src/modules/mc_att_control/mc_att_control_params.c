@@ -115,16 +115,15 @@ PARAM_DEFINE_FLOAT(MC_ATT_FF, 0.0f);
  * Cutoff frequency for the attitude setpoint rate feed-forward
  *
  * First order low pass on the attitude setpoint's rate used by MC_ATT_FF.
- * 0 disables the filter.
  *
  * @unit Hz
- * @min 0.0
+ * @min 1.0
  * @max 100.0
  * @decimal 1
  * @increment 1
  * @group Multicopter Attitude Control
  */
-PARAM_DEFINE_FLOAT(MC_ATT_FF_CUT, 20.0f);
+PARAM_DEFINE_FLOAT(MC_ATT_FF_CUTOFF, 20.0f);
 
 /**
  * Max roll rate
