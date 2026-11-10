@@ -407,7 +407,7 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 		uint32_t lastBATV_ms = 0;
 		uint32_t lastCUR_ms = 0;
 		uint32_t lastALT_ms = 0;
-		uint32_t lastSPD_ms = 0;
+		// uint32_t lastSPD_ms = 0;  // sees.ai: POLL_4 speed removed, see SMARTPORT_POLL_4
 		uint32_t lastFUEL_ms = 0;
 		uint32_t lastVSPD_ms = 0;
 		uint32_t lastGPS_ms = 0;
@@ -509,15 +509,10 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 
 
 			case SMARTPORT_POLL_4:
-
-				/* report speed at 5Hz */
-				if (now_ms - lastSPD_ms > 200) {
-					lastSPD_ms = now_ms;
-					/* send speed */
-					sPort_send_SPD(uart);
-					sentPackets++;
-				}
-
+				// ---Sees.ai---
+				// Speed removed from this poll. sPort_send_SPD() used the GPS speed ID (0x0830),
+				// which POLL_7 already sends with the correct knots scaling. The same App ID
+				// arriving under two physical IDs makes ETHOS announce "sensor conflict" every 30 s.
 				break;
 
 			case SMARTPORT_POLL_5:
@@ -592,7 +587,10 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 
 				}
 
-			/* FALLTHROUGH */
+				// ---Sees.ai---
+				// No fall-through into POLL_8: it sent the GPS1 stream (0x5002) under the GPS
+				// physical ID, as a second frame in the same reply slot.
+				break;
 
 			// ---Sees.ai---
 			// Removed these vanilla DIY states whilst adding our own instead of hijacking for clarity.
