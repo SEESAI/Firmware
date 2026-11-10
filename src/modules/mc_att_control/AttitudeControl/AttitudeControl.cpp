@@ -58,11 +58,15 @@ void AttitudeControl::setAttitudeSetpoint(const Quatf &qd, const float yawspeed_
 	_attitude_setpoint_q.normalize();
 	_yawspeed_setpoint = yawspeed_setpoint;
 
-	// the setpoint's rate, in its own frame, from its rotation since the previous setpoint
+	// the setpoint's rate, in its own frame
 	Quatf dq = _ff_setpoint_prev.inversed() * _attitude_setpoint_q;
 	dq.canonicalize();
-	const Vector3f rate = Vector3f(AxisAnglef(dq)) / dt;
+	Vector3f rate = Vector3f(AxisAnglef(dq)) / dt;
 	_ff_setpoint_prev = _attitude_setpoint_q;
+
+	// remove rotation about the world vertical: yaw has its own feed-forward, and heading resets are about the vertical
+	const Vector3f vertical = _attitude_setpoint_q.inversed().dcm_z();
+	rate -= rate.dot(vertical) * vertical;
 
 	// not finite for the first setpoint, or a non-finite setpoint
 	if (rate.isAllFinite()) {

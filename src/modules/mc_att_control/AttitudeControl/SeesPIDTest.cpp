@@ -58,6 +58,14 @@ struct Random {
 
 static Vector3f rollPitch(const Vector3f &v) { return Vector3f(v(0), v(1), 0.f); }
 
+// A random rate of a target at attitude q that only changes its tilt, i.e. with no part about the vertical
+static Vector3f tiltRate(Random &random, const Quatf &q, float max)
+{
+	const Vector3f vertical = q.inversed().dcm_z();
+	const Vector3f r = random.vector(max);
+	return r - r.dot(vertical) * vertical;
+}
+
 // Attitude control with only the feed-forward, so update() returns the feed-forward
 static AttitudeControl feedForwardOnly(float gain = kGain, float rate_limit = 100.f)
 {
@@ -90,7 +98,7 @@ TEST(SeesPIDTest, ConstantTargetGivesZero)
 	}
 }
 
-// F has unit DC gain, so a target turning at r settles to K_ff * r, in the body frame, roll and pitch only,
+// F has unit DC gain, so a target tilting at r settles to K_ff * r, in the body frame, roll and pitch only,
 // at any setpoint rate
 TEST(SeesPIDTest, SteadyRateGivesGainTimesRate)
 {
@@ -100,7 +108,7 @@ TEST(SeesPIDTest, SteadyRateGivesGainTimesRate)
 		AttitudeControl ac = feedForwardOnly();
 		const Quatf q0 = random.attitude();
 		const Quatf offset = random.attitude(); // of the drone from the target
-		const Vector3f r = random.vector(1.f);
+		const Vector3f r = tiltRate(random, q0, 1.f);
 		const float dt = kDt * (1 + n % 10);
 		Vector3f ff;
 
@@ -121,7 +129,7 @@ TEST(SeesPIDTest, StepIntegralIsGainTimesStep)
 
 	for (int n = 0; n < kCases; n++) {
 		AttitudeControl ac = feedForwardOnly();
-		const Vector3f delta = random.vector(1.5f);
+		const Vector3f delta = rollPitch(random.vector(1.5f));
 		const int ramp = (n % 2) ? 1 : 2 + n;
 		const float dt = kDt * (1 + n % 10);
 		Vector3f integral;
@@ -144,7 +152,7 @@ TEST(SeesPIDTest, StepResponseIsFirstOrder)
 
 	for (int n = 0; n < kCases; n++) {
 		AttitudeControl ac = feedForwardOnly();
-		const Vector3f delta = random.vector(0.3f);
+		const Vector3f delta = rollPitch(random.vector(0.3f));
 		Vector3f expected = kGain * rollPitch(delta) / kDt * a;
 		step(ac, Quatf(), Quatf());
 
@@ -173,19 +181,39 @@ TEST(SeesPIDTest, QuaternionSignDoesNotMatter)
 	}
 }
 
-// A heading reset moves the setpoint without the target moving, so it gives zero
+// A heading reset rotates the setpoint about the vertical without the target moving, so it gives zero,
+// whether or not the setpoint was adapted before the next one arrives
 TEST(SeesPIDTest, HeadingResetGivesZero)
 {
 	Random random;
 
 	for (int n = 0; n < kCases; n++) {
-		AttitudeControl ac = feedForwardOnly();
+		AttitudeControl ac = feedForwardOnly(), ac_adapted = feedForwardOnly();
 		const Quatf target = random.attitude();
 		const Quatf q = random.attitude();
 		const Quatf reset(AxisAnglef(0.f, 0.f, random.uniform(-M_PI_F, M_PI_F)));
 		step(ac, target, q);
-		ac.adaptAttitudeSetpoint(reset);
+		step(ac_adapted, target, q);
+		ac_adapted.adaptAttitudeSetpoint(reset);
 		EXPECT_LT(step(ac, reset * target, q).norm(), kTol);
+		EXPECT_LT(step(ac_adapted, reset * target, q).norm(), kTol);
+	}
+}
+
+// Yaw has its own feed-forward, so a tilted target yawing about the vertical gives zero
+TEST(SeesPIDTest, YawGivesZero)
+{
+	Random random;
+
+	for (int n = 0; n < kCases; n++) {
+		AttitudeControl ac = feedForwardOnly();
+		const Quatf q0 = random.attitude();
+		const float yawspeed = random.uniform(-3.f, 3.f);
+
+		for (int i = 0; i < 100; i++) {
+			const Quatf target = Quatf(AxisAnglef(0.f, 0.f, yawspeed * i * kDt)) * q0;
+			EXPECT_LT(step(ac, target, target).norm(), kTol);
+		}
 	}
 }
 
