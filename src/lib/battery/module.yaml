@@ -135,6 +135,20 @@ parameters:
             increment: 0.01
             default: 0.15
 
+        BAT_CRIT_V:
+            description:
+                short: Deep discharge cell voltage.
+                long: |
+                    Reports a deep discharge battery fault when the measured (not load-compensated)
+                    cell voltage, filtered over 1 s, drops below this value.
+            type: float
+            unit: V
+            min: 0.05
+            max: 4.35
+            decimal: 3
+            increment: 0.01
+            default: 3.5
+
         BAT_CRIT_THR:
             description:
                 short: Critical threshold.
