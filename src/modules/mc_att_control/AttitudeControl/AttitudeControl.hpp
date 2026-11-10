@@ -88,7 +88,6 @@ public:
 	{
 		_attitude_setpoint_q = q_delta * _attitude_setpoint_q;
 		_attitude_setpoint_q.normalize();
-		_ff_setpoint_prev = q_delta * _ff_setpoint_prev;
 	}
 
 	/**

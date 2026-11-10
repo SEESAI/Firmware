@@ -64,11 +64,19 @@ PX4 uses quaternions for attitude. When attitude setpoint $k$ arrives, the chang
 
 $$q_{T_{k-1}\leftarrow T_k} = q_{G\leftarrow T_{k-1}}^*\otimes q_{G\leftarrow T_k}$$
 
-We turn this quaternion into a rotation vector $\phi_{T_{k-1}\leftarrow T_k} = \text{Log}(q_{T_{k-1}\leftarrow T_k})$ using the logarithmic map. Dividing this by the $\Delta t$ between the two setpoints and rotating into the drone's body frame gives $s\theta_T$, which is held until the next setpoint.
+The logarithmic map turns it into a rotation vector, the axis times the angle turned:
 
-$$s\theta_T \approx R\big(q_{G\leftarrow B}^*\otimes q_{G\leftarrow T_k}\big)\cdot\frac{\phi_{T_{k-1}\leftarrow T_k}}{\Delta t}$$
+$$\phi = \text{Log}(q_{T_{k-1}\leftarrow T_k})$$
 
-$F$ is a first-order `AlphaFilter` with cut-off `MC_ATT_FF_CUTOFF`, and $K_{ff}$ is `MC_ATT_FF`.
+We remove its part about the world's vertical $z$, expressed in the target's frame. Yaw has its own feed-forward, and heading resets are rotations about the vertical:
+
+$$\phi_\perp = \big(I - z\,z^\top\big)\cdot\phi, \qquad z = R\big(q_{G\leftarrow T_k}\big)^\top\cdot\begin{bmatrix}0\\0\\1\end{bmatrix}$$
+
+Dividing by the $\Delta t$ between the two setpoints and rotating into the drone's body frame gives the target's rate:
+
+$$s\theta_T \approx R\big(q_{G\leftarrow B}^*\otimes q_{G\leftarrow T_k}\big)\cdot\frac{\phi_\perp}{\Delta t}$$
+
+$F$ is a first-order `AlphaFilter` with cut-off `MC_ATT_FF_CUTOFF`, applied in the target's frame when each setpoint arrives and held until the next. $K_{ff}$ is `MC_ATT_FF`, and only the body roll and pitch of $K_{ff}\cdot F\cdot s\theta_T$ are added to (5).
 
 ## Parameter Values
 
