@@ -26,9 +26,9 @@ Full yaw rate is `MPC_MAN_Y_MAX` = 150 deg/s ≈ 2.6 rad/s.
 
 **Results**
 
-Not yet run.
+Passed.
 
 `MPC_MAN_Y_ACC` | Time to full yaw rate | Screenshot | Result
 --|--|--|--
-30 | | |
-0 | | |
+30 | ~5 seconds | yes | pass
+0 | ~1 second | yes | pass
