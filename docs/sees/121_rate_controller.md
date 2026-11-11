@@ -108,7 +108,7 @@ $$\tau = C_t\cdot\theta_T - C_c\cdot\theta \tag{7}$$
 
 If both transfer functions match, the controllers behave the same. Substituting $s = j\cdot 2\pi f$ gives each one's gain and phase at frequency $f$. Stock uses the current, un-retuned gains.
 
-![Bode comparison](figures/26_bode_comparison.png)
+![Bode comparison](figures/121_bode_comparison.png)
 
 The comparison takes $\omega = s\theta$, i.e. $G \approx 1$, which holds well below `IMU_GYRO_CUTOFF` (40 Hz), so the plots are approximate from 20 to 40 Hz.
 
