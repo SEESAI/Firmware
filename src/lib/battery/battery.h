@@ -114,7 +114,7 @@ public:
 
 	/**
 	 * Sees: state of charge [0, 1] from open circuit cell voltage, using the Reference Chemistry Curve
-	 * rescaled to the operational window [v_empty, v_charged]. See docs/sees/30_battery_state_of_charge.md
+	 * rescaled to the operational window [v_empty, v_charged]. See docs/sees/125_battery_state_of_charge.md
 	 */
 	float stateOfChargeFromVoltage(float cell_voltage);
 

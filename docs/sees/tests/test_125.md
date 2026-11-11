@@ -1,12 +1,12 @@
-**Test ID** | 30
+**Test ID** | 125
 --|--
-**PR** | [30](https://github.com/SEESAI/Firmware/pull/30), [61](https://github.com/SEESAI/Firmware/pull/61), [95](https://github.com/SEESAI/Firmware/pull/95)
+**PR** | [125](https://github.com/SEESAI/Firmware/pull/125) (port of v1.13 [#30](https://github.com/SEESAI/Firmware/pull/30), [#61](https://github.com/SEESAI/Firmware/pull/61), [#95](https://github.com/SEESAI/Firmware/pull/95))
 **Requirement** | Disarmed, battery % follows the Reference Chemistry Curve. Armed, it falls only by the charge used. Below `BAT_CRIT_V` a deep discharge fault is reported. On Yealm it matches SI2's SoC.
 **Test lane** | Unit + FY
 
 **Background**
 - Upstream reads SoC linearly from voltage, which over-estimated battery charge when they're near empty.
-- This patch changes PX4 to use SI2's battery estimator. See [30_battery_state_of_charge.md](../30_battery_state_of_charge.md).
+- This patch changes PX4 to use SI2's battery estimator. See [125_battery_state_of_charge.md](../125_battery_state_of_charge.md).
 - Both SI2 and QGC should show the same battery charge, up to rounding.
 
 **Test Method**
