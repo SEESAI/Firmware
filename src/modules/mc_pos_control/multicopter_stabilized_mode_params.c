@@ -56,7 +56,7 @@ PARAM_DEFINE_FLOAT(MPC_MAN_TILT_MAX, 35.f);
 PARAM_DEFINE_FLOAT(MPC_MAN_Y_MAX, 150.f);
 
 /**
- * Max manual yaw acceleration (Sees.ai)
+ * Max manual yaw acceleration for Stabilised, Altitude and Position mode (Sees.ai)
  *
  * Limits how fast the stick can change the yaw rate setpoint,
  * to avoid asking for more yaw torque than the motors can produce.
