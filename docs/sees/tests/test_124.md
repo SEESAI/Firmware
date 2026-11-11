@@ -1,12 +1,12 @@
-**Test ID** | 33
+**Test ID** | 124
 --|--
-**PR** | [33](https://github.com/SEESAI/Firmware/pull/33), [36](https://github.com/SEESAI/Firmware/pull/36), [53](https://github.com/SEESAI/Firmware/pull/53)
+**PR** | [124](https://github.com/SEESAI/Firmware/pull/124) (port of v1.13 [#33](https://github.com/SEESAI/Firmware/pull/33), [#36](https://github.com/SEESAI/Firmware/pull/36), [#53](https://github.com/SEESAI/Firmware/pull/53))
 **Requirement** | With `SENS_MAG_LP_CUT` = 10, 50 Hz power-line noise is removed from `vehicle_magnetometer`.
 **Test lane** | HITL
 
 **Background**
 - Power lines add 50 Hz noise to the magnetometer.
-- The patch samples the IST8310 at ~150 Hz, filters, then averages down to 15 Hz. See [33_magnetometer_filter.md](../33_magnetometer_filter.md).
+- The patch samples the IST8310 at ~150 Hz, filters, then averages down to 15 Hz. See [124_magnetometer_filter.md](../124_magnetometer_filter.md).
 
 **Test Method**
 - Flash v1.17 with the patch. Props off. Connect QGC over USB.
