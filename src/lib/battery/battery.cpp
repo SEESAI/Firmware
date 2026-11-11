@@ -304,7 +304,7 @@ void Battery::resetInternalResistanceEstimation(const float voltage_v, const flo
 void Battery::estimateStateOfCharge()
 {
 	// Sees: SoC from voltage while disarmed (current ~0), then count the charge used while armed.
-	// Negative current is ignored, as in v1.13 and SI2. See docs/sees/30_battery_state_of_charge.md
+	// Negative current is ignored, as in v1.13 and SI2. See docs/sees/125_battery_state_of_charge.md
 	if (_armed && _battery_initialized && _capacity_mah > 0.f) {
 		const float used_mah = math::max(_discharged_mah_loop, 0.f);
 		_state_of_charge = math::constrain(_state_of_charge - used_mah / _capacity_mah, 0.f, 1.f);

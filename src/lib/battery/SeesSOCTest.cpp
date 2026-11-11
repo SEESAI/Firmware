@@ -1,5 +1,5 @@
 /**
- * Sees: property tests for the battery state of charge estimator. See docs/sees/30_battery_state_of_charge.md
+ * Sees: property tests for the battery state of charge estimator. See docs/sees/125_battery_state_of_charge.md
  *
  *   disarmed: SoC = S(V)        armed: SoC = SoC - max(dQ, 0) / C, clamped to [0, 1]
  *
