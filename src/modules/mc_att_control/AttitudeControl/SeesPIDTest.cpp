@@ -34,7 +34,7 @@
 
 /**
  * Property tests of the attitude setpoint rate feed-forward, K_ff * F * s * theta_T in (5) of
- * docs/sees/26_rate_controller.md. Each test checks one property over random cases.
+ * docs/sees/121_rate_controller.md. Each test checks one property over random cases.
  */
 
 #include <gtest/gtest.h>
