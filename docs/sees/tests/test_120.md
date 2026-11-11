@@ -1,6 +1,6 @@
-**Test ID** | 89
+**Test ID** | 120
 --|--
-**PR** | [89](https://github.com/SEESAI/Firmware/pull/89)
+**PR** | [120](https://github.com/SEESAI/Firmware/pull/120) (port of v1.13 [#89](https://github.com/SEESAI/Firmware/pull/89))
 **Requirement** | Joystick yaw acceleration never exceeds `MPC_MAN_Y_ACC`
 **Test lane** | SITL
 

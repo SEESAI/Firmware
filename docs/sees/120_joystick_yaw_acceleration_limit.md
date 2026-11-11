@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Since v1.13 (#89). Proposed port to v1.17. |
+| **Status** | Since v1.13 (#89). Ported to v1.17 in #120. |
 | **Code** | `StickYaw::generateYawSetpoint()` in `src/lib/stick_yaw/StickYaw.cpp` |
 
 ## Summary

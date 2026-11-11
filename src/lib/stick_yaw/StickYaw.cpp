@@ -72,6 +72,10 @@ void StickYaw::generateYawSetpoint(float &yawspeed_setpoint, float &yaw_setpoint
 	if (_param_mpc_man_y_acc.get() > 0.f) {
 		_yawspeed_slew_rate.setSlewRate(math::radians(_param_mpc_man_y_acc.get()));
 		yawspeed_setpoint = _yawspeed_slew_rate.update(yawspeed_setpoint, deltatime);
+
+	} else {
+		// --- SEES.AI --- keep the limiter state in sync so re-enabling it doesn't jump
+		_yawspeed_slew_rate.setForcedValue(yawspeed_setpoint);
 	}
 
 	yaw_setpoint = updateYawLock(yaw, yawspeed_setpoint, yaw_setpoint, yaw_correction_prev);
