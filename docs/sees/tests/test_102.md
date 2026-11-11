@@ -1,6 +1,6 @@
-**Test ID** | 84
+**Test ID** | 102
 --|--
-**PR** | [84](https://github.com/SEESAI/Firmware/pull/84)
+**PR** | [102](https://github.com/SEESAI/Firmware/pull/102) (port of v1.13 [#84](https://github.com/SEESAI/Firmware/pull/84))
 **Requirement** | When the drone tilts, PX4 does not turn SI2's forward/backward acceleration into vertical acceleration
 **Test lane** | SITL
 
