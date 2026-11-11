@@ -52,6 +52,28 @@ void AttitudeControl::setProportionalGain(const matrix::Vector3f &proportional_g
 	}
 }
 
+void AttitudeControl::setAttitudeSetpoint(const Quatf &qd, const float yawspeed_setpoint, const float dt)
+{
+	_attitude_setpoint_q = qd;
+	_attitude_setpoint_q.normalize();
+	_yawspeed_setpoint = yawspeed_setpoint;
+
+	// the setpoint's rate, in its own frame
+	Quatf dq = _ff_setpoint_prev.inversed() * _attitude_setpoint_q;
+	dq.canonicalize();
+	Vector3f rate = Vector3f(AxisAnglef(dq)) / dt;
+	_ff_setpoint_prev = _attitude_setpoint_q;
+
+	// remove rotation about the world vertical: yaw has its own feed-forward, and heading resets are about the vertical
+	const Vector3f vertical = _attitude_setpoint_q.inversed().dcm_z();
+	rate -= rate.dot(vertical) * vertical;
+
+	// not finite for the first setpoint, or a non-finite setpoint
+	if (rate.isAllFinite()) {
+		_ff_rate = _ff_filter.update(rate, dt);
+	}
+}
+
 matrix::Vector3f AttitudeControl::update(const Quatf &q) const
 {
 	Quatf qd = _attitude_setpoint_q;
@@ -104,6 +126,10 @@ matrix::Vector3f AttitudeControl::update(const Quatf &q) const
 	if (std::isfinite(_yawspeed_setpoint)) {
 		rate_setpoint += q.inversed().dcm_z() * _yawspeed_setpoint;
 	}
+
+	// feed-forward on the setpoint's rate, rotated into the body frame, roll and pitch only
+	const Vector3f ff = (q.inversed() * _attitude_setpoint_q).rotateVector(_ff_rate);
+	rate_setpoint += _ff_gain * Vector3f(ff(0), ff(1), 0.f);
 
 	// limit rates
 	for (int i = 0; i < 3; i++) {
