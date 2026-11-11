@@ -64,7 +64,7 @@ PARAM_DEFINE_FLOAT(MPC_MAN_Y_MAX, 150.f);
  *
  * @unit deg/s^2
  * @min 0
- * @max 1000
+ * @max 3600
  * @decimal 0
  * @increment 10
  * @group Multicopter Position Control
