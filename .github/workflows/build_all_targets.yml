@@ -90,9 +90,11 @@ jobs:
         with:
           path: "./Tools/setup/requirements.txt"
 
+      # SEES: only build the boards we fly.
+      # See docs/sees/ci_build_targets.md
       - id: set-matrix
         name: Generate Build Matrix
-        run: echo "matrix=$(./Tools/ci/generate_board_targets_json.py --group)" >> $GITHUB_OUTPUT
+        run: echo "matrix=$(./Tools/ci/generate_board_targets_json.py --group --filter cubepilot_cubeorange,cubepilot_cubeorangeplus,cubepilot_io-v2)" >> $GITHUB_OUTPUT
 
       - id: set-timestamp
         name: Save Current Timestamp
@@ -113,7 +115,8 @@ jobs:
         run: |
           echo "${{ steps.set-timestamp.outputs.timestamp }}"
           echo "${{ steps.set-branch.outputs.branchname }}"
-          echo "$(./Tools/ci/generate_board_targets_json.py --group --verbose)"
+          # SEES: same --filter as the Generate Build Matrix step above
+          echo "$(./Tools/ci/generate_board_targets_json.py --group --verbose --filter cubepilot_cubeorange,cubepilot_cubeorangeplus,cubepilot_io-v2)"
 
   setup:
     name: Build [${{ matrix.runner }}][${{ matrix.group }}]
