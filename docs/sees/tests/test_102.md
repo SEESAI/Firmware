@@ -9,30 +9,26 @@
 - Braking in SI2 Joystick mode tilts the drone a lot, so a large part of the horizontal command becomes vertical.
 
 **Test Method**
-- Run SI2 + PX4 SITL + QGC as usual.
-- In QGC, open Analyze Tools > MAVLink Inspector and chart:
-  - `ATTITUDE.pitch`: how much the drone tilts
-  - `POSITION_TARGET_LOCAL_NED.afz`: vertical acceleration command in PX4 (positive = down)
-  - `LOCAL_POSITION_NED.vz`: vertical speed (positive = down)
-- Take off with SI2, switch to Joystick. Full forward stick for ~3 s, then release so SI2 brakes. Repeat 2-3 times. Screenshot the chart.
-- Remove the patch, rebuild, repeat the test.
+- Start PX4 SITL: `make px4_sitl sihsim_quadx` (no SI2 or AirSim).
+- In QGC, open Analyze Tools > MAVLink Inspector > `POSITION_TARGET_LOCAL_NED` and chart `afx` and `afz` (positive = down).
+- Run [`scripts/102_body_accel.py`](./scripts/102_body_accel.py). It takes off to 20 m, switches to offboard and sends the same acceleration commands as SI2: 3 × (3 m/s² forward for 3 s, then 3 m/s² backward for 3 s), with 0 vertical. Then it lands.
+- Screenshot the chart.
+- Remove the patch (commit `6b84e02196`), rebuild and repeat.
 
 **Pass criteria**
 
-Compare the two screenshots. Look at `afz` and `vz` while tilted.
+Each `afx` pulse tilts the drone about 17°.
 
-Build | What the graph should look like
+Build | Expected chart
 --|--
-Without patch | `afz` and `vz` jump downward while tilted and accelerating or braking.
-With patch | Those downward jumps are much smaller or gone.
+With patch | `afx` pulses ±3 m/s². `afz` stays at 0.
+Without patch | `afx` pulses about ±2.9 m/s². `afz` sits at about +0.85 m/s² (downward) during each pulse, with a brief upward spike when forward switches to brake.
 
-Pass if the downward jumps in the "without patch" run are clearly smaller or gone with the patch.
+Pass if `afz` stays at 0 with the patch.
 
 **Results**
 
-Not yet run.
-
-Build | Downward jumps when pitching? | Screenshot | Result
+Build | `afz` flat while tilted? | Screenshot | Result
 --|--|--|--
-With patch | | |
-Without patch | | |
+With patch | yes | attached | pass
+Without patch | no | attached | fail
