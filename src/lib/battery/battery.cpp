@@ -48,6 +48,11 @@
 using namespace time_literals;
 using namespace matrix;
 
+// Sees: Reference Chemistry Curve for Tattu 25Ah HV packs (TN23.27).
+// Fraction of chemical charge left vs open circuit cell voltage. Must match SI2's BatterySOCEstimator.
+static constexpr float VOLTAGE_CURVE[] {3.300f, 3.554f, 3.678f, 3.722f, 3.757f, 3.795f, 3.838f, 3.902f, 4.002f, 4.095f, 4.203f, 4.350f};
+static constexpr float CHARGE_CURVE[] {0.000f, 0.026f, 0.076f, 0.175f, 0.265f, 0.377f, 0.476f, 0.578f, 0.680f, 0.779f, 0.879f, 1.000f};
+
 Battery::Battery(int index, ModuleParams *parent, const int sample_interval_us, const uint8_t source) :
 	ModuleParams(parent),
 	_index(index < 1 || index > 9 ? 1 : index),
@@ -57,6 +62,7 @@ Battery::Battery(int index, ModuleParams *parent, const int sample_interval_us, 
 	_current_average_filter_a.setParameters(expected_filter_dt, 50.f);
 	_ocv_filter_v.setParameters(expected_filter_dt, 1.f);
 	_cell_voltage_filter_v.setParameters(expected_filter_dt, 1.f);
+	_cell_terminal_voltage_filter_v.setParameters(expected_filter_dt, 1.f);
 
 	if (index > 9 || index < 1) {
 		PX4_ERR("Battery index must be between 1 and 9 (inclusive). Received %d. Defaulting to 1.", index);
@@ -88,6 +94,7 @@ Battery::Battery(int index, ModuleParams *parent, const int sample_interval_us, 
 	_param_handles.source = param_find(param_name);
 
 	_param_handles.low_thr = param_find("BAT_LOW_THR");
+	_param_handles.crit_v = param_find("BAT_CRIT_V");
 	_param_handles.crit_thr = param_find("BAT_CRIT_THR");
 	_param_handles.emergen_thr = param_find("BAT_EMERGEN_THR");
 
@@ -218,6 +225,7 @@ float Battery::calculateStateOfChargeVoltageBased(const float voltage_v, const f
 
 	// remaining battery capacity based on voltage
 	float cell_voltage = voltage_v / _params.n_cells;
+	_cell_terminal_voltage_filter_v.update(cell_voltage);
 
 	// correct battery voltage locally for load drop according to internal resistance and current
 	if (current_a > FLT_EPSILON) {
@@ -233,7 +241,15 @@ float Battery::calculateStateOfChargeVoltageBased(const float voltage_v, const f
 	}
 
 	_cell_voltage_filter_v.update(cell_voltage);
-	return math::interpolate(_cell_voltage_filter_v.getState(), _params.v_empty, _params.v_charged, 0.f, 1.f);
+	return stateOfChargeFromVoltage(_cell_voltage_filter_v.getState());
+}
+
+float Battery::stateOfChargeFromVoltage(float cell_voltage)
+{
+	const float charge = math::interpolateNXY(cell_voltage, VOLTAGE_CURVE, CHARGE_CURVE);
+	const float charge_empty = math::interpolateNXY(_params.v_empty, VOLTAGE_CURVE, CHARGE_CURVE);
+	const float charge_charged = math::interpolateNXY(_params.v_charged, VOLTAGE_CURVE, CHARGE_CURVE);
+	return math::interpolate(charge, charge_empty, charge_charged, 0.f, 1.f);
 }
 
 void Battery::updateInternalResistanceEstimation(const float voltage_v, const float current_a)
@@ -275,6 +291,7 @@ void Battery::resetInternalResistanceEstimation(const float voltage_v, const flo
 					    2.f) + powf(_estimation_covariance(1, 1), 2.f));
 	_internal_resistance_estimate = R_DEFAULT;
 	_ocv_filter_v.reset(voltage_v + _internal_resistance_estimate * _params.n_cells * current_a);
+	_cell_terminal_voltage_filter_v.reset(voltage_v / _params.n_cells);
 
 	if (_params.r_internal >= 0.f) { // Use user specified internal resistance value
 		_cell_voltage_filter_v.reset(voltage_v / _params.n_cells + _params.r_internal * current_a);
@@ -286,18 +303,11 @@ void Battery::resetInternalResistanceEstimation(const float voltage_v, const flo
 
 void Battery::estimateStateOfCharge()
 {
-	// choose which quantity we're using for final reporting
-	if ((_capacity_mah > 0.f) && _battery_initialized) {
-		// if battery capacity is known, fuse voltage measurement with used capacity
-		// The lower the voltage the more adjust the estimate with it to avoid deep discharge
-		const float weight_v = 3e-2f * (1 - _state_of_charge_volt_based);
-		_state_of_charge = (1 - weight_v) * _state_of_charge + weight_v * _state_of_charge_volt_based;
-		// directly apply current capacity slope calculated using current
-		_state_of_charge -= _discharged_mah_loop / _capacity_mah;
-		_state_of_charge = math::max(_state_of_charge, 0.f);
-
-		const float state_of_charge_current_based = math::max(1.f - _discharged_mah / _capacity_mah, 0.f);
-		_state_of_charge = math::min(state_of_charge_current_based, _state_of_charge);
+	// Sees: SoC from voltage while disarmed (current ~0), then count the charge used while armed.
+	// Negative current is ignored, as in v1.13 and SI2. See docs/sees/125_battery_state_of_charge.md
+	if (_armed && _battery_initialized && _capacity_mah > 0.f) {
+		const float used_mah = math::max(_discharged_mah_loop, 0.f);
+		_state_of_charge = math::constrain(_state_of_charge - used_mah / _capacity_mah, 0.f, 1.f);
 
 	} else {
 		_state_of_charge = _state_of_charge_volt_based;
@@ -328,6 +338,11 @@ uint16_t Battery::determineFaults()
 	    && (_voltage_v > (_params.n_cells * _params.v_charged * 1.05f))) {
 		// Reported as a "spike" since "over-voltage" does not exist in MAV_BATTERY_FAULT
 		faults |= (1 << battery_status_s::FAULT_SPIKES);
+	}
+
+	// Sees: nothing corrects SoC in flight, so flag low measured (not load-compensated) cell voltage
+	if (_battery_initialized && (_params.n_cells > 0) && (_cell_terminal_voltage_filter_v.getState() < _params.crit_v)) {
+		faults |= (1 << battery_status_s::FAULT_DEEP_DISCHARGE);
 	}
 
 	return faults;
@@ -404,6 +419,7 @@ void Battery::updateParams()
 	param_get(_param_handles.r_internal, &_params.r_internal);
 	param_get(_param_handles.source, &_params.source);
 	param_get(_param_handles.low_thr, &_params.low_thr);
+	param_get(_param_handles.crit_v, &_params.crit_v);
 	param_get(_param_handles.crit_thr, &_params.crit_thr);
 	param_get(_param_handles.emergen_thr, &_params.emergen_thr);
 	param_get(_param_handles.bat_avrg_current, &_params.bat_avrg_current);
