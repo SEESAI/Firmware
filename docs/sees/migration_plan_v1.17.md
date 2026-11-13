@@ -165,7 +165,7 @@ Each commit was checked against the `v1.17.0-dev` tip: whether its touched files
 
 | Commit | PR | Subject | Note | I/E/R score, Action |
 |---|---|---|---|---|
-| `0efcb970` | #31 | GPS driver submodule swap + timeout warning via `isFallbackAllowed()` | Blending logic rewritten, no equivalent concept present | REVIEW UPSTREAM MASTER FIRST, PORT - H/L/L |
+| `0efcb970` | #31 | GPS driver submodule swap + timeout warning via `isFallbackAllowed()` | Blending logic rewritten, no equivalent concept present. Port with the GPS half of #36 | REVIEW UPSTREAM MASTER FIRST, PORT - H/L/L |
 | `e116be69` | #50 | Delay GPS node-124 publish until node-125 (Rover) claims uORB instance 0 | Confirm dual-CAN-GPS node-ID assumptions still match fleet config; upstream now uses a different channel-index mechanism | **DEFER_UNTIL_TEST**, POSSIBLY BACKPORT FROM LATEST MASTER |
 | `77b5150e` | #69 | `UAVCAN_ROVER_ID` param for configurable CAN node ID | Verify whether the instance-ordering problem still exists under the new upstream mechanism before rebuilding | PORT WITH #50 - H/L/L |
 | `b7aa8c4b` + `f918007e` | #94, #96 | `UAVCAN_COMPID_1/2` auto-detection for param-management tooling | Needs the (unported) rover-ID prerequisite logic re-anchored first | **DEFER_UNTIL_TEST** - H/L/L |
