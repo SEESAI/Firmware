@@ -50,8 +50,9 @@ on:
   pull_request:
     branches:
       - '**'
-    paths-ignore:
-      - 'docs/**'
+    # paths-ignore disabled so docs-only PRs still report the required status checks
+    # paths-ignore:
+    #   - 'docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
