@@ -143,6 +143,17 @@ bool VehicleMagnetometer::ParametersUpdate(bool force)
 
 
 		if (!_armed) {
+			// --- SEES.AI --- apply low-pass filter cut-off (only while disarmed, like the other mag settings)
+			const float cutoff_hz = _param_sens_mag_lp_cut.get();
+
+			for (int i = 0; i < MAX_SENSOR_COUNT; i++) {
+				_lowpass_stage1[i].setCutoffFreq(cutoff_hz);
+				_lowpass_stage2[i].setCutoffFreq(cutoff_hz);
+			}
+
+			// Each first-order stage delays by tau = 1/(2*pi*fc), so two stages delay by 1/(pi*fc)
+			_lowpass_delay_us = (cutoff_hz > 0.f) ? static_cast<hrt_abstime>(1e6f / (M_PI_F * cutoff_hz)) : 0;
+
 			bool calibration_updated = false;
 
 			// update mag priority (CAL_MAGx_PRIO)
@@ -519,11 +530,19 @@ void VehicleMagnetometer::Run()
 					float mag_array[3] {vect(0), vect(1), vect(2)};
 					_voter.put(uorb_index, report.timestamp, mag_array, report.error_count, _priority[uorb_index]);
 
+					// --- SEES.AI --- low-pass filter at the sample rate
+					// dt in seconds. On the first sample dt is large, so the filter starts at that sample.
+					const float dt = (report.timestamp_sample - _lowpass_last_timestamp[uorb_index]) * 1e-6f;
+					_lowpass_last_timestamp[uorb_index] = report.timestamp_sample;
+
+					const Vector3f stage1 = _lowpass_stage1[uorb_index].update(vect, dt);
+					const Vector3f vect_filtered = _lowpass_stage2[uorb_index].update(stage1, dt);
+
 					_timestamp_sample_sum[uorb_index] += report.timestamp_sample;
-					_data_sum[uorb_index] += vect;
+					_data_sum[uorb_index] += vect_filtered;
 					_data_sum_count[uorb_index]++;
 
-					_last_data[uorb_index] = vect;
+					_last_data[uorb_index] = vect_filtered;
 
 					updated[uorb_index] = true;
 				}
@@ -580,7 +599,7 @@ void VehicleMagnetometer::Run()
 
 						// populate vehicle_magnetometer and publish
 						vehicle_magnetometer_s out{};
-						out.timestamp_sample = timestamp_sample;
+						out.timestamp_sample = timestamp_sample - _lowpass_delay_us; // --- SEES.AI --- compensate low-pass delay
 						out.device_id = _calibration[instance].device_id();
 						magnetometer_data.copyTo(out.magnetometer_ga);
 						out.calibration_count = _calibration[instance].calibration_count();
