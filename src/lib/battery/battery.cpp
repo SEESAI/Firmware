@@ -176,9 +176,8 @@ battery_status_s Battery::getBatteryStatus()
 	battery_status.internal_resistance_estimate = _internal_resistance_estimate;
 	battery_status.ocv_estimate = _voltage_v + _internal_resistance_estimate * _params.n_cells * _current_a;
 	battery_status.ocv_estimate_filtered = _ocv_filter_v.getState();
-	battery_status.volt_based_soc_estimate = _params.n_cells > 0 ? math::interpolate(_ocv_filter_v.getState() /
-			_params.n_cells,
-			_params.v_empty, _params.v_charged, 0.f, 1.f) : -1.f;
+	battery_status.volt_based_soc_estimate = _params.n_cells > 0 ?
+			stateOfChargeFromVoltage(_ocv_filter_v.getState() / _params.n_cells) : -1.f;
 	battery_status.voltage_prediction = _voltage_prediction;
 	battery_status.prediction_error = _prediction_error;
 	battery_status.estimation_covariance_norm = _estimation_covariance_norm;

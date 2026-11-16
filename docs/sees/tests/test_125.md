@@ -1,35 +1,36 @@
 **Test ID** | 125
 --|--
 **PR** | [125](https://github.com/SEESAI/Firmware/pull/125) (port of v1.13 [#30](https://github.com/SEESAI/Firmware/pull/30), [#61](https://github.com/SEESAI/Firmware/pull/61), [#95](https://github.com/SEESAI/Firmware/pull/95))
-**Requirement** | Disarmed, battery % follows the Reference Chemistry Curve. Armed, it falls only by the charge used. Below `BAT_CRIT_V` a deep discharge fault is reported. On Yealm it matches SI2's SoC.
+**Requirement** | The battery % PX4 predicts by counting charge in flight equals the % it observes from the rested pack voltage after landing.
 **Test lane** | Unit + FY
 
 **Background**
-- Upstream reads SoC linearly from voltage, which over-estimated battery charge when they're near empty.
-- This patch changes PX4 to use SI2's battery estimator. See [125_battery_state_of_charge.md](../125_battery_state_of_charge.md).
-- Both SI2 and QGC should show the same battery charge, up to rounding.
+- Upstream reads battery % linearly from voltage, which over-estimates the charge left when the battery is near empty.
+- The patch reads battery % from the Reference Chemistry Curve while disarmed, and subtracts the charge used while armed. See [125_battery_state_of_charge.md](../125_battery_state_of_charge.md).
+- After landing, the rested voltage shows the true charge left. If the in-flight % was right, the two agree.
 
 **Test Method**
 
 Unit: `make tests TESTFILTER=SeesSOC`.
 
-Flight (Yealm, SI2 running):
-1. Before arming, note the battery % in QGC and the SoC in SI2.
-2. Fly a normal mission.
-3. In the final hover before landing, note both again.
+Flight (Yealm):
+1. Fly a normal mission.
+2. Just before disarming, note the battery % in QGC (predicted).
+3. Leave the drone powered and disarmed. After a few minutes the battery voltage in QGC should have stopped changing, note the battery % (observed).
 
 **Pass criteria**
 - Unit tests pass.
-- QGC and SI2 agree within 1 % at both readings.
+- Predicted and observed % agree within 3 %.
 - No "Battery 1: under voltage" message in QGC during the flight.
 
 **Results**
 
 Not yet run.
 
-Check | QGC | SI2 | Result
---|--|--|--
-Unit tests | n/a | n/a |
-Before arming | | |
-Final hover | | |
-Under voltage message | n/a | n/a |
+Check | Value | Result
+--|--|--
+Unit tests |  | pass
+Predicted % (before disarm) | |
+Observed % (rested) | |
+Difference | |
+Under voltage message | |
