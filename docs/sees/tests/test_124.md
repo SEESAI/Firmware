@@ -38,4 +38,3 @@ Filter | `xmag` peak to peak (G)
 --|--
 Off | 0.072
 On | 0.00268
-
