@@ -21,6 +21,9 @@ A test defines the expected behavior, how to exercise it, and pass criteria. The
 | Flight-Whitby | FW | End-to-end behavior only observable in flight; verifiable on development drone (Whitby) | Test flight per existing Sees flight-test procedure |
 | Flight-Yealm | FY | End-to-end behavior only observable in flight; verifiable only on operational drone (Yealm) | Test flight per existing Sees flight-test procedure |
 
+* All SITL and HITL tests may require QGroundControl and HawkEye, but not `SeesInterface2`. Simple test harnesses emulate the SI2 interface instead.
+* All flight tests except BGCS/RC arbitration test shall require only QGroundControl and RC controller.
+
 ---
 
 ## Tests
