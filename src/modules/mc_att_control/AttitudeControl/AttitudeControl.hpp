@@ -50,6 +50,7 @@
 
 #include <matrix/matrix/math.hpp>
 #include <mathlib/math/Limits.hpp>
+#include <mathlib/math/filter/AlphaFilter.hpp>
 
 class AttitudeControl
 {
@@ -74,13 +75,9 @@ public:
 	 * Set a new attitude setpoint replacing the one tracked before
 	 * @param qd desired vehicle attitude setpoint
 	 * @param yawspeed_setpoint [rad/s] yaw feed forward angular rate in world frame
+	 * @param dt [s] time since the previous setpoint, for the feed-forward on the setpoint's rate
 	 */
-	void setAttitudeSetpoint(const matrix::Quatf &qd, const float yawspeed_setpoint)
-	{
-		_attitude_setpoint_q = qd;
-		_attitude_setpoint_q.normalize();
-		_yawspeed_setpoint = yawspeed_setpoint;
-	}
+	void setAttitudeSetpoint(const matrix::Quatf &qd, const float yawspeed_setpoint, const float dt);
 
 	/**
 	 * Adjust last known attitude setpoint by a delta rotation
@@ -91,6 +88,17 @@ public:
 	{
 		_attitude_setpoint_q = q_delta * _attitude_setpoint_q;
 		_attitude_setpoint_q.normalize();
+	}
+
+	/**
+	 * Set the feed-forward on the attitude setpoint's rate, roll and pitch only
+	 * @param gain fraction [0,1] of the setpoint's rate added to the rate setpoint
+	 * @param cutoff_freq [Hz] first order low pass on the setpoint's rate
+	 */
+	void setFeedForward(const float gain, const float cutoff_freq)
+	{
+		_ff_gain = gain;
+		_ff_filter.setCutoffFreq(cutoff_freq);
 	}
 
 	/**
@@ -107,4 +115,9 @@ private:
 
 	matrix::Quatf _attitude_setpoint_q; ///< latest known attitude setpoint e.g. from position control
 	float _yawspeed_setpoint{0.f}; ///< latest known yawspeed feed-forward setpoint
+
+	float _ff_gain{0.f};
+	matrix::Quatf _ff_setpoint_prev{NAN, NAN, NAN, NAN}; ///< previous setpoint, NaN until the first
+	AlphaFilter<matrix::Vector3f> _ff_filter;
+	matrix::Vector3f _ff_rate; ///< [rad/s] filtered setpoint's rate, in the setpoint's frame
 };
