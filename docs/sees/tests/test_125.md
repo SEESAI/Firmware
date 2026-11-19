@@ -13,24 +13,27 @@
 
 Unit: `make tests TESTFILTER=SeesSOC`.
 
-Flight (Yealm):
-1. From a full pack, fly until QGC shows about 40 %.
-2. Just before disarming, note the battery % in QGC (predicted).
-3. Leave the drone powered and disarmed for 15 minutes, then note the battery % (observed).
+Flight (Yealm, on 1.13 then 1.17, same pack, `SDLOG_MODE` = 2):
+1. From a full pack, hover in Position mode for 10 minutes.
+2. Land, disarm, and leave the drone powered on for 10 minutes.
+
+Log Analysis:
+
+3. From the log, read the battery % just before disarming (predicted) and after the rest (observed).
+4. Plot battery % over time for both logs on one chart. The two curves should look alike.
 
 **Pass criteria**
 - Unit tests pass.
-- Predicted and observed % agree within 3 %.
-- No "Battery 1: under voltage" message in QGC during the flight.
+- On both versions, predicted and observed % agree within 3 %.
+- No "Battery 1: under voltage" message in QGC during either flight.
 
 **Results**
 
-Not yet run.
-
-Check | Value | Result
---|--|--
-Unit tests |  | pass
-Predicted % (before disarm) | |
-Observed % (rested) | |
-Difference | |
-Under voltage message | |
+Check | 1.13 | 1.17 | Result
+--|--|--|--
+Unit tests | - | | pass
+Predicted % (before disarm) | | |
+Observed % (after 10 min rest) | | |
+Difference | | |
+Under voltage message | | |
+Battery % curves look alike | | |
