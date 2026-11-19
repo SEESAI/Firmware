@@ -14,9 +14,9 @@
 Unit: `make tests TESTFILTER=SeesSOC`.
 
 Flight (Yealm):
-1. Fly a normal mission.
+1. From a full pack, fly until QGC shows about 40 %.
 2. Just before disarming, note the battery % in QGC (predicted).
-3. Leave the drone powered and disarmed. After a few minutes the battery voltage in QGC should have stopped changing, note the battery % (observed).
+3. Leave the drone powered and disarmed for 15 minutes, then note the battery % (observed).
 
 **Pass criteria**
 - Unit tests pass.
