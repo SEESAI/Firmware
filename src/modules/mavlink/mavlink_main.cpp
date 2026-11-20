@@ -1431,6 +1431,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS2_RAW", 1.0f);
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 1.0f);
 		configure_stream_local("GPS_RAW_INT", 5.0f);
+		configure_stream_local("SEES_GPS_RAW", 1.0f);
 		configure_stream_local("GPS_STATUS", 1.0f);
 		configure_stream_local("HOME_POSITION", 0.5f);
 		configure_stream_local("HYGROMETER_SENSOR", 0.1f);
@@ -1504,6 +1505,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS2_RAW", unlimited_rate);
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 1.0f);
 		configure_stream_local("GPS_RAW_INT", unlimited_rate);
+		configure_stream_local("SEES_GPS_RAW", unlimited_rate);
 		configure_stream_local("GPS_RTCM_DATA", unlimited_rate);
 		configure_stream_local("GPS_STATUS", 1.0f);
 		configure_stream_local("HOME_POSITION", 0.5f);
@@ -1666,6 +1668,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS2_RAW", unlimited_rate);
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 1.0f);
 		configure_stream_local("GPS_RAW_INT", unlimited_rate);
+		configure_stream_local("SEES_GPS_RAW", unlimited_rate);
 		configure_stream_local("GPS_STATUS", 1.0f);
 		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 0.5f);
 		configure_stream_local("GIMBAL_MANAGER_STATUS", 0.5f);

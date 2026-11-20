@@ -116,6 +116,9 @@
 #include "streams/SCALED_IMU3.hpp"
 #include "streams/SCALED_PRESSURE.hpp"
 #include "streams/SERVO_OUTPUT_RAW.hpp"
+#if defined(MAVLINK_MSG_ID_SEES_GPS_RAW) // SEES: only defined if sees.xml dialect is used
+#include "streams/SEES_GPS_RAW.hpp"
+#endif // MAVLINK_MSG_ID_SEES_GPS_RAW
 #include "streams/STATUSTEXT.hpp"
 #include "streams/STORAGE_INFORMATION.hpp"
 #include "streams/SYS_STATUS.hpp"
@@ -308,6 +311,9 @@ static const StreamListItem streams_list[] = {
 #if defined(GPS_RAW_INT_HPP)
 	create_stream_list_item<MavlinkStreamGPSRawInt>(),
 #endif // GPS_RAW_INT_HPP
+#if defined(SEES_GPS_RAW_HPP)
+	create_stream_list_item<MavlinkStreamSeesGPSRaw>(),
+#endif // SEES_GPS_RAW_HPP
 #if defined(GPS2_RAW_HPP)
 	create_stream_list_item<MavlinkStreamGPS2Raw>(),
 #endif // GPS2_RAW_HPP
