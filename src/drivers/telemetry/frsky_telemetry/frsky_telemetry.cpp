@@ -418,6 +418,10 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 		uint32_t lastDIY_rcmav_ms = 0;
 		uint32_t lastDIY_flgtmode_ms = 0;
 
+		// ---Sees.ai--- REQ-SPORT-02: prime topic data once. The refresh now happens
+		// after each reply rather than before it, so the first reply needs initialised data.
+		sPort_update_topics();
+
 		/* send S.port telemetry */
 		while (!thread_should_exit) {
 
@@ -444,28 +448,8 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 
 			newBytes = read(uart, &sbuf[1], 1);
 
-			/* get a local copy of the current sensor values
-			 * in order to apply a lowpass filter to baro pressure.
-			 */
-			bool sensor_updated = false;
-			orb_check(airdata_sub, &sensor_updated);
-
-			if (sensor_updated) {
-				struct vehicle_air_data_s airdata;
-				orb_copy(ORB_ID(vehicle_air_data), airdata_sub, &airdata);
-
-				if (isnan(filtered_alt)) {
-					filtered_alt = airdata.baro_alt_meter;
-
-				} else {
-					filtered_alt = .05f * airdata.baro_alt_meter + .95f * filtered_alt;
-				}
-			}
-
 			// allow a minimum of 500usec before reply
 			usleep(500);
-
-			sPort_update_topics();
 
 			switch (sbuf[1]) {
 
@@ -679,6 +663,29 @@ static int frsky_telemetry_thread_main(int argc, char *argv[])
 
 				break;
 			}
+
+			// ---Sees.ai--- REQ-SPORT-02: refresh data AFTER replying, not between poll
+			// and reply. Topic copies on the critical path produced a latency tail
+			// (p99.9 4.1 ms, max 11.9 ms) that occasionally overran the 12 ms slot.
+			/* get a local copy of the current sensor values
+			 * in order to apply a lowpass filter to baro pressure.
+			 */
+			bool sensor_updated = false;
+			orb_check(airdata_sub, &sensor_updated);
+
+			if (sensor_updated) {
+				struct vehicle_air_data_s airdata;
+				orb_copy(ORB_ID(vehicle_air_data), airdata_sub, &airdata);
+
+				if (isnan(filtered_alt)) {
+					filtered_alt = airdata.baro_alt_meter;
+
+				} else {
+					filtered_alt = .05f * airdata.baro_alt_meter + .95f * filtered_alt;
+				}
+			}
+
+			sPort_update_topics();
 		}
 
 		PX4_DEBUG("freeing sPort memory");
