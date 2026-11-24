@@ -192,7 +192,7 @@ private:
 	bool _battery_initialized{false};
 	float _voltage_v{0.f};
 	AlphaFilter<float> _ocv_filter_v;
-	AlphaFilter<float> _cell_voltage_filter_v;
+	AlphaFilter<float> _cell_voltage_filter_v; ///< Sees: load-compensated (estimated OCV) cell voltage
 	float _current_a{-1};
 	AlphaFilter<float>
 	_current_average_filter_a; ///< averaging filter for current. For FW, it is the current in level flight.
@@ -209,7 +209,7 @@ private:
 	bool _armed{false};
 	bool _vehicle_status_is_fw{false};
 	hrt_abstime _last_unconnected_timestamp{0};
-	AlphaFilter<float> _cell_terminal_voltage_filter_v; ///< Sees: measured (not load-compensated) cell voltage for BAT_CRIT_V
+	AlphaFilter<float> _cell_measured_voltage_filter_v; ///< Sees: cell voltage measured under load (not load-compensated)
 
 	// Internal Resistance estimation
 	void updateInternalResistanceEstimation(const float voltage_v, const float current_a);

@@ -62,7 +62,7 @@ Battery::Battery(int index, ModuleParams *parent, const int sample_interval_us, 
 	_current_average_filter_a.setParameters(expected_filter_dt, 50.f);
 	_ocv_filter_v.setParameters(expected_filter_dt, 1.f);
 	_cell_voltage_filter_v.setParameters(expected_filter_dt, 1.f);
-	_cell_terminal_voltage_filter_v.setParameters(expected_filter_dt, 1.f);
+	_cell_measured_voltage_filter_v.setParameters(expected_filter_dt, 1.f);
 
 	if (index > 9 || index < 1) {
 		PX4_ERR("Battery index must be between 1 and 9 (inclusive). Received %d. Defaulting to 1.", index);
@@ -224,7 +224,7 @@ float Battery::calculateStateOfChargeVoltageBased(const float voltage_v, const f
 
 	// remaining battery capacity based on voltage
 	float cell_voltage = voltage_v / _params.n_cells;
-	_cell_terminal_voltage_filter_v.update(cell_voltage);
+	_cell_measured_voltage_filter_v.update(cell_voltage);
 
 	// correct battery voltage locally for load drop according to internal resistance and current
 	if (current_a > FLT_EPSILON) {
@@ -290,7 +290,7 @@ void Battery::resetInternalResistanceEstimation(const float voltage_v, const flo
 					    2.f) + powf(_estimation_covariance(1, 1), 2.f));
 	_internal_resistance_estimate = R_DEFAULT;
 	_ocv_filter_v.reset(voltage_v + _internal_resistance_estimate * _params.n_cells * current_a);
-	_cell_terminal_voltage_filter_v.reset(voltage_v / _params.n_cells);
+	_cell_measured_voltage_filter_v.reset(voltage_v / _params.n_cells);
 
 	if (_params.r_internal >= 0.f) { // Use user specified internal resistance value
 		_cell_voltage_filter_v.reset(voltage_v / _params.n_cells + _params.r_internal * current_a);
@@ -340,7 +340,7 @@ uint16_t Battery::determineFaults()
 	}
 
 	// Sees: nothing corrects SoC in flight, so flag low measured (not load-compensated) cell voltage
-	if (_battery_initialized && (_params.n_cells > 0) && (_cell_terminal_voltage_filter_v.getState() < _params.crit_v)) {
+	if (_battery_initialized && (_params.n_cells > 0) && (_cell_measured_voltage_filter_v.getState() < _params.crit_v)) {
 		faults |= (1 << battery_status_s::FAULT_DEEP_DISCHARGE);
 	}
 
