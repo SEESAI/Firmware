@@ -30,7 +30,7 @@ So we use voltage on the ground and current in flight.
 
 ### 1. Voltage to SoC
 
-$c(V)$ is the fraction of chemical charge left at open circuit voltage $V$, measured for Tattu 25 Ah HV packs (TN23.27):
+$c(V)$ is the fraction of chemical charge left at open circuit voltage $V$, measured for Tattu 25 Ah HV packs ([TN23.27](https://app.notion.com/p/435b1db595a7473eba11133b0d0982a2), see also the [Battery Home Page](https://app.notion.com/p/seesai/Battery-Home-Page-1e0f348e9918801aaa0ede79e14077b8)):
 
 $V$ | 3.300 | 3.554 | 3.678 | 3.722 | 3.757 | 3.795 | 3.838 | 3.902 | 4.002 | 4.095 | 4.203 | 4.350
 --|--|--|--|--|--|--|--|--|--|--|--|--
