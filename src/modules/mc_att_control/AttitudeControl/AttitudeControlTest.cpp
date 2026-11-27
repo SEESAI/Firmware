@@ -58,7 +58,7 @@ public:
 		int i; // need function scope to check how many steps
 		Vector3f rate_setpoint(1000.f, 1000.f, 1000.f);
 
-		_attitude_control.setAttitudeSetpoint(_quat_goal, 0.f);
+		_attitude_control.setAttitudeSetpoint(_quat_goal, 0.f, 0.004f);
 
 		for (i = 100; i > 0; i--) {
 			// run attitude control to get rate setpoints
@@ -121,7 +121,7 @@ TEST(AttitudeControlTest, YawWeightScaling)
 	Quatf pure_yaw_attitude(cosf(yaw_sp / 2.f), 0, 0, sinf(yaw_sp / 2.f));
 	attitude_control.setProportionalGain(Vector3f(6.5f, 6.5f, yaw_gain), .4f);
 	attitude_control.setRateLimit(Vector3f(1000.f, 1000.f, 1000.f));
-	attitude_control.setAttitudeSetpoint(pure_yaw_attitude, 0.f);
+	attitude_control.setAttitudeSetpoint(pure_yaw_attitude, 0.f, 0.004f);
 
 	// WHEN: we run one iteration of the controller
 	Vector3f rate_setpoint = attitude_control.update(Quatf());

@@ -97,6 +97,35 @@ PARAM_DEFINE_FLOAT(MC_YAW_P, 2.8f);
 PARAM_DEFINE_FLOAT(MC_YAW_WEIGHT, 0.4f);
 
 /**
+ * Roll and pitch feed-forward on the attitude setpoint's rate
+ *
+ * Fraction of the attitude setpoint's roll and pitch rate added to the rate setpoint.
+ * Gives an extra push when the setpoint changes quickly, e.g. hard braking.
+ * 0 disables it.
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 3
+ * @increment 0.01
+ * @group Multicopter Attitude Control
+ */
+PARAM_DEFINE_FLOAT(MC_ATT_FF, 0.0f);
+
+/**
+ * Cutoff frequency for the attitude setpoint rate feed-forward
+ *
+ * First order low pass on the attitude setpoint's rate used by MC_ATT_FF.
+ *
+ * @unit Hz
+ * @min 1.0
+ * @max 100.0
+ * @decimal 1
+ * @increment 1
+ * @group Multicopter Attitude Control
+ */
+PARAM_DEFINE_FLOAT(MC_ATT_FF_CUTOFF, 20.0f);
+
+/**
  * Max roll rate
  *
  * Limit for roll rate in manual and auto modes (except acro).
